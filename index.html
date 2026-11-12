@@ -167,7 +167,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 004";
+var VERSION="Version 005";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -179,7 +179,7 @@ var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
 var photoSrc=null, depthImg=null, photoName="example", cur=null;
-var scene=null, yaw=0, pitch=0, zoom=1, panX=0, panY=0, vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
+var scene=null, zoom=1, panX=0, panY=0, vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
 var toastT=0;
 function setStatus(msg,kind){
   var t=$("toast");clearTimeout(toastT);
@@ -358,12 +358,28 @@ function upload(){
   gl.enableVertexAttribArray(loc.aSize);gl.vertexAttribPointer(loc.aSize,1,gl.FLOAT,false,28,24);
 }
 function persp(f,a,n,fa){var t=1/Math.tan(f/2);return new Float32Array([t/a,0,0,0,0,t,0,0,0,0,(fa+n)/(n-fa),-1,0,0,2*fa*n/(n-fa),0])}
-function lookAt(e,t){
-  var z=[e[0]-t[0],e[1]-t[1],e[2]-t[2]],l=Math.hypot(z[0],z[1],z[2]);z=[z[0]/l,z[1]/l,z[2]/l];
-  var x=[z[2],0,-z[0]];l=Math.hypot(x[0],x[1],x[2])||1;x=[x[0]/l,x[1]/l,x[2]/l];
+function lookAt(e,t,up){
+  var z=[e[0]-t[0],e[1]-t[1],e[2]-t[2]],l=Math.hypot(z[0],z[1],z[2])||1;z=[z[0]/l,z[1]/l,z[2]/l];
+  var x=[up[1]*z[2]-up[2]*z[1],up[2]*z[0]-up[0]*z[2],up[0]*z[1]-up[1]*z[0]];l=Math.hypot(x[0],x[1],x[2])||1;x=[x[0]/l,x[1]/l,x[2]/l];
   var y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
   var dot=function(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]};
   return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,e),-dot(y,e),-dot(z,e),1]);
+}
+/* free orbit: the view orientation is a rotation matrix, so there are no pole or angle limits */
+var Rm=[1,0,0,0,1,0,0,0,1];
+function mm(a,b){var r=new Array(9),i,j;for(i=0;i<3;i++)for(j=0;j<3;j++)r[i*3+j]=a[i*3]*b[j]+a[i*3+1]*b[3+j]+a[i*3+2]*b[6+j];return r}
+function mv(m,v){return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2],m[3]*v[0]+m[4]*v[1]+m[5]*v[2],m[6]*v[0]+m[7]*v[1]+m[8]*v[2]]}
+function rotAxis(ax,ang){var l=Math.hypot(ax[0],ax[1],ax[2])||1,x=ax[0]/l,y=ax[1]/l,z=ax[2]/l,c=Math.cos(ang),s=Math.sin(ang),t=1-c;
+  return [t*x*x+c,t*x*y-s*z,t*x*z+s*y,t*x*y+s*z,t*y*y+c,t*y*z-s*x,t*x*z-s*y,t*y*z+s*x,t*z*z+c]}
+function orthonorm(m){
+  var c0=[m[0],m[3],m[6]],c1=[m[1],m[4],m[7]],l=Math.hypot(c0[0],c0[1],c0[2])||1;c0=[c0[0]/l,c0[1]/l,c0[2]/l];
+  var d=c0[0]*c1[0]+c0[1]*c1[1]+c0[2]*c1[2];c1=[c1[0]-d*c0[0],c1[1]-d*c0[1],c1[2]-d*c0[2]];l=Math.hypot(c1[0],c1[1],c1[2])||1;c1=[c1[0]/l,c1[1]/l,c1[2]/l];
+  var c2=[c0[1]*c1[2]-c0[2]*c1[1],c0[2]*c1[0]-c0[0]*c1[2],c0[0]*c1[1]-c0[1]*c1[0]];
+  return [c0[0],c1[0],c2[0],c0[1],c1[1],c2[1],c0[2],c1[2],c2[2]];
+}
+function orbitBy(ay,ap){
+  var up=mv(Rm,[0,1,0]),rt=mv(Rm,[1,0,0]);
+  Rm=orthonorm(mm(rotAxis(rt,-ap),mm(rotAxis(up,ay),Rm)));
 }
 var OFF0={y:0,p:0,z:1,x:0};
 function draw(ao){
@@ -382,13 +398,13 @@ function draw(ao){
   gl.viewport(vx,vy,vw,vh);
   w=vw;h=vh;
   var o=ao||OFF0;
-  var yw=clamp(yaw+o.y,-1.1,1.1),pt=clamp(pitch+o.p,-0.7,0.7);
-  var zm=1+scene.R/2,dist=zm*zoom*o.z,cp=Math.cos(pt);
-  var px=panX+o.x*scene.tx*zm,py=panY;
-  var eye=[px+Math.sin(yw)*cp*dist,py+Math.sin(pt)*dist,-zm+Math.cos(yw)*cp*dist];
+  var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
+  var zm=1+scene.R/2,dist=zm*zoom*o.z;
+  var po=mv(Rv,[panX+o.x*scene.tx*zm,panY,0]),tg=[po[0],po[1],-zm+po[2]];
+  var eo=mv(Rv,[0,0,dist]),eye=[tg[0]+eo[0],tg[1]+eo[1],tg[2]+eo[2]],upv=mv(Rv,[0,1,0]);
   var vA=w/h,tyv=Math.max(TY,scene.tx/vA);lastTyv=tyv;
-  gl.uniformMatrix4fv(loc.uView,false,lookAt(eye,[px,py,-zm]));
-  gl.uniformMatrix4fv(loc.uProj,false,persp(2*Math.atan(tyv),vA,0.05,30));
+  gl.uniformMatrix4fv(loc.uView,false,lookAt(eye,tg,upv));
+  gl.uniformMatrix4fv(loc.uProj,false,persp(2*Math.atan(tyv),vA,0.01,500));
   gl.uniform1f(loc.uPx,h/(2*tyv));gl.uniform1f(loc.uMul,S.size);
   gl.uniform1f(loc.uZR,Math.max(scene.R,0.001));gl.uniform1f(loc.uFog,S.fog);gl.uniform3f(loc.uBg,bg[0],bg[1],bg[2]);
   gl.uniform1f(loc.uFocus,S.focus);gl.uniform1f(loc.uDef,S.defocus);gl.uniform1f(loc.uShape,S.shape);
@@ -419,7 +435,7 @@ function loop(t){
   requestAnimationFrame(loop);
   if($("editor").hidden)return;
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
-    yaw=clamp(yaw+vyaw,-0.9,0.9);pitch=clamp(pitch+vpitch,-0.55,0.55);
+    orbitBy(vyaw,vpitch);
     vyaw*=0.92;vpitch*=0.92;if(Math.abs(vyaw)<0.0002)vyaw=0;if(Math.abs(vpitch)<0.0002)vpitch=0;dirty=true;
   }
   if(anim){
@@ -439,7 +455,7 @@ var ptrs=new Map(),lastD=0;
 function pinch(){if(ptrs.size<2)return 0;var a=Array.from(ptrs.values());return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
 function centroid(){var a=Array.from(ptrs.values());return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}}
 var tapT=0,tapX=0,tapY=0,moved=0;
-function resetView(){yaw=0;pitch=0;zoom=1;panX=0;panY=0;vyaw=0;vpitch=0;dirty=true}
+function resetView(){Rm=[1,0,0,0,1,0,0,0,1];zoom=1;panX=0;panY=0;vyaw=0;vpitch=0;dirty=true}
 cv.addEventListener("pointerdown",function(e){
   cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();
   stopAnim();vyaw=vpitch=0;if(ptrs.size===1)moved=0;
@@ -450,12 +466,12 @@ cv.addEventListener("pointermove",function(e){
   if(ptrs.size===1){
     p.x=e.clientX;p.y=e.clientY;
     var ay=-dx*0.005,ap=dy*0.005;
-    yaw=clamp(yaw+ay,-0.9,0.9);pitch=clamp(pitch+ap,-0.55,0.55);vyaw=ay;vpitch=ap;
+    orbitBy(ay,ap);vyaw=ay;vpitch=ap;
   }else if(ptrs.size===2){
     var c0=centroid();p.x=e.clientX;p.y=e.clientY;var c1=centroid(),d=pinch();
     var wpp=2*lastTyv*(1+(scene?scene.R:1)/2)*zoom/Math.max(1,cv.clientHeight);
-    panX=clamp(panX-(c1.x-c0.x)*wpp,-1.5,1.5);panY=clamp(panY+(c1.y-c0.y)*wpp,-1.5,1.5);
-    if(lastD&&d)zoom=clamp(zoom*lastD/d,0.3,2.5);lastD=d;vyaw=vpitch=0;
+    panX-=(c1.x-c0.x)*wpp;panY+=(c1.y-c0.y)*wpp;
+    if(lastD&&d)zoom=clamp(zoom*lastD/d,0.003,60);lastD=d;vyaw=vpitch=0;
   }
   dirty=true;
 });
@@ -468,7 +484,7 @@ function release(e){
   }
 }
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
-cv.addEventListener("wheel",function(e){e.preventDefault();zoom=clamp(zoom*Math.exp(e.deltaY*0.001),0.3,2.5);dirty=true},{passive:false});
+cv.addEventListener("wheel",function(e){e.preventDefault();zoom=clamp(zoom*Math.exp(e.deltaY*0.001),0.003,60);dirty=true},{passive:false});
 $("reset").addEventListener("click",resetView);
 if(window.ResizeObserver){var ro=new ResizeObserver(function(){dirty=true});ro.observe($("stage"));ro.observe($("pop"))}
 window.addEventListener("resize",function(){dirty=true});
