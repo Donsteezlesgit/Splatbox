@@ -8,133 +8,134 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Splatbox">
-<style>html,body{margin:0}</style>
-<title>Splatbox</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: 3D viewport first, controls underneath; side by side on wide screens. Dark only, like a viewport tool. */
 :root{
-  --bg:#0e1113; --stage:#0a0c0d; --panel:#161a1d; --line:#272d32;
-  --fg:#e7ecef; --mute:#8d99a1; --accent:#ff7a3d; --accent-ink:#1b0e06;
+  --bg:#0b0d10; --stage:#07080a; --sheet:#12151a; --raise:#1a1e25; --line:#262b33;
+  --fg:#eef1f4; --mute:#8a94a0; --accent:#ff6a3d; --accent2:#ffb04a; --accent-ink:#1a0b05;
   --ok:#6fcf97; --warn:#f2c14e; --bad:#ff6b6b;
   --font-ui:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
   --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
   color-scheme:dark;
 }
-*{box-sizing:border-box}
-body{
-  margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-ui);
-  padding-block:12px 28px;
-  padding-left:max(16px,env(safe-area-inset-left,0px));
-  padding-right:max(16px,env(safe-area-inset-right,0px));
-}
-.app{max-width:1100px;margin:0 auto;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
-@media(min-width:900px){
-  .app{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);align-items:start;column-gap:24px}
-  header{grid-column:1/-1}
-  .stage{position:sticky;top:12px}
-}
-h1{margin:0;font:600 22px/1.2 var(--font-ui);letter-spacing:-.01em}
-.sub{margin:4px 0 0;color:var(--mute);max-width:60ch}
-.stage{position:relative;height:clamp(300px,56vh,680px);background:var(--stage);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-canvas{width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;left:10px;bottom:8px;right:10px;font:12px var(--font-mono);color:var(--mute);pointer-events:none;text-shadow:0 1px 2px #000}
-.chip{position:absolute;right:10px;top:10px;min-height:36px;padding:0 12px;border:1px solid var(--line);background:rgba(22,26,29,.85);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
-.panel{display:grid;gap:20px;min-width:0}
-fieldset{border:0;padding:0;margin:0;display:grid;gap:10px;min-width:0}
-legend{padding:0;margin-bottom:8px;font:500 12px var(--font-ui);text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
-.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;font:500 15px var(--font-ui);cursor:pointer;text-align:center}
-.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.btn:focus-visible,.chip:focus-visible,input:focus-visible+label,input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-ui)}
+.shell{height:100dvh;display:flex;flex-direction:column}
+.stage{position:relative;flex:1;min-height:0;background:radial-gradient(120% 90% at 50% 30%,#10141a,var(--stage));overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(14px,env(safe-area-inset-right,0px)) 0 max(14px,env(safe-area-inset-left,0px))}
+.word{font:600 17px/1 var(--font-ui);letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:9px;text-shadow:0 1px 8px #000a}
+.word i{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));box-shadow:0 0 14px #ff6a3d88}
+.ico{pointer-events:auto;width:44px;height:44px;display:grid;place-items:center;border:1px solid #ffffff1f;background:#0b0d10aa;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--fg);border-radius:12px;cursor:pointer}
+.ico:active{transform:scale(.95)}
+.ico svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.hud{position:absolute;left:max(14px,env(safe-area-inset-left,0px));bottom:10px;font:11px var(--font-mono);color:var(--mute);pointer-events:none;text-shadow:0 1px 3px #000}
+.busy{position:absolute;inset:0;display:none;place-items:center;pointer-events:none}
+.busy.on{display:grid}
+.busy span{padding:10px 16px;border-radius:999px;background:#0b0d10d9;border:1px solid var(--line);font:500 13px var(--font-ui);display:flex;gap:10px;align-items:center}
+.busy span::before{content:"";width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.sheet{flex:none;background:var(--sheet);border-top:1px solid var(--line);border-radius:18px 18px 0 0;display:flex;flex-direction:column;min-width:0;
+  padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -10px 30px #0008;position:relative;z-index:2}
+.grab{appearance:none;border:0;background:transparent;height:22px;display:grid;place-items:center;cursor:pointer;color:inherit;padding:0}
+.grab span{width:38px;height:4px;border-radius:2px;background:#ffffff30}
+#status{margin:0;padding:0 max(16px,env(safe-area-inset-left,0px)) 6px;min-height:22px;font-size:13px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad);white-space:normal}
+.panes{display:none;max-height:min(46dvh,420px);overflow-y:auto;overscroll-behavior:contain;padding:4px max(16px,env(safe-area-inset-left,0px)) 14px}
+.sheet[data-open="true"] .panes{display:block}
+.pane{display:none;gap:14px;min-width:0}
+.pane.on{display:grid}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--line)}
+.tab{appearance:none;border:0;background:transparent;color:var(--mute);min-height:58px;display:grid;place-items:center;align-content:center;gap:3px;font:500 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;position:relative}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-selected="true"]{color:var(--fg)}
+.sheet[data-open="true"] .tab[aria-selected="true"]::after{content:"";position:absolute;top:-1px;left:22%;right:22%;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 18px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:12px;font:600 15px var(--font-ui);cursor:pointer;text-align:center;width:100%}
+.btn:active{transform:scale(.99)}
+.btn.primary{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--accent-ink);border-color:transparent}
+.btn[disabled]{opacity:.55;cursor:progress}
+.btn:focus-visible,.tab:focus-visible,.ico:focus-visible,.grab:focus-visible,input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .note{margin:0;color:var(--mute);font-size:13px}
 .fname{font:12px var(--font-mono);color:var(--mute);overflow-wrap:anywhere}
-.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.opt{position:relative}
-.opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
-.opt label{display:block;padding:11px 4px;text-align:center;font-size:14px;background:var(--panel);cursor:pointer}
-.opt input:checked+label{background:var(--fg);color:var(--bg);font-weight:500}
-.opt+.opt{border-left:1px solid var(--line)}
-.sl{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
+.sl{display:grid;grid-template-columns:1fr auto;gap:0 12px;align-items:baseline}
 .sl output{font:13px var(--font-mono);color:var(--mute)}
-.sl input[type=range]{grid-column:1/-1;width:100%;margin:6px 0;accent-color:var(--accent)}
-.chk{display:flex;gap:10px;align-items:center;min-height:36px}
-.chk input{width:20px;height:20px;accent-color:var(--accent);margin:0}
+.sl input[type=range]{grid-column:1/-1;width:100%;margin:2px 0;height:34px;background:transparent;-webkit-appearance:none;appearance:none}
+.sl input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
+.sl input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+.sl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;margin-top:-11px;border-radius:50%;background:var(--fg);border:3px solid var(--accent)}
+.sl input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--fg);border:3px solid var(--accent)}
+.chk{display:flex;gap:12px;align-items:center;min-height:44px}
+.chk input{width:22px;height:22px;accent-color:var(--accent);margin:0}
 .stats{font:13px var(--font-mono);color:var(--mute);font-variant-numeric:tabular-nums}
-#status{margin:0;min-height:2.9em;font-size:14px}
-#status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
-.ver{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:24px;padding-block:12px;font:12px/1.4 "JetBrains Mono",ui-monospace,monospace;opacity:.75}
-.ver button{font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:6px;padding:6px 10px;min-height:40px}
+.ver{display:flex;gap:12px;align-items:center;justify-content:space-between;font:12px/1.4 var(--font-mono);color:var(--mute)}
+.ver button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:40px;cursor:pointer}
+@media(min-width:760px){
+  .shell{flex-direction:row}
+  .sheet{width:360px;border-radius:0;border-top:0;border-left:1px solid var(--line);box-shadow:none;order:2}
+  .grab{display:none}
+  .panes{display:block;flex:1;max-height:none;padding-top:16px}
+  .tabs{order:-1;border-top:0;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+  #status{padding-top:10px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
 </style>
 
 </head>
 <body>
-<main class="app">
-  <header>
-    <h1>Splatbox</h1>
-    <p class="sub">Turn a photo and its depth map into Gaussian splats. Orbit them here, then export a .ply for a splat viewer.</p>
-  </header>
-
+<div class="shell">
   <section class="stage" aria-label="3D splat viewport">
-    <canvas id="gl" aria-label="Splat preview. Drag to orbit, pinch to zoom."></canvas>
-    <button class="chip" id="reset" type="button">Reset view</button>
+    <canvas id="gl" aria-label="Splat preview. Drag to orbit, pinch to zoom, two fingers to pan, double-tap to reset."></canvas>
+    <div class="top">
+      <div class="word"><i></i>Splatbox</div>
+      <button class="ico" id="reset" type="button" aria-label="Reset view"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+    </div>
+    <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="hud" id="hud"></div>
   </section>
 
-  <section class="panel">
-    <fieldset>
-      <legend>1. Photo</legend>
-      <label class="btn" for="photo">Choose photo</label>
-      <input id="photo" type="file" accept="image/*" hidden>
-      <span class="fname" id="photoName">Example scene (generated mountains)</span>
-    </fieldset>
-
-    <fieldset>
-      <legend>2. Depth</legend>
-      <div class="seg" role="radiogroup" aria-label="Depth source">
-        <div class="opt"><input type="radio" name="dmode" id="m-map" value="map" checked><label for="m-map">Depth map</label></div>
-        <div class="opt"><input type="radio" name="dmode" id="m-est" value="estimate"><label for="m-est">Estimate</label></div>
-        <div class="opt"><input type="radio" name="dmode" id="m-ai" value="ai"><label for="m-ai">AI depth</label></div>
+  <section class="sheet" id="sheet" data-open="false">
+    <button class="grab" id="grab" type="button" aria-label="Show or hide controls"><span></span></button>
+    <p id="status" role="status" aria-live="polite"></p>
+    <div class="panes">
+      <div class="pane on" id="p-photo" role="tabpanel">
+        <label class="btn primary" for="photo">Choose photo</label>
+        <input id="photo" type="file" accept="image/*" hidden>
+        <span class="fname" id="photoName">Example scene (generated mountains)</span>
+        <p class="note">Pick a photo and Splatbox works out the depth for you, right on your phone.</p>
       </div>
-      <div id="mapRow">
-        <label class="btn" for="depthFile" style="width:100%">Choose depth map</label>
-        <input id="depthFile" type="file" accept="image/*" hidden>
-        <p class="note" id="mapNote">Use the grayscale depth image from your ComfyUI workflow. White or black as near both work; the page guesses and you can flip it below.</p>
+      <div class="pane" id="p-depth" role="tabpanel">
+        <button class="btn" id="runAI" type="button">Estimate depth with AI</button>
+        <p class="note">Runs on your device with Depth Anything V2 Small. The first run downloads about 40 MB, once. After that it works offline.</p>
+        <label class="chk"><input type="checkbox" id="invert"> Flip depth (near and far swapped)</label>
       </div>
-      <div id="estRow" hidden>
-        <p class="note">Rough guess from the picture, no AI: lower in frame is nearer. Expect a flat, stage-set look.</p>
+      <div class="pane" id="p-shape" role="tabpanel">
+        <div class="sl"><label for="range">Depth range</label><output id="rangeO" for="range"></output>
+          <input id="range" type="range" min="0.2" max="2" step="0.05" value="0.8"></div>
+        <div class="sl"><label for="size">Splat size</label><output id="sizeO" for="size"></output>
+          <input id="size" type="range" min="0.6" max="2.6" step="0.1" value="1.3"></div>
+        <div class="sl"><label for="detail">Detail (long side)</label><output id="detailO" for="detail"></output>
+          <input id="detail" type="range" min="192" max="768" step="64" value="448"></div>
+        <div class="sl"><label for="cut">Cut far background</label><output id="cutO" for="cut"></output>
+          <input id="cut" type="range" min="0" max="0.6" step="0.02" value="0"></div>
+        <label class="chk"><input type="checkbox" id="sway"> Gentle sway</label>
       </div>
-      <div id="aiRow" hidden>
-        <button class="btn" id="runAI" type="button" style="width:100%">Estimate depth with AI</button>
-        <p class="note">Runs on your device with Depth Anything V2 Small. The first run downloads about 40 MB (model and runtime), then it is quick. If it fails, use a depth map.</p>
+      <div class="pane" id="p-export" role="tabpanel">
+        <div class="stats" id="stats"></div>
+        <button class="btn primary" id="export" type="button">Export .ply</button>
+        <p class="note">Saves a splat file. Open it in a splat viewer such as SuperSplat.</p>
+        <div class="ver"><span id="ver"></span><button id="upd" type="button">Update app</button></div>
       </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>3. Shape</legend>
-      <div class="sl"><label for="range">Depth range</label><output id="rangeO" for="range"></output>
-        <input id="range" type="range" min="0.2" max="2" step="0.05" value="0.8"></div>
-      <div class="sl"><label for="size">Splat size</label><output id="sizeO" for="size"></output>
-        <input id="size" type="range" min="0.6" max="2.6" step="0.1" value="1.3"></div>
-      <div class="sl"><label for="detail">Detail (long side)</label><output id="detailO" for="detail"></output>
-        <input id="detail" type="range" min="192" max="768" step="64" value="448"></div>
-      <div class="sl"><label for="cut">Cut far background</label><output id="cutO" for="cut"></output>
-        <input id="cut" type="range" min="0" max="0.6" step="0.02" value="0"></div>
-      <label class="chk"><input type="checkbox" id="invert"> Flip depth (near and far swapped)</label>
-      <label class="chk"><input type="checkbox" id="sway"> Gentle sway</label>
-    </fieldset>
-
-    <fieldset>
-      <legend>4. Export</legend>
-      <div class="stats" id="stats"></div>
-      <button class="btn primary" id="export" type="button">Export splats (.ply in a .zip)</button>
-      <p class="note">Phones can't save a bare .ply from here, so it comes zipped. Unzip it, then open the .ply in a splat viewer such as SuperSplat.</p>
-      <p id="status" role="status" aria-live="polite"></p>
-    </fieldset>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Controls">
+      <button class="tab" role="tab" data-tab="photo" aria-selected="false"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M21 16l-5-4-7 6"/></svg>Photo</button>
+      <button class="tab" role="tab" data-tab="depth" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>Depth</button>
+      <button class="tab" role="tab" data-tab="shape" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Shape</button>
+      <button class="tab" role="tab" data-tab="export" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Export</button>
+    </nav>
   </section>
-  <footer class="ver"><span id="ver"></span> <button id="upd" type="button">Update app</button></footer>
-</main>
+</div>
 
 <script>
 (function(){
@@ -145,7 +146,8 @@ var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
 
 /* ---------- state ---------- */
 var photoSrc=null, depthSrc=null, aiCanvas=null, photoName="example";
-var scene=null, yaw=0, pitch=0, zoom=1, dirty=true, interacted=0, timer=0;
+var scene=null, yaw=0, pitch=0, zoom=1, panX=0, panY=0, vyaw=0, vpitch=0, lastTyv=TY0(), dirty=true, interacted=0, timer=0;
+function TY0(){return Math.tan(25*Math.PI/180)}
 
 function setStatus(msg,kind){var s=$("status");s.textContent=msg||"";s.className=kind||""}
 function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
@@ -217,11 +219,9 @@ function rebuild(){
   var pd=dims(photoSrc),aspect=pd.w/pd.h,long=+$("detail").value;
   var W=aspect>=1?long:Math.round(long*aspect),H=aspect>=1?Math.round(long/aspect):long;
   var R=+$("range").value,cut=+$("cut").value,flip=$("invert").checked;
-  var mode=document.querySelector("input[name=dmode]:checked").value;
   var rgba=grab(photoSrc,W,H),N=W*H,D=new Float32Array(N),i,j;
   var src=null;
-  if(mode==="map")src=depthSrc;
-  if(mode==="ai")src=aiCanvas;
+  src=aiCanvas||depthSrc;
   if(src){
     var dd=grab(src,W,H);
     for(i=0;i<N;i++)D[i]=(0.299*dd[i*4]+0.587*dd[i*4+1]+0.114*dd[i*4+2])/255;
@@ -251,7 +251,7 @@ function rebuild(){
   scene={n:n,buf:buf.subarray(0,n*7),R:R,tx:tx,aspect:aspect};
   upload();
   $("stats").textContent=n.toLocaleString("en-GB")+" splats  ·  about "+(n*56/1e6).toFixed(1)+" MB";
-  $("hud").textContent=n.toLocaleString("en-GB")+" splats · drag to orbit · pinch to zoom";
+  $("hud").textContent=n.toLocaleString("en-GB")+" splats · drag · pinch · double-tap resets";
   dirty=true;
 }
 function schedule(){clearTimeout(timer);timer=setTimeout(rebuild,50)}
@@ -294,15 +294,20 @@ function draw(t,sway){
   if(!scene||!scene.n)return;
   var yw=yaw+(sway?0.22*Math.sin(t/1400):0),pt=pitch+(sway?0.05*Math.sin(t/1900):0);
   var zm=1+scene.R/2,dist=zm*zoom,cp=Math.cos(pt);
-  var eye=[Math.sin(yw)*cp*dist,Math.sin(pt)*dist,-zm+Math.cos(yw)*cp*dist];
-  var vA=w/h,tyv=Math.max(TY,scene.tx/vA);
-  gl.uniformMatrix4fv(loc.uView,false,lookAt(eye,[0,0,-zm]));
+  var eye=[panX+Math.sin(yw)*cp*dist,panY+Math.sin(pt)*dist,-zm+Math.cos(yw)*cp*dist];
+  var vA=w/h,tyv=Math.max(TY,scene.tx/vA);lastTyv=tyv;
+  gl.uniformMatrix4fv(loc.uView,false,lookAt(eye,[panX,panY,-zm]));
   gl.uniformMatrix4fv(loc.uProj,false,persp(2*Math.atan(tyv),vA,0.05,30));
   gl.uniform1f(loc.uPx,h/(2*tyv));gl.uniform1f(loc.uMul,+$("size").value);
   gl.drawArrays(gl.POINTS,0,scene.n);
 }
 function loop(t){
   requestAnimationFrame(loop);
+  if((vyaw||vpitch)&&!ptrs.size){
+    yaw=clamp(yaw+vyaw,-0.9,0.9);pitch=clamp(pitch+vpitch,-0.55,0.55);
+    vyaw*=0.92;vpitch*=0.92;if(Math.abs(vyaw)<0.0002)vyaw=0;if(Math.abs(vpitch)<0.0002)vpitch=0;
+    dirty=true;interacted=t;
+  }
   var sway=$("sway").checked&&(t-interacted>1500);
   if(!dirty&&!sway)return;
   dirty=false;draw(t,sway);
@@ -311,18 +316,40 @@ function loop(t){
 /* ---------- orbit controls ---------- */
 var ptrs=new Map(),lastD=0;
 function pinch(){if(ptrs.size<2)return 0;var a=Array.from(ptrs.values());return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
-cv.addEventListener("pointerdown",function(e){cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();interacted=performance.now()});
+function centroid(){var a=Array.from(ptrs.values());return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}}
+var tapT=0,tapX=0,tapY=0,moved=0;
+function resetView(){yaw=0;pitch=0;zoom=1;panX=0;panY=0;vyaw=0;vpitch=0;dirty=true}
+cv.addEventListener("pointerdown",function(e){
+  cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();interacted=performance.now();
+  vyaw=vpitch=0;if(ptrs.size===1)moved=0;
+});
 cv.addEventListener("pointermove",function(e){
   var p=ptrs.get(e.pointerId);if(!p)return;
-  var dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
-  if(ptrs.size===1){yaw=clamp(yaw-dx*0.006,-0.8,0.8);pitch=clamp(pitch+dy*0.006,-0.5,0.5)}
-  else if(ptrs.size===2){var d=pinch();if(lastD&&d)zoom=clamp(zoom*lastD/d,0.3,2.5);lastD=d}
+  var dx=e.clientX-p.x,dy=e.clientY-p.y;moved+=Math.abs(dx)+Math.abs(dy);
+  if(ptrs.size===1){
+    p.x=e.clientX;p.y=e.clientY;
+    var ay=-dx*0.005,ap=dy*0.005;
+    yaw=clamp(yaw+ay,-0.9,0.9);pitch=clamp(pitch+ap,-0.55,0.55);vyaw=ay;vpitch=ap;
+  }else if(ptrs.size===2){
+    var c0=centroid();p.x=e.clientX;p.y=e.clientY;var c1=centroid(),d=pinch();
+    var wpp=2*lastTyv*(1+(scene?scene.R:1)/2)*zoom/Math.max(1,cv.clientHeight);
+    panX=clamp(panX-(c1.x-c0.x)*wpp,-1.5,1.5);panY=clamp(panY+(c1.y-c0.y)*wpp,-1.5,1.5);
+    if(lastD&&d)zoom=clamp(zoom*lastD/d,0.3,2.5);lastD=d;vyaw=vpitch=0;
+  }
   interacted=performance.now();dirty=true;
 });
-function release(e){ptrs.delete(e.pointerId);lastD=pinch()}
+function release(e){
+  var was=ptrs.size;ptrs.delete(e.pointerId);lastD=pinch();
+  if(was===1&&moved<10){
+    var now=performance.now();
+    if(now-tapT<320&&Math.abs(e.clientX-tapX)<30&&Math.abs(e.clientY-tapY)<30){resetView();tapT=0}
+    else{tapT=now;tapX=e.clientX;tapY=e.clientY;if($("sheet").dataset.open==="true"&&window.innerWidth<760)openTab(null)}
+  }
+}
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
 cv.addEventListener("wheel",function(e){e.preventDefault();zoom=clamp(zoom*Math.exp(e.deltaY*0.001),0.3,2.5);dirty=true},{passive:false});
-$("reset").addEventListener("click",function(){yaw=0;pitch=0;zoom=1;dirty=true});
+$("reset").addEventListener("click",resetView);
+if(window.ResizeObserver)new ResizeObserver(function(){dirty=true}).observe(cv.parentNode);
 window.addEventListener("resize",function(){dirty=true});
 
 /* ---------- inputs ---------- */
@@ -332,31 +359,34 @@ function loadFile(file){
     im.onload=function(){res(im)};im.onerror=function(){rej(new Error("That file isn't an image this browser can read."))};im.src=u;
   });
 }
-function showMode(){
-  var m=document.querySelector("input[name=dmode]:checked").value;
-  $("mapRow").hidden=m!=="map";$("estRow").hidden=m!=="estimate";$("aiRow").hidden=m!=="ai";
+/* ---------- bottom sheet tabs ---------- */
+var curTab=null;
+function openTab(name){
+  curTab=name;
+  $("sheet").dataset.open=name?"true":"false";
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){t.setAttribute("aria-selected",String(t.dataset.tab===name))});
+  Array.prototype.forEach.call(document.querySelectorAll(".pane"),function(p){p.classList.toggle("on",p.id==="p-"+name)});
+  dirty=true;
 }
-function setMode(m){$("m-"+(m==="estimate"?"est":m)).checked=true;showMode()}
-Array.prototype.forEach.call(document.querySelectorAll("input[name=dmode]"),function(r){
-  r.addEventListener("change",function(){showMode();schedule();
-    if(r.value==="map"&&!depthSrc)setStatus("No depth map loaded yet, so this is the estimate for now.","warn");else setStatus("");});
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(t){
+  t.addEventListener("click",function(){
+    if(window.innerWidth>=760)openTab(t.dataset.tab);else openTab(curTab===t.dataset.tab?null:t.dataset.tab);
+  });
 });
+$("grab").addEventListener("click",function(){openTab(curTab?null:"photo")});
+function busy(on,msg){$("busy").classList.toggle("on",!!on);if(msg)$("busyT").textContent=msg}
+function aiCached(){return window.caches?caches.match("model/dav2s.1.wasm").then(function(r){return !!r},function(){return false}):Promise.resolve(false)}
 $("photo").addEventListener("change",function(e){
   var f=e.target.files[0];if(!f)return;
   loadFile(f).then(function(im){
     photoSrc=im;depthSrc=null;aiCanvas=null;photoName=f.name.replace(/\.[^.]+$/,"").replace(/[^\w-]+/g,"_").slice(0,40)||"photo";
     $("photoName").textContent=f.name;$("invert").checked=false;
-    setMode("estimate");yaw=0;pitch=0;zoom=1;schedule();
-    setStatus("Photo loaded. Add its depth map for a proper result, or keep the rough estimate.","ok");
-  }).catch(function(err){setStatus(err.message,"bad")});
-});
-$("depthFile").addEventListener("change",function(e){
-  var f=e.target.files[0];if(!f)return;
-  loadFile(f).then(function(im){
-    depthSrc=im;var flip=guessFlip(im);$("invert").checked=flip;
-    $("mapNote").textContent="Depth map: "+f.name;
-    setMode("map");schedule();
-    setStatus(flip?"Depth map loaded. Bright sky looked like far, so I flipped it. Use the flip box if that's wrong.":"Depth map loaded.","ok");
+    resetView();schedule();
+    if(window.innerWidth<760)openTab(null);
+    aiCached().then(function(c){
+      if(c)doAI();
+      else{setStatus("Photo loaded. Tap Depth to download the AI model (about 40 MB, once).","ok");openTab("depth")}
+    });
   }).catch(function(err){setStatus(err.message,"bad")});
 });
 [["range","rangeO",function(v){return (+v).toFixed(2)}],["size","sizeO",function(v){return (+v).toFixed(1)+"×"}],
@@ -401,18 +431,20 @@ function runDepth(session){
     x.putImageData(id,0,0);return cc;
   });
 }
-$("runAI").addEventListener("click",function(){
+function doAI(){
   var btn=$("runAI"),t0=performance.now();btn.disabled=true;
-  getSession().then(function(s){
-    setStatus("Estimating depth…");
-    return new Promise(function(r){setTimeout(r,40)}).then(function(){return runDepth(s)});
+  aiCached().then(function(c){busy(true,c?"Estimating depth…":"Downloading AI model (about 40 MB)…");setStatus(c?"Estimating depth…":"First run downloads the AI model, about 40 MB. One time only.")});
+  return getSession().then(function(sess){
+    busy(true,"Estimating depth…");
+    return new Promise(function(r){setTimeout(r,40)}).then(function(){return runDepth(sess)});
   }).then(function(cc){
-    aiCanvas=cc;$("invert").checked=false;setMode("ai");schedule();
-    setStatus("AI depth ready in "+((performance.now()-t0)/1000).toFixed(1)+" s.","ok");
+    aiCanvas=cc;$("invert").checked=false;schedule();
+    setStatus("3D ready in "+((performance.now()-t0)/1000).toFixed(1)+" s. Drag to look around.","ok");
   }).catch(function(err){
-    setStatus("The depth model didn't run here: "+(err&&err.message?err.message:"blocked")+" Use a depth map from ComfyUI instead.","bad");
-  }).then(function(){btn.disabled=false});
-});
+    setStatus("The depth model didn't run here: "+(err&&err.message?err.message:"blocked")+". The rough preview is still shown.","bad");
+  }).then(function(){btn.disabled=false;busy(false)});
+}
+$("runAI").addEventListener("click",doAI);
 
 /* ---------- export: 3DGS .ply inside a stored .zip ---------- */
 var CRC=(function(){var t=new Uint32Array(256),n,k,c;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
@@ -454,13 +486,13 @@ $("export").addEventListener("click",function(){
       var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="splatbox-"+photoName+".ply";
       document.body.appendChild(a);a.click();a.remove();
       setTimeout(function(){URL.revokeObjectURL(a.href)},60000);
-      setStatus("Saved splatbox-"+photoName+".ply. Open it in a splat viewer such as SuperSplat.","ok");
+      setStatus("Saved splatbox-"+photoName+".ply. Open it in SuperSplat or any splat viewer.","ok");
     }catch(e){setStatus("The save didn't go through: "+(e&&e.message||"unknown"),"bad")}
   },30);
 });
 
 /* ---------- app: version + update ---------- */
-var VERSION="Version 001";
+var VERSION="Version 002";
 $("ver").textContent="Splatbox "+VERSION;
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("sw.js").catch(function(){});
@@ -468,7 +500,7 @@ if("serviceWorker" in navigator){
 $("upd").addEventListener("click",function(){
   setStatus("Checking for a new version…");
   var done=function(){location.reload()};
-  (window.caches?caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}):Promise.resolve()).then(function(){
+  (window.caches?caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!=="splatbox-ai"}).map(function(k){return caches.delete(k)}))}):Promise.resolve()).then(function(){
     return navigator.serviceWorker?navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}):0;
   }).then(done,done);
 });
@@ -479,8 +511,8 @@ if(!gl){
 }else{
   initGL();
   var s=makeSample();photoSrc=s.photo;depthSrc=s.depth;
-  showMode();rebuild();
-  setStatus("Example scene loaded. Choose your own photo above and add its depth map.");
+  rebuild();
+  setStatus("Example scene. Tap Photo to use your own.");
   requestAnimationFrame(loop);
 }
 })();
