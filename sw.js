@@ -1,5 +1,5 @@
 /* Splatbox service worker. App shell is versioned; the AI runtime and model live in their own cache so updates don't re-download 40 MB. */
-const VERSION='Version 011';
+const VERSION='Version 012';
 const CACHE='splatbox-'+VERSION;
 const AI='splatbox-ai';
 const SHELL=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];

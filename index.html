@@ -131,9 +131,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .tool:hover,.btn:hover,.seg button:hover,.ico:hover{filter:brightness(1.15)}
   #train .tinfo,#train .trow{width:min(820px,100%);margin:0 auto}
 }
-#rmodes{position:absolute;right:12px;bottom:calc(12px + var(--safe-b));z-index:5;display:flex;gap:2px;padding:3px;border-radius:12px;background:#12151acc;border:1px solid var(--line);backdrop-filter:blur(8px)}
-#rmodes button{min-height:36px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:var(--mute);font:500 13px var(--font-ui);cursor:pointer}
-#rmodes button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
 #dropHint{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#0b0d10d9;border:3px dashed var(--accent);font:600 22px var(--font-ui);pointer-events:none}
 .keys{font:12px/1.7 var(--font-mono);color:var(--mute);margin:0}
 .keys b{color:var(--fg);font-weight:500}
@@ -169,13 +166,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 
 <div id="editor" hidden>
   <section class="stage" id="stage" aria-label="3D splat viewport">
-    <canvas id="gl" aria-label="Splat preview. Drag to orbit, pinch to zoom, two fingers to pan, double-tap to reset."></canvas>
+    <canvas id="gl" aria-label="Splat preview. Left-drag to orbit, right-drag to pan, wheel to zoom, double-click to focus."></canvas>
     <div class="top">
       <button class="ico" id="back" type="button" aria-label="Back to projects"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
       <div class="pname" id="pname"></div>
       <button class="ico" id="reset" type="button" aria-label="Reset view"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
     </div>
-    <div class="rmodes" id="rmodes" hidden role="group" aria-label="Render mode"></div>
     <div id="dropHint" hidden>Drop photos to start a project</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
@@ -203,19 +199,19 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 011";
+var VERSION="Version 012";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:768,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
   fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat"};
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"orbit",fov:50,sens:1};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
 var photoSrc=null, depthImg=null, photoName="example", cur=null;
-var scene=null, zoom=1, panX=0, panY=0, vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
+var scene=null, zoom=1, TG=[0,0,0], vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
 var toastT=0;
 function setStatus(msg,kind){
   var t=$("toast");clearTimeout(toastT);
@@ -532,10 +528,36 @@ function orthonorm(m){
   var c2=[c0[1]*c1[2]-c0[2]*c1[1],c0[2]*c1[0]-c0[0]*c1[2],c0[0]*c1[1]-c0[1]*c1[0]];
   return [c0[0],c1[0],c2[0],c0[1],c1[1],c2[1],c0[2],c1[2],c2[2]];
 }
-function orbitBy(ay,ap){
-  var up=mv(Rm,[0,1,0]),rt=mv(Rm,[1,0,0]);
-  Rm=orthonorm(mm(rotAxis(rt,-ap),mm(rotAxis(up,ay),Rm)));
+var KEYS={},LASTM=null,focusA=null;
+function pitchOf(){return Math.asin(clamp(mv(Rm,[0,0,1])[1],-1,1))}
+function rawTurn(ay,ap){
+  if(S.ctrl==="trackball"){
+    var up=mv(Rm,[0,1,0]),rt=mv(Rm,[1,0,0]);
+    Rm=orthonorm(mm(rotAxis(rt,-ap),mm(rotAxis(up,ay),Rm)));return;
+  }
+  /* turntable: yaw about the world's up axis, pitch about the camera's own right axis, so the horizon never tilts */
+  Rm=orthonorm(mm(rotAxis([0,1,0],ay),Rm));
+  var np=pitchOf()+ap;
+  if(Math.abs(np)>1.5533){ap=(np>0?1.5533:-1.5533)-pitchOf()}
+  Rm=orthonorm(mm(Rm,rotAxis([1,0,0],-ap)));
 }
+function orbitBy(ay,ap){
+  if(S.ctrl==="fly"){
+    /* look around from where the camera is: pivot on the eye, not the target */
+    var d=curDist(),eye=[TG[0]+Rm[2]*d,TG[1]+Rm[5]*d,TG[2]+Rm[8]*d];
+    rawTurn(-ay,-ap);
+    TG=[eye[0]-Rm[2]*d,eye[1]-Rm[5]*d,eye[2]-Rm[8]*d];
+  }else rawTurn(ay,ap);
+}
+function rollBy(a){Rm=orthonorm(mm(Rm,rotAxis([0,0,1],a)))}
+function levelHorizon(){
+  var f=mv(Rm,[0,0,-1]),fl=Math.hypot(f[0],f[2]);
+  if(fl<1e-4){dirty=true;return}
+  var rx=[-f[2]/fl,0,f[0]/fl],zb=[-f[0],-f[1],-f[2]];
+  var yb=[zb[1]*rx[2]-zb[2]*rx[1],zb[2]*rx[0]-zb[0]*rx[2],zb[0]*rx[1]-zb[1]*rx[0]];
+  Rm=[rx[0],yb[0],zb[0],rx[1],yb[1],zb[1],rx[2],yb[2],zb[2]];dirty=true;
+}
+function curDist(){return LASTM?LASTM.dist:1.95*zoom}
 var OFF0={y:0,p:0,z:1,x:0};
 function draw(ao){
   var dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(2,Math.round(cv.clientWidth*dpr/2)*2),h=Math.max(2,Math.round(cv.clientHeight*dpr/2)*2);
@@ -554,11 +576,13 @@ function draw(ao){
   w=vw;h=vh;
   var o=ao||OFF0;
   var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
-  var zm=1+scene.R/2,dist=zm*zoom*o.z;
-  var po=mv(Rv,[panX+o.x*scene.tx*zm,panY,0]),tg=[po[0],po[1],-zm+po[2]];
+  var zm=1+scene.R/2,vA=w/h,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,15,110)*Math.PI/360),tyv=tyBase*tyf/TY;
+  var dist=zm*zoom*o.z*TY/tyf;lastTyv=tyv;
+  var po=mv(Rv,[o.x*scene.tx*zm,0,0]),tg=[TG[0]+po[0],TG[1]+po[1],-zm+TG[2]+po[2]];
   var eo=mv(Rv,[0,0,dist]),eye=[tg[0]+eo[0],tg[1]+eo[1],tg[2]+eo[2]],upv=mv(Rv,[0,1,0]);
-  var vA=w/h,tyv=Math.max(TY,scene.tx/vA);lastTyv=tyv;
   var Vm=lookAt(eye,tg,upv),Pm=persp(2*Math.atan(tyv),vA,0.01,500);
+  var kk=cv.width/Math.max(1,cv.clientWidth);
+  LASTM={V:Vm,P:Pm,vx:vx,vy:vy,vw:w,vh:h,k:kk,tyv:tyv,vA:vA,dist:dist};
   if(scene.gs&&GL2&&S.render!=="points"&&drawGS(Vm,Pm,w,h,tyv,dist,bg))return;
   if(dotsStale)bindDots();
   gl.uniformMatrix4fv(loc.uView,false,Vm);
@@ -592,9 +616,11 @@ function syncPlay(){var b=document.querySelector("[data-act=play]");if(b)b.textC
 function loop(t){
   requestAnimationFrame(loop);
   if($("editor").hidden)return;
+  stepKeys(t);
+  if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
     orbitBy(vyaw,vpitch);
-    vyaw*=0.92;vpitch*=0.92;if(Math.abs(vyaw)<0.0002)vyaw=0;if(Math.abs(vpitch)<0.0002)vpitch=0;dirty=true;
+    vyaw*=0.9;vpitch*=0.9;if(Math.abs(vyaw)<0.0003)vyaw=0;if(Math.abs(vpitch)<0.0003)vpitch=0;dirty=true;
   }
   if(anim){
     var u=(t-anim.t0)/1000/anim.dur;
@@ -613,64 +639,130 @@ var ptrs=new Map(),lastD=0;
 function pinch(){if(ptrs.size<2)return 0;var a=Array.from(ptrs.values());return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
 function pangle(){var a=Array.from(ptrs.values());return Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x)}
 function centroid(){var a=Array.from(ptrs.values());return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}}
-var tapT=0,tapX=0,tapY=0,moved=0;
-function resetView(){Rm=[1,0,0,0,1,0,0,0,1];zoom=1;panX=0;panY=0;vyaw=0;vpitch=0;dirty=true}
-var mousePan=false;
+var moved=0,mode=null,lastMoveT=0,lastCX=0,lastCY=0;
+function resetView(){Rm=[1,0,0,0,1,0,0,0,1];zoom=1;TG=[0,0,0];vyaw=0;vpitch=0;focusA=null;dirty=true}
+function frameAll(){TG=[0,0,0];zoom=1;focusA=null;dirty=true}
+function ndcAt(cx,cy){
+  var L=LASTM;if(!L)return null;var r=cv.getBoundingClientRect(),px=(cx-r.left)*L.k,py=(r.bottom-cy)*L.k;
+  return {x:((px-L.vx)/L.vw)*2-1,y:((py-L.vy)/L.vh)*2-1};
+}
+function panBy(dxPx,dyPx){
+  var L=LASTM;if(!L)return;var wpp=2*L.tyv*L.dist/Math.max(1,L.vh/L.k),rt=[Rm[0],Rm[3],Rm[6]],up=[Rm[1],Rm[4],Rm[7]];
+  TG=[TG[0]-rt[0]*dxPx*wpp+up[0]*dyPx*wpp,TG[1]-rt[1]*dxPx*wpp+up[1]*dyPx*wpp,TG[2]-rt[2]*dxPx*wpp+up[2]*dyPx*wpp];
+}
+function zoomAt(f,cx,cy){
+  var L=LASTM,nd=(L&&cx!=null)?ndcAt(cx,cy):null,nz=clamp(zoom*f,0.0005,200);f=nz/zoom;
+  if(S.ctrl!=="fly"&&L&&nd){
+    /* keep the point under the cursor where it is while zooming */
+    var ox=nd.x*L.vA*L.tyv*L.dist,oy=nd.y*L.tyv*L.dist,rt=[Rm[0],Rm[3],Rm[6]],up=[Rm[1],Rm[4],Rm[7]];
+    var q=[rt[0]*ox+up[0]*oy,rt[1]*ox+up[1]*oy,rt[2]*ox+up[2]*oy];
+    TG=[TG[0]+q[0]*(1-f),TG[1]+q[1]*(1-f),TG[2]+q[2]*(1-f)];
+  }
+  zoom=nz;dirty=true;
+}
+function pickAt(cx,cy){
+  var L=LASTM;if(!L||!scene)return null;var nd=ndcAt(cx,cy);if(!nd)return null;
+  var V=L.V,P=L.P,g=scene.gs,pos=g?g.pos:scene.buf,st=g?3:7,n=g?g.n:scene.n,al=g?g.alpha:null,rad2=Math.pow(14*L.k,2),best=null,bz=1e9;
+  for(var i=0;i<n;i++){
+    if(al&&al[i]<0.4)continue;
+    var x=pos[i*st],y=pos[i*st+1],z=pos[i*st+2],vz=V[2]*x+V[6]*y+V[10]*z+V[14];
+    if(vz>-0.05||-vz>=bz)continue;
+    var vx_=V[0]*x+V[4]*y+V[8]*z+V[12],vy_=V[1]*x+V[5]*y+V[9]*z+V[13],w=-vz;
+    var ex=(P[0]*vx_/w-nd.x)*0.5*L.vw,ey=(P[5]*vy_/w-nd.y)*0.5*L.vh;
+    if(ex*ex+ey*ey<rad2){bz=-vz;best=[x,y,z]}
+  }
+  return best;
+}
+function focusOn(cx,cy){
+  var pt=pickAt(cx,cy);
+  if(!pt){frameAll();return}
+  var zm=1.95;focusA={t0:performance.now(),a:TG.slice(),b:[pt[0],pt[1],pt[2]+zm]};vyaw=vpitch=0;dirty=true;
+}
 cv.addEventListener("contextmenu",function(e){e.preventDefault()});
 cv.addEventListener("pointerdown",function(e){
-  mousePan=e.pointerType==="mouse"&&(e.button===1||e.button===2||e.shiftKey);
+  if(e.pointerType==="mouse"){
+    mode=(e.button===1||e.button===2||e.shiftKey)?"pan":e.ctrlKey||e.metaKey?"zoom":e.altKey?"roll":"orbit";
+    if(e.button===2&&e.shiftKey)mode="orbit";
+  }else mode="orbit";
   try{cv.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();
-  stopAnim();vyaw=vpitch=0;if(ptrs.size===1)moved=0;
+  stopAnim();focusA=null;vyaw=vpitch=0;if(ptrs.size===1){moved=0;lastCX=e.clientX;lastCY=e.clientY}
+  cv.style.cursor=mode==="pan"?"move":mode==="zoom"?"zoom-in":"grabbing";
 });
 cv.addEventListener("pointermove",function(e){
   var p=ptrs.get(e.pointerId);if(!p||(anim&&anim.rec))return;
   var dx=e.clientX-p.x,dy=e.clientY-p.y;moved+=Math.abs(dx)+Math.abs(dy);
-  if(ptrs.size===1&&mousePan){
+  var sens=0.0055*(+S.sens||1)*(S.fov?S.fov/50:1);
+  if(ptrs.size===1){
     p.x=e.clientX;p.y=e.clientY;
-    var wpp1=2*lastTyv*(1+(scene?scene.R:1)/2)*zoom/Math.max(1,cv.clientHeight);
-    panX-=dx*wpp1;panY+=dy*wpp1;vyaw=vpitch=0;
-  }else if(ptrs.size===1){
-    p.x=e.clientX;p.y=e.clientY;
-    var ay=-dx*0.005,ap=dy*0.005;
-    orbitBy(ay,ap);vyaw=ay;vpitch=ap;
+    if(mode==="pan"){panBy(dx,dy);vyaw=vpitch=0}
+    else if(mode==="zoom"){zoomAt(Math.exp(dy*0.006));vyaw=vpitch=0}
+    else if(mode==="roll"){rollBy(dx*0.006);vyaw=vpitch=0}
+    else{
+      var ay=-dx*sens,ap=dy*sens;orbitBy(ay,ap);
+      var nowT=performance.now();vyaw=ay;vpitch=ap;lastMoveT=nowT;
+    }
   }else if(ptrs.size===2){
-    /* two fingers: twist = roll, drag up/down = tilt, drag sideways = pan, pinch = zoom */
+    /* two fingers: drag = pan, pinch = zoom, twist = roll (trackball only) */
     var c0=centroid(),a0=pangle();p.x=e.clientX;p.y=e.clientY;var c1=centroid(),d=pinch(),da=pangle()-a0;
     if(da>Math.PI)da-=2*Math.PI;else if(da<-Math.PI)da+=2*Math.PI;
-    var wpp=2*lastTyv*(1+(scene?scene.R:1)/2)*zoom/Math.max(1,cv.clientHeight);
-    panX-=(c1.x-c0.x)*wpp;
-    orbitBy(0,(c1.y-c0.y)*0.005);
-    if(da)Rm=orthonorm(mm(rotAxis(mv(Rm,[0,0,1]),da),Rm));
-    if(lastD&&d)zoom=clamp(zoom*lastD/d,0.003,60);lastD=d;vyaw=vpitch=0;
+    panBy(c1.x-c0.x,c1.y-c0.y);
+    if(da&&S.ctrl==="trackball")rollBy(da);
+    if(lastD&&d)zoomAt(lastD/d,c1.x,c1.y);lastD=d;vyaw=vpitch=0;
   }
   dirty=true;
 });
 function release(e){
-  var was=ptrs.size;ptrs.delete(e.pointerId);lastD=pinch();
-  if(was===1&&moved<10){
-    var now=performance.now();
-    if(now-tapT<320&&Math.abs(e.clientX-tapX)<30&&Math.abs(e.clientY-tapY)<30){resetView();tapT=0}
-    else{tapT=now;tapX=e.clientX;tapY=e.clientY;closeTool()}
-  }
+  var was=ptrs.size;ptrs.delete(e.pointerId);lastD=pinch();cv.style.cursor="";
+  /* only coast if the pointer was still moving when let go */
+  if(performance.now()-lastMoveT>70||mode!=="orbit"||S.ctrl==="fly"){vyaw=vpitch=0}
+  if(was===1&&moved<10){closeTool()}
 }
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
-cv.addEventListener("wheel",function(e){e.preventDefault();var d=e.deltaY*(e.deltaMode===1?16:1);zoom=clamp(zoom*Math.exp(d*0.0012),0.003,60);dirty=true},{passive:false});
-cv.addEventListener("dblclick",function(){resetView()});
+cv.addEventListener("wheel",function(e){e.preventDefault();var d=e.deltaY*(e.deltaMode===1?16:1);
+  if(S.ctrl==="fly"&&!e.ctrlKey){var f=mv(Rm,[0,0,-1]),st=-d*0.0012*curDist();TG=[TG[0]+f[0]*st,TG[1]+f[1]*st,TG[2]+f[2]*st];dirty=true}
+  else zoomAt(Math.exp(d*(e.ctrlKey?0.01:0.0012)),e.clientX,e.clientY)},{passive:false});
+cv.addEventListener("dblclick",function(e){focusOn(e.clientX,e.clientY)});
+var KEYMAP={ArrowLeft:1,ArrowRight:1,ArrowUp:1,ArrowDown:1,KeyW:1,KeyA:1,KeyS:1,KeyD:1,KeyQ:1,KeyE:1,BracketLeft:1,BracketRight:1,Equal:1,Minus:1,NumpadAdd:1,NumpadSubtract:1};
+var lastKT=0;
+function stepKeys(t){
+  var any=false,k;for(k in KEYS){if(KEYS[k]&&k!=="ShiftLeft"&&k!=="ShiftRight"){any=true;break}}
+  if(!any){lastKT=t;return}
+  if($("editor").hidden||anim){lastKT=t;return}
+  var dt=Math.min(0.05,Math.max(0,(t-(lastKT||t))/1000));lastKT=t;if(!dt)return;
+  var fast=(KEYS.ShiftLeft||KEYS.ShiftRight)?3:1,K=function(c){return !!KEYS[c]},sens=(+S.sens||1);
+  var L=LASTM,fly=S.ctrl==="fly",d=curDist(),mvSpd=d*0.9*fast*dt,f=mv(Rm,[0,0,-1]),rt=[Rm[0],Rm[3],Rm[6]],up=fly?[0,1,0]:[Rm[1],Rm[4],Rm[7]];
+  var lr=(K("ArrowLeft")?1:0)-(K("ArrowRight")?1:0),ud=(K("ArrowDown")?1:0)-(K("ArrowUp")?1:0);
+  if(lr||ud){orbitBy(lr*1.7*sens*fast*dt,ud*1.7*sens*fast*dt);vyaw=vpitch=0}
+  var fw=(K("KeyW")?1:0)-(K("KeyS")?1:0),sd=(K("KeyD")?1:0)-(K("KeyA")?1:0),vt=(K("KeyE")?1:0)-(K("KeyQ")?1:0);
+  if(fw){if(fly){TG=[TG[0]+f[0]*fw*mvSpd,TG[1]+f[1]*fw*mvSpd,TG[2]+f[2]*fw*mvSpd]}else zoom=clamp(zoom*Math.exp(-fw*1.4*fast*dt),0.0005,200)}
+  if(sd){TG=[TG[0]+rt[0]*sd*mvSpd,TG[1]+rt[1]*sd*mvSpd,TG[2]+rt[2]*sd*mvSpd]}
+  if(vt){TG=[TG[0]+up[0]*vt*mvSpd,TG[1]+up[1]*vt*mvSpd,TG[2]+up[2]*vt*mvSpd]}
+  var rl=(K("BracketRight")?1:0)-(K("BracketLeft")?1:0);if(rl)rollBy(rl*1.2*fast*dt);
+  var zz=(K("Equal")||K("NumpadAdd")?1:0)-(K("Minus")||K("NumpadSubtract")?1:0);if(zz)zoom=clamp(zoom*Math.exp(-zz*1.4*fast*dt),0.0005,200);
+  dirty=true;
+}
+function viewPreset(yaw,pitch){Rm=[1,0,0,0,1,0,0,0,1];rawTurnTo(yaw,pitch);dirty=true}
+function rawTurnTo(yaw,pitch){Rm=orthonorm(mm(rotAxis([0,1,0],yaw),Rm));Rm=orthonorm(mm(Rm,rotAxis([1,0,0],-pitch)))}
 document.addEventListener("keydown",function(e){
-  if(e.ctrlKey||e.metaKey||e.altKey)return;
   var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
   if($("editor").hidden)return;
-  var k=e.key,ids=TOOLS.map(function(x){return x[0]}).filter(function(id){return !rail.querySelector('[data-tool="'+id+'"]').hidden});
-  if(k==="Escape"){closeTool();return}
-  if(/^[1-9]$/.test(k)&&ids[+k-1]){e.preventDefault();var id=ids[+k-1];if(curTool===id)closeTool();else openTool(id);return}
-  if(k==="r"||k==="R"||k==="Home"){resetView();return}
-  if(k===" "){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false);return}
-  if(k==="ArrowLeft"){orbitBy(0.06,0);dirty=true}else if(k==="ArrowRight"){orbitBy(-0.06,0);dirty=true}
-  else if(k==="ArrowUp"){orbitBy(0,-0.06);dirty=true}else if(k==="ArrowDown"){orbitBy(0,0.06);dirty=true}
-  else if(k==="+"||k==="="){zoom=clamp(zoom/1.12,0.003,60);dirty=true}else if(k==="-"){zoom=clamp(zoom*1.12,0.003,60);dirty=true}
-  else return;
-  e.preventDefault();
+  if(e.metaKey||(e.ctrlKey&&!/^Numpad/.test(e.code)))return;
+  var c=e.code,ids=TOOLS.map(function(x){return x[0]}).filter(function(id){return !rail.querySelector('[data-tool="'+id+'"]').hidden});
+  if(c==="Escape"){closeTool();return}
+  var dm=/^Digit([1-9])$/.exec(c);
+  if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curTool===id)closeTool();else openTool(id);return}
+  if(c==="KeyR"||c==="Home"){resetView();return}
+  if(c==="KeyF"){frameAll();return}
+  if(c==="KeyL"){levelHorizon();return}
+  if(c==="Space"){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false);return}
+  if(c==="Numpad1"){e.preventDefault();viewPreset(e.ctrlKey?Math.PI:0,0);return}
+  if(c==="Numpad3"){e.preventDefault();viewPreset(e.ctrlKey?Math.PI/2:-Math.PI/2,0);return}
+  if(c==="Numpad7"){e.preventDefault();viewPreset(0,e.ctrlKey?-1.5533:1.5533);return}
+  if(c==="ShiftLeft"||c==="ShiftRight")KEYS[c]=true;
+  if(KEYMAP[c]){e.preventDefault();KEYS[c]=true;stopAnim();focusA=null;vyaw=vpitch=0;dirty=true}
 });
+document.addEventListener("keyup",function(e){if(KEYS[e.code]){KEYS[e.code]=false}if(e.code==="ShiftLeft"||e.code==="ShiftRight")KEYS[e.code]=false});
+window.addEventListener("blur",function(){KEYS={}});
 $("reset").addEventListener("click",resetView);
 if(window.ResizeObserver){var ro=new ResizeObserver(function(){dirty=true});ro.observe($("stage"));ro.observe($("pop"))}
 window.addEventListener("resize",function(){dirty=true});
@@ -820,13 +912,16 @@ var PANES={
   look:function(){return (cur&&cur.kind==="photos"?'<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+'<p class="note">Splats = real soft Gaussians. Solid = hard-edged ellipses. Points = simple dots. Depth = colour by distance.</p>':'')+'<p class="lbl">Dot shape</p>'+seg("shape",[[0,"Round"],[1,"Square"],[2,"Diamond"],[3,"Ring"]])+
     sl("size","Splat size",0.6,2.6,0.1)+sl("detail","Detail (long side)",192,768,64)+
     '<p class="lbl">Background</p><div class="sw">'+SWATCH.map(function(c){return '<button type="button" data-k="bg" data-v="'+c+'" style="background:'+c+'" aria-label="Background '+c+'" aria-pressed="false"></button>'}).join("")+
-    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'+
-    (IS_DESK?'<p class="keys"><b>Left-drag</b> orbit · <b>Right-drag</b> or <b>Shift-drag</b> pan · <b>Wheel</b> zoom · <b>Double-click</b> or <b>R</b> reset · <b>Arrows</b> orbit · <b>+ −</b> zoom · <b>Space</b> play · <b>1–7</b> open tools · <b>Esc</b> close</p>':'')},
+    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'},
   colour:function(){return sl("exp","Exposure",-100,100,1)+sl("con","Contrast",-100,100,1)+sl("sat","Saturation",-100,100,1)+sl("hue","Hue",-180,180,1)+sl("warm","Warmth",-100,100,1)+
     '<button class="btn small" type="button" data-act="resetColour">Reset colour</button><p class="note">Colour changes are saved into the exported .ply.</p>'},
   fx:function(){return sl("fog","Depth fog",0,1,0.05)+sl("defocus","Defocus",0,1,0.05)+sl("focus","Focus distance",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
     '<button class="btn small" type="button" data-act="resetFx">Reset FX</button><p class="note">FX are for viewing, video and images. They aren\'t saved into the .ply.</p>'},
-  camera:function(){return '<p class="lbl">Move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
+  camera:function(){return '<p class="lbl">Controls</p>'+seg("ctrl",[["orbit","Turntable"],["fly","Fly"],["trackball","Free"]])+
+    sl("fov","Lens (field of view)",20,100,1)+sl("sens","Mouse speed",0.3,3,0.1)+
+    '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
+    '<p class="keys"><b>Left-drag</b> orbit · <b>Right/Shift-drag</b> pan · <b>Wheel</b> zoom to cursor · <b>Double-click</b> focus on that spot<br><b>W A S D</b> move · <b>Q E</b> down/up · <b>Arrows</b> look · <b>Shift</b> faster<br><b>Alt-drag</b> or <b>[ ]</b> roll · <b>L</b> level · <b>F</b> frame all · <b>R</b> reset<br><b>Numpad 1 / 3 / 7</b> front / side / top (Ctrl = opposite)</p>'+
+    '<p class="lbl">Move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
     sl("dur","Length",2,12,1)+chk("loop","Loop")+
     '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
     '<p class="note">Recording plays the move once and saves a video of the viewer.</p>'},
@@ -839,7 +934,7 @@ var FMT=(function(){
   var pm=function(v){v=+v;return v>0?"+"+v:""+v},pc=function(v){return Math.round(v*100)+"%"};
   return {range:function(v){return (+v).toFixed(2)},smooth:function(v){return +v?v+" px":"off"},cut:pc,fill:function(v){return +v?pc(v):"off"},
     size:function(v){return (+v).toFixed(1)+"×"},detail:function(v){return v+" px"},exp:pm,con:pm,sat:pm,hue:function(v){return pm(v)+"°"},warm:pm,
-    fog:pc,defocus:pc,focus:pc,sliceA:pc,sliceB:pc,dur:function(v){return v+" s"}};
+    fog:pc,defocus:pc,focus:pc,sliceA:pc,sliceB:pc,dur:function(v){return v+" s"},fov:function(v){return v+"°"},sens:function(v){return (+v).toFixed(1)+"×"}};
 })();
 var curTool=null;
 function syncControls(){
@@ -874,6 +969,7 @@ $("popX").addEventListener("click",closeTool);
 var REB={range:1,smooth:1,cut:1,invert:1,fill:1,detail:1},GRD={exp:1,con:1,sat:1,hue:1,warm:1};
 function setK(k,v){
   S[k]=v;
+  if(k==="render"&&scene&&scene.gs&&$("stats"))$("stats").textContent=scene.gs.n.toLocaleString("en-GB")+" splats  ·  "+(v==="points"?"shown as dots":"true splats");
   if(REB[k])schedule();else if(GRD[k])regradeSoon();
   dirty=true;saveSoon();
 }
@@ -895,6 +991,8 @@ $("popB").addEventListener("click",function(e){
   else if(a==="resetFx"){["fog","defocus","focus","sliceA","sliceB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
+  else if(a==="level"){levelHorizon()}
+  else if(a==="frame"){frameAll()}
   else if(a==="ply")exportPLY();
   else if(a==="plyOrig"&&cur&&cur.ply)saveBlob(cur.ply,"splatbox-"+photoName+"-trained.ply");
   else if(a==="turn"&&plyRaw){S.turn=((S.turn|0)+1)%4;buildFromRaw();saveSoon()}
@@ -950,7 +1048,7 @@ function newProject(name,src,depthCanvas){
   });
 }
 function openProject(p,preloaded){
-  cur=p;plyRaw=null;applyRail();$("rmodes").hidden=true;S=Object.assign({},DEF,p.settings||{});
+  cur=p;plyRaw=null;applyRail();S=Object.assign({},DEF,p.settings||{});
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
   $("pname").textContent=p.name;
   var photoP=preloaded&&preloaded.photo?Promise.resolve(preloaded.photo):loadImg(p.photo);
@@ -972,7 +1070,7 @@ function goHome(){
   saveNow().then(function(){showHome()});
 }
 function showHome(){
-  $("rmodes").hidden=true;$("editor").hidden=true;$("home").hidden=false;cur=null;renderHome();
+  $("editor").hidden=true;$("home").hidden=false;cur=null;renderHome();
 }
 $("back").addEventListener("click",function(){
   if(history.state&&history.state.e){history.back()}else goHome();
@@ -1123,19 +1221,9 @@ function buildFromRaw(){
     uploadGSGeo();
   }
   regrade();
-  syncPill();
   $("hud").textContent=(scene.gs?scene.gs.n:nd).toLocaleString("en-GB")+" splats";
   if($("stats"))$("stats").textContent=(scene.gs?scene.gs.n:nd).toLocaleString("en-GB")+" splats  ·  "+(S.render==="points"?"shown as dots":"true splats");
 }
-var RM=[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]];
-function syncPill(){
-  var pl=$("rmodes"),show=!!(scene&&scene.gs&&cur&&cur.kind==="photos");
-  pl.hidden=!show;if(!show)return;
-  if(!pl.firstChild)pl.innerHTML=RM.map(function(r){return '<button type="button" data-r="'+r[0]+'" aria-pressed="false">'+r[1]+'</button>'}).join("");
-  Array.prototype.forEach.call(pl.children,function(b){b.setAttribute("aria-pressed",String(S.render===b.dataset.r))});
-}
-$("rmodes").addEventListener("click",function(e){var b=e.target.closest("[data-r]");if(!b)return;setK("render",b.dataset.r);syncPill();syncControls();
-  if($("stats")&&scene&&scene.gs)$("stats").textContent=scene.gs.n.toLocaleString("en-GB")+" splats  ·  "+(S.render==="points"?"shown as dots":"true splats")});
 function openPhotosProject(p){
   cur=p;S=Object.assign({},DEF,p.settings||{});
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
