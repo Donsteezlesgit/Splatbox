@@ -191,6 +191,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true">Edit</button><button type="button" data-mode="render" aria-pressed="false">Render</button></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
       <div class="pname" id="pname"></div>
+      <button class="ico" id="saveBtn" type="button" aria-label="Save project (Ctrl+S)"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/></svg></button>
       <button class="ico" id="hideGui" type="button" aria-label="Hide the interface (H)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button class="ico" id="reset" type="button" aria-label="Reset view"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
     </div>
@@ -224,7 +225,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 017";
+var VERSION="Version 018";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -1684,7 +1685,7 @@ var PANES={
       '<p class="note">Auto-level finds the ground and makes it flat. If it ends up upside down, use Flip. For fine tuning, use the rotation boxes in Objects.</p>';
     return h;
   },
-  file:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
+  file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<p class="note">Changes save by themselves.</p>'+
     '<div class="row2"><button class="btn small" type="button" data-act="fNew">New project</button><button class="btn small" type="button" data-act="fCopy">Save as a copy</button></div>'+
     '<button class="btn small" type="button" data-act="fHome">Open another project</button>'+
@@ -2023,6 +2024,7 @@ $("popB").addEventListener("click",function(e){
   else if(a==="ply")exportScenePLY();
   else if(a==="addPhotos")$("multiIn").click();
   else if(a==="addPhoto")$("newIn").click();
+  else if(a==="fSave")saveProject();
   else if(a==="fHome")goHome();
   else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
   else if(a==="fCopy"){saveNow().then(function(){var c=Object.assign({},cur,{id:uid(),name:(cur.name||"Project")+" copy",created:Date.now(),updated:Date.now()});return dbPut(c).then(function(){cur=c;$("pname").textContent=c.name;syncControls();setStatus("Saved a copy. You're now working in the copy.","ok")})}).catch(function(){setStatus("Couldn't save a copy.","bad")})}
@@ -2056,7 +2058,8 @@ function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 function saveNow(){
   clearTimeout(saveT);
   if(!cur)return Promise.resolve();
-  cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;cur.updated=Date.now();
+  cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;
+  var vw=THRU&&VPS?{R:VPS.R,TG:VPS.TG,zoom:VPS.zoom}:{R:Rm,TG:TG,zoom:zoom};cur.view={R:vw.R.slice(),TG:vw.TG.slice(),zoom:vw.zoom,mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null};cur.updated=Date.now();
   return dbPut(cur).catch(function(){setStatus("Couldn't save this project on the device.","bad")});
 }
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -2109,9 +2112,18 @@ function openSpace(p){
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
   $("pname").textContent=p.name;
   newScene();resetView();anim=null;PF.lutKey="";
+  if(p.view&&p.view.R&&p.view.TG){Rm=p.view.R.slice();TG=p.view.TG.slice();zoom=p.view.zoom||1}
   showEditor();closeTool();applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");
-  return loadObjs(p.objs).then(function(){busy(false);refreshSpace();regrade();dirty=true}).catch(function(err){busy(false);setStatus(err.message,"bad")});
+  return loadObjs(p.objs).then(function(){
+    busy(false);refreshSpace();regrade();dirty=true;
+    var vv=p.view;
+    if(vv){
+      if(vv.acam){var ca=findObj(vv.acam);if(ca)ACAM=ca}
+      if(vv.mode==="render")setMode("render");
+      if(vv.thru){var tc=findObj(vv.thru);if(tc&&MODE==="render")enterThru(tc)}
+    }
+  }).catch(function(err){busy(false);setStatus(err.message,"bad")});
 }
 function showEditor(){
   $("home").hidden=true;$("editor").hidden=false;
@@ -2122,6 +2134,16 @@ function captureThumb(){
   if(!scene||!cur||!OBJS.some(isGeo))return Promise.resolve(null);
   try{draw(null);return toBlob(fitCanvas(cv,360),"image/jpeg",0.8)}catch(_){return Promise.resolve(null)}
 }
+function saveProject(){
+  if(!cur)return;
+  if(THRU&&ACAM)camFromView(ACAM);
+  clearTimeout(objSaveT);persistObjs();
+  captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){
+    setStatus("Saved \u201c"+(cur&&cur.name||"project")+"\u201d: objects, cameras, effects and view.","ok");
+  }).catch(function(){setStatus("Couldn't save this project.","bad")});
+}
+$("saveBtn").addEventListener("click",saveProject);
+document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.code==="KeyS"&&!$("editor").hidden){e.preventDefault();saveProject()}});
 function goHome(){
   if(anim&&anim.rec)return;
   anim=null;closeTool();leaveThru();
