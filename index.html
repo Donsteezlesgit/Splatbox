@@ -186,7 +186,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 007";
+var VERSION="Version 008";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -939,7 +939,17 @@ function openPhotosProject(p){
   }).catch(function(err){busy(false);setStatus(err.message,"bad")});
 }
 function smallBlob(file,side){
-  return loadImg(file).then(function(im){var c=fitCanvas(im,side);return toBlob(c,"image/jpeg",0.9)});
+  var tick=new Promise(function(r){setTimeout(r,30)});
+  if(window.createImageBitmap){
+    return tick.then(function(){return createImageBitmap(file,{resizeWidth:side,resizeQuality:"medium"})}).then(function(bm){
+      var c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;c.getContext("2d").drawImage(bm,0,0);bm.close();
+      return toBlob(c,"image/jpeg",0.9).then(function(b){c.width=c.height=1;return b});
+    }).catch(function(){return smallBlobOld(file,side)});
+  }
+  return tick.then(function(){return smallBlobOld(file,side)});
+}
+function smallBlobOld(file,side){
+  return loadImg(file).then(function(im){var c=fitCanvas(im,side),u=im.src;return toBlob(c,"image/jpeg",0.9).then(function(b){try{URL.revokeObjectURL(u)}catch(_){}im.src="";return b})});
 }
 $("multiIn").addEventListener("change",function(e){
   var files=Array.prototype.slice.call(e.target.files||[]);e.target.value="";
@@ -953,7 +963,7 @@ $("multiIn").addEventListener("change",function(e){
     smallBlob(files[i],1024).then(function(b){out.push(b);i++;next()}).catch(function(err){busy(false);setStatus("Couldn't read photo "+(i+1)+": "+err.message,"bad")});
   })();
   function done(){
-    loadImg(files[0]).then(prepPhoto).then(function(pp){
+    loadImg(out[0]).then(prepPhoto).then(function(pp){
       var pr={id:uid(),name:"Photo scan "+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"}),created:Date.now(),updated:Date.now(),
         photo:pp.photo,thumb:pp.thumb,depth:null,settings:Object.assign({},DEF,{turn:2}),kind:"photos",srcs:out,ply:null};
       return dbPut(pr).catch(function(){setStatus("Couldn't save to the device, so this scan won't be kept.","warn")}).then(function(){busy(false);return startTraining(pr)});
