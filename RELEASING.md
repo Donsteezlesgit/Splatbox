@@ -16,7 +16,7 @@
 4. Max says "promote" -> `./release.sh promote`, commit, tag `vNNN`, push.
 
 ## Roll back
-`./release.sh rollback v018`, commit, push. Projects saved by a newer format are refused by the old app (not damaged). Backups still import.
+`./release.sh rollback v018`, commit, push. (Tags could not be pushed to GitHub from this setup, so rollback also finds the version by its commit message.) Projects saved by a newer format are refused by the old app (not damaged). Backups still import.
 
 ## Adding anything new (checklist)
 - New setting -> add to `DEF`. Add a non-default value to `PERTURB` in `tests/test_roundtrip.py` (the test fails until you do).

@@ -37,7 +37,10 @@ case "${1:-}" in
   echo "Next: git add -A && git commit && git tag v$(ver index.html) && git push --tags";;
  rollback)
   t="${2:?usage: ./release.sh rollback v018}"
-  git rev-parse -q --verify "refs/tags/$t" >/dev/null || { echo "no such tag: $t"; git tag; exit 1; }
+  if ! git rev-parse -q --verify "refs/tags/$t" >/dev/null; then
+    n="${t#v}"; c=$(git log --format=%h -E --grep="^(V|Version |Splatbox Version )0*$n\\b" | tail -1)
+    [ -n "$c" ] || { echo "no such version: $t"; exit 1; }; t=$c
+  fi
   git checkout "$t" -- index.html sw.js
   echo "Root is back to $t (Version $(ver index.html)). Projects saved in a newer format will be refused by it, not damaged."
   echo "Next: git commit -am 'Rollback to $t' && git push";;
