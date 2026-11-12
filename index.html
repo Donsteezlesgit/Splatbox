@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e0f12">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Splatbox">
+<style>html,body{margin:0}</style>
+<title>Splatbox</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 3D viewport first, controls underneath; side by side on wide screens. Dark only, like a viewport tool. */
+:root{
+  --bg:#0e1113; --stage:#0a0c0d; --panel:#161a1d; --line:#272d32;
+  --fg:#e7ecef; --mute:#8d99a1; --accent:#ff7a3d; --accent-ink:#1b0e06;
+  --ok:#6fcf97; --warn:#f2c14e; --bad:#ff6b6b;
+  --font-ui:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--font-ui);
+  padding-block:12px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.app{max-width:1100px;margin:0 auto;display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){
+  .app{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);align-items:start;column-gap:24px}
+  header{grid-column:1/-1}
+  .stage{position:sticky;top:12px}
+}
+h1{margin:0;font:600 22px/1.2 var(--font-ui);letter-spacing:-.01em}
+.sub{margin:4px 0 0;color:var(--mute);max-width:60ch}
+.stage{position:relative;height:clamp(300px,56vh,680px);background:var(--stage);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;left:10px;bottom:8px;right:10px;font:12px var(--font-mono);color:var(--mute);pointer-events:none;text-shadow:0 1px 2px #000}
+.chip{position:absolute;right:10px;top:10px;min-height:36px;padding:0 12px;border:1px solid var(--line);background:rgba(22,26,29,.85);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
+.panel{display:grid;gap:20px;min-width:0}
+fieldset{border:0;padding:0;margin:0;display:grid;gap:10px;min-width:0}
+legend{padding:0;margin-bottom:8px;font:500 12px var(--font-ui);text-transform:uppercase;letter-spacing:.08em;color:var(--mute)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;font:500 15px var(--font-ui);cursor:pointer;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible+label,input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{margin:0;color:var(--mute);font-size:13px}
+.fname{font:12px var(--font-mono);color:var(--mute);overflow-wrap:anywhere}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.opt{position:relative}
+.opt input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.opt label{display:block;padding:11px 4px;text-align:center;font-size:14px;background:var(--panel);cursor:pointer}
+.opt input:checked+label{background:var(--fg);color:var(--bg);font-weight:500}
+.opt+.opt{border-left:1px solid var(--line)}
+.sl{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline}
+.sl output{font:13px var(--font-mono);color:var(--mute)}
+.sl input[type=range]{grid-column:1/-1;width:100%;margin:6px 0;accent-color:var(--accent)}
+.chk{display:flex;gap:10px;align-items:center;min-height:36px}
+.chk input{width:20px;height:20px;accent-color:var(--accent);margin:0}
+.stats{font:13px var(--font-mono);color:var(--mute);font-variant-numeric:tabular-nums}
+#status{margin:0;min-height:2.9em;font-size:14px}
+#status.ok{color:var(--ok)} #status.warn{color:var(--warn)} #status.bad{color:var(--bad)}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+.ver{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:24px;padding-block:12px;font:12px/1.4 "JetBrains Mono",ui-monospace,monospace;opacity:.75}
+.ver button{font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:6px;padding:6px 10px;min-height:40px}
+</style>
+
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1>Splatbox</h1>
+    <p class="sub">Turn a photo and its depth map into Gaussian splats. Orbit them here, then export a .ply for a splat viewer.</p>
+  </header>
+
+  <section class="stage" aria-label="3D splat viewport">
+    <canvas id="gl" aria-label="Splat preview. Drag to orbit, pinch to zoom."></canvas>
+    <button class="chip" id="reset" type="button">Reset view</button>
+    <div class="hud" id="hud"></div>
+  </section>
+
+  <section class="panel">
+    <fieldset>
+      <legend>1. Photo</legend>
+      <label class="btn" for="photo">Choose photo</label>
+      <input id="photo" type="file" accept="image/*" hidden>
+      <span class="fname" id="photoName">Example scene (generated mountains)</span>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. Depth</legend>
+      <div class="seg" role="radiogroup" aria-label="Depth source">
+        <div class="opt"><input type="radio" name="dmode" id="m-map" value="map" checked><label for="m-map">Depth map</label></div>
+        <div class="opt"><input type="radio" name="dmode" id="m-est" value="estimate"><label for="m-est">Estimate</label></div>
+        <div class="opt"><input type="radio" name="dmode" id="m-ai" value="ai"><label for="m-ai">AI depth</label></div>
+      </div>
+      <div id="mapRow">
+        <label class="btn" for="depthFile" style="width:100%">Choose depth map</label>
+        <input id="depthFile" type="file" accept="image/*" hidden>
+        <p class="note" id="mapNote">Use the grayscale depth image from your ComfyUI workflow. White or black as near both work; the page guesses and you can flip it below.</p>
+      </div>
+      <div id="estRow" hidden>
+        <p class="note">Rough guess from the picture, no AI: lower in frame is nearer. Expect a flat, stage-set look.</p>
+      </div>
+      <div id="aiRow" hidden>
+        <button class="btn" id="runAI" type="button" style="width:100%">Estimate depth with AI</button>
+        <p class="note">Runs on your device with Depth Anything V2 Small. The first run downloads about 40 MB (model and runtime), then it is quick. If it fails, use a depth map.</p>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. Shape</legend>
+      <div class="sl"><label for="range">Depth range</label><output id="rangeO" for="range"></output>
+        <input id="range" type="range" min="0.2" max="2" step="0.05" value="0.8"></div>
+      <div class="sl"><label for="size">Splat size</label><output id="sizeO" for="size"></output>
+        <input id="size" type="range" min="0.6" max="2.6" step="0.1" value="1.3"></div>
+      <div class="sl"><label for="detail">Detail (long side)</label><output id="detailO" for="detail"></output>
+        <input id="detail" type="range" min="192" max="768" step="64" value="448"></div>
+      <div class="sl"><label for="cut">Cut far background</label><output id="cutO" for="cut"></output>
+        <input id="cut" type="range" min="0" max="0.6" step="0.02" value="0"></div>
+      <label class="chk"><input type="checkbox" id="invert"> Flip depth (near and far swapped)</label>
+      <label class="chk"><input type="checkbox" id="sway"> Gentle sway</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>4. Export</legend>
+      <div class="stats" id="stats"></div>
+      <button class="btn primary" id="export" type="button">Export splats (.ply in a .zip)</button>
+      <p class="note">Phones can't save a bare .ply from here, so it comes zipped. Unzip it, then open the .ply in a splat viewer such as SuperSplat.</p>
+      <p id="status" role="status" aria-live="polite"></p>
+    </fieldset>
+  </section>
+  <footer class="ver"><span id="ver"></span> <button id="upd" type="button">Update app</button></footer>
+</main>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
+var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
+
+/* ---------- state ---------- */
+var photoSrc=null, depthSrc=null, aiCanvas=null, photoName="example";
+var scene=null, yaw=0, pitch=0, zoom=1, dirty=true, interacted=0, timer=0;
+
+function setStatus(msg,kind){var s=$("status");s.textContent=msg||"";s.className=kind||""}
+function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
+
+/* ---------- example scene (generated, so the page opens working) ---------- */
+function ridge(x,k){
+  return Math.sin(x*0.011+k*2.1)*22+Math.sin(x*0.027+k*5.3)*11+Math.sin(x*0.061+k*1.7)*5+Math.sin(x*0.13+k)*2;
+}
+function makeSample(){
+  var W=640,H=400,p=document.createElement("canvas"),d=document.createElement("canvas");
+  p.width=d.width=W;p.height=d.height=H;
+  var a=p.getContext("2d"),b=d.getContext("2d");
+  var g=a.createLinearGradient(0,0,0,H*0.6);g.addColorStop(0,"#9cc3e6");g.addColorStop(1,"#f3e4cf");
+  a.fillStyle=g;a.fillRect(0,0,W,H);
+  b.fillStyle="#000";b.fillRect(0,0,W,H);
+  var layers=[
+    {base:190,top:"#b9c6d6",bot:"#dfe3e8",g:0.16},
+    {base:222,top:"#8fa2b8",bot:"#bfc9d3",g:0.32},
+    {base:262,top:"#60758d",bot:"#8fa0b1",g:0.50},
+    {base:306,top:"#3f5a53",bot:"#6c8a7d",g:0.70},
+    {base:352,top:"#26382f",bot:"#4a6a55",g:0.90}
+  ];
+  layers.forEach(function(L,k){
+    var path=new Path2D();path.moveTo(0,H);
+    for(var x=0;x<=W;x+=4){path.lineTo(x,L.base+ridge(x,k)*(1+k*0.25))}
+    path.lineTo(W,H);path.closePath();
+    var cg=a.createLinearGradient(0,L.base-40,0,H);cg.addColorStop(0,L.top);cg.addColorStop(1,L.bot);
+    a.fillStyle=cg;a.fill(path);
+    var dg=b.createLinearGradient(0,L.base-40,0,H);
+    var lo=Math.round(255*L.g),hi=Math.round(255*Math.min(1,L.g+0.1));
+    dg.addColorStop(0,"rgb("+lo+","+lo+","+lo+")");dg.addColorStop(1,"rgb("+hi+","+hi+","+hi+")");
+    b.fillStyle=dg;b.fill(path);
+  });
+  return {photo:p,depth:d};
+}
+
+/* ---------- pixel helpers ---------- */
+function grab(src,W,H){
+  var c=document.createElement("canvas");c.width=W;c.height=H;
+  var x=c.getContext("2d",{willReadFrequently:true});x.drawImage(src,0,0,W,H);
+  return x.getImageData(0,0,W,H).data;
+}
+function boxBlur(a,W,H,r){
+  var t=new Float32Array(a.length),o=new Float32Array(a.length),i,j,s,n,k;
+  for(j=0;j<H;j++){for(i=0;i<W;i++){s=0;n=0;for(k=-r;k<=r;k++){var x=i+k;if(x>=0&&x<W){s+=a[j*W+x];n++}}t[j*W+i]=s/n}}
+  for(j=0;j<H;j++){for(i=0;i<W;i++){s=0;n=0;for(k=-r;k<=r;k++){var y=j+k;if(y>=0&&y<H){s+=t[y*W+i];n++}}o[j*W+i]=s/n}}
+  return o;
+}
+function normalise(D){
+  var h=new Uint32Array(256),n=D.length,i;
+  for(i=0;i<n;i++)h[clamp(Math.round(D[i]*255),0,255)]++;
+  var acc=0,lo=0,hi=255;
+  for(i=0;i<256;i++){acc+=h[i];if(acc>=n*0.01){lo=i;break}}
+  acc=0;for(i=255;i>=0;i--){acc+=h[i];if(acc>=n*0.01){hi=i;break}}
+  if(hi-lo<4){lo=0;hi=255}
+  var out=new Float32Array(n),span=(hi-lo)/255,base=lo/255;
+  for(i=0;i<n;i++)out[i]=clamp((D[i]-base)/span,0,1);
+  return out;
+}
+function guessFlip(src){
+  var d=grab(src,64,64),top=0,bot=0,i,j;
+  for(j=0;j<8;j++)for(i=0;i<64;i++){top+=d[(j*64+i)*4]; bot+=d[((63-j)*64+i)*4]}
+  return (top-bot)/(8*64*255)>0.08;
+}
+
+/* ---------- build splats from photo + depth ---------- */
+function rebuild(){
+  if(!photoSrc)return;
+  var pd=dims(photoSrc),aspect=pd.w/pd.h,long=+$("detail").value;
+  var W=aspect>=1?long:Math.round(long*aspect),H=aspect>=1?Math.round(long/aspect):long;
+  var R=+$("range").value,cut=+$("cut").value,flip=$("invert").checked;
+  var mode=document.querySelector("input[name=dmode]:checked").value;
+  var rgba=grab(photoSrc,W,H),N=W*H,D=new Float32Array(N),i,j;
+  var src=null;
+  if(mode==="map")src=depthSrc;
+  if(mode==="ai")src=aiCanvas;
+  if(src){
+    var dd=grab(src,W,H);
+    for(i=0;i<N;i++)D[i]=(0.299*dd[i*4]+0.587*dd[i*4+1]+0.114*dd[i*4+2])/255;
+    D=boxBlur(D,W,H,1);
+  }else{
+    var L=new Float32Array(N);
+    for(i=0;i<N;i++)L[i]=(0.299*rgba[i*4]+0.587*rgba[i*4+1]+0.114*rgba[i*4+2])/255;
+    var Lb=boxBlur(L,W,H,Math.max(3,Math.round(W/60)));
+    for(j=0;j<H;j++)for(i=0;i<W;i++)D[j*W+i]=0.7*(j/H)+0.3*(1-Lb[j*W+i]);
+  }
+  D=normalise(D);
+  if(flip)for(i=0;i<N;i++)D[i]=1-D[i];
+  var tx=TY*aspect,buf=new Float32Array(N*7),n=0,o=0;
+  for(j=0;j<H;j++){
+    for(i=0;i<W;i++){
+      var idx=j*W+i,d=D[idx];
+      if(d<cut)continue;
+      var z=1+(1-d)*R;
+      buf[o++]=((i+0.5)/W*2-1)*z*tx;
+      buf[o++]=(1-(j+0.5)/H*2)*z*TY;
+      buf[o++]=-z;
+      buf[o++]=rgba[idx*4]/255;buf[o++]=rgba[idx*4+1]/255;buf[o++]=rgba[idx*4+2]/255;
+      buf[o++]=z*2*TY/H*1.25;
+      n++;
+    }
+  }
+  scene={n:n,buf:buf.subarray(0,n*7),R:R,tx:tx,aspect:aspect};
+  upload();
+  $("stats").textContent=n.toLocaleString("en-GB")+" splats  ·  about "+(n*56/1e6).toFixed(1)+" MB";
+  $("hud").textContent=n.toLocaleString("en-GB")+" splats · drag to orbit · pinch to zoom";
+  dirty=true;
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(rebuild,50)}
+
+/* ---------- WebGL ---------- */
+var cv=$("gl"),gl=cv.getContext("webgl",{antialias:false,alpha:false}),prog,vbo,loc={};
+var VS="attribute vec3 aPos;attribute vec3 aCol;attribute float aSize;uniform mat4 uView;uniform mat4 uProj;uniform float uPx;uniform float uMul;varying vec3 vCol;"+
+"void main(){vec4 v=uView*vec4(aPos,1.0);gl_Position=uProj*v;float z=-v.z;gl_PointSize=clamp(aSize*uPx*uMul/max(z,0.05),2.2,120.0);vCol=aCol;}";
+var FS="precision mediump float;varying vec3 vCol;"+
+"void main(){vec2 c=gl_PointCoord-0.5;if(dot(c,c)>0.25)discard;gl_FragColor=vec4(vCol,1.0);}";
+function shader(t,s){var h=gl.createShader(t);gl.shaderSource(h,s);gl.compileShader(h);return h}
+function initGL(){
+  prog=gl.createProgram();
+  gl.attachShader(prog,shader(gl.VERTEX_SHADER,VS));gl.attachShader(prog,shader(gl.FRAGMENT_SHADER,FS));
+  gl.linkProgram(prog);gl.useProgram(prog);
+  ["aPos","aCol","aSize"].forEach(function(n){loc[n]=gl.getAttribLocation(prog,n)});
+  ["uView","uProj","uPx","uMul"].forEach(function(n){loc[n]=gl.getUniformLocation(prog,n)});
+  vbo=gl.createBuffer();
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+  gl.clearColor(10/255,12/255,13/255,1);
+}
+function upload(){
+  gl.bindBuffer(gl.ARRAY_BUFFER,vbo);gl.bufferData(gl.ARRAY_BUFFER,scene.buf,gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(loc.aPos);gl.vertexAttribPointer(loc.aPos,3,gl.FLOAT,false,28,0);
+  gl.enableVertexAttribArray(loc.aCol);gl.vertexAttribPointer(loc.aCol,3,gl.FLOAT,false,28,12);
+  gl.enableVertexAttribArray(loc.aSize);gl.vertexAttribPointer(loc.aSize,1,gl.FLOAT,false,28,24);
+}
+function persp(f,a,n,fa){var t=1/Math.tan(f/2);return new Float32Array([t/a,0,0,0,0,t,0,0,0,0,(fa+n)/(n-fa),-1,0,0,2*fa*n/(n-fa),0])}
+function lookAt(e,t){
+  var z=[e[0]-t[0],e[1]-t[1],e[2]-t[2]],l=Math.hypot(z[0],z[1],z[2]);z=[z[0]/l,z[1]/l,z[2]/l];
+  var x=[z[2],0,-z[0]];l=Math.hypot(x[0],x[1],x[2])||1;x=[x[0]/l,x[1]/l,x[2]/l];
+  var y=[z[1]*x[2]-z[2]*x[1],z[2]*x[0]-z[0]*x[2],z[0]*x[1]-z[1]*x[0]];
+  var dot=function(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]};
+  return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,e),-dot(y,e),-dot(z,e),1]);
+}
+function draw(t,sway){
+  var dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,Math.round(cv.clientWidth*dpr)),h=Math.max(1,Math.round(cv.clientHeight*dpr));
+  if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
+  gl.viewport(0,0,w,h);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  if(!scene||!scene.n)return;
+  var yw=yaw+(sway?0.22*Math.sin(t/1400):0),pt=pitch+(sway?0.05*Math.sin(t/1900):0);
+  var zm=1+scene.R/2,dist=zm*zoom,cp=Math.cos(pt);
+  var eye=[Math.sin(yw)*cp*dist,Math.sin(pt)*dist,-zm+Math.cos(yw)*cp*dist];
+  var vA=w/h,tyv=Math.max(TY,scene.tx/vA);
+  gl.uniformMatrix4fv(loc.uView,false,lookAt(eye,[0,0,-zm]));
+  gl.uniformMatrix4fv(loc.uProj,false,persp(2*Math.atan(tyv),vA,0.05,30));
+  gl.uniform1f(loc.uPx,h/(2*tyv));gl.uniform1f(loc.uMul,+$("size").value);
+  gl.drawArrays(gl.POINTS,0,scene.n);
+}
+function loop(t){
+  requestAnimationFrame(loop);
+  var sway=$("sway").checked&&(t-interacted>1500);
+  if(!dirty&&!sway)return;
+  dirty=false;draw(t,sway);
+}
+
+/* ---------- orbit controls ---------- */
+var ptrs=new Map(),lastD=0;
+function pinch(){if(ptrs.size<2)return 0;var a=Array.from(ptrs.values());return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}
+cv.addEventListener("pointerdown",function(e){cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();interacted=performance.now()});
+cv.addEventListener("pointermove",function(e){
+  var p=ptrs.get(e.pointerId);if(!p)return;
+  var dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+  if(ptrs.size===1){yaw=clamp(yaw-dx*0.006,-0.8,0.8);pitch=clamp(pitch+dy*0.006,-0.5,0.5)}
+  else if(ptrs.size===2){var d=pinch();if(lastD&&d)zoom=clamp(zoom*lastD/d,0.3,2.5);lastD=d}
+  interacted=performance.now();dirty=true;
+});
+function release(e){ptrs.delete(e.pointerId);lastD=pinch()}
+cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
+cv.addEventListener("wheel",function(e){e.preventDefault();zoom=clamp(zoom*Math.exp(e.deltaY*0.001),0.3,2.5);dirty=true},{passive:false});
+$("reset").addEventListener("click",function(){yaw=0;pitch=0;zoom=1;dirty=true});
+window.addEventListener("resize",function(){dirty=true});
+
+/* ---------- inputs ---------- */
+function loadFile(file){
+  return new Promise(function(res,rej){
+    var u=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){res(im)};im.onerror=function(){rej(new Error("That file isn't an image this browser can read."))};im.src=u;
+  });
+}
+function showMode(){
+  var m=document.querySelector("input[name=dmode]:checked").value;
+  $("mapRow").hidden=m!=="map";$("estRow").hidden=m!=="estimate";$("aiRow").hidden=m!=="ai";
+}
+function setMode(m){$("m-"+(m==="estimate"?"est":m)).checked=true;showMode()}
+Array.prototype.forEach.call(document.querySelectorAll("input[name=dmode]"),function(r){
+  r.addEventListener("change",function(){showMode();schedule();
+    if(r.value==="map"&&!depthSrc)setStatus("No depth map loaded yet, so this is the estimate for now.","warn");else setStatus("");});
+});
+$("photo").addEventListener("change",function(e){
+  var f=e.target.files[0];if(!f)return;
+  loadFile(f).then(function(im){
+    photoSrc=im;depthSrc=null;aiCanvas=null;photoName=f.name.replace(/\.[^.]+$/,"").replace(/[^\w-]+/g,"_").slice(0,40)||"photo";
+    $("photoName").textContent=f.name;$("invert").checked=false;
+    setMode("estimate");yaw=0;pitch=0;zoom=1;schedule();
+    setStatus("Photo loaded. Add its depth map for a proper result, or keep the rough estimate.","ok");
+  }).catch(function(err){setStatus(err.message,"bad")});
+});
+$("depthFile").addEventListener("change",function(e){
+  var f=e.target.files[0];if(!f)return;
+  loadFile(f).then(function(im){
+    depthSrc=im;var flip=guessFlip(im);$("invert").checked=flip;
+    $("mapNote").textContent="Depth map: "+f.name;
+    setMode("map");schedule();
+    setStatus(flip?"Depth map loaded. Bright sky looked like far, so I flipped it. Use the flip box if that's wrong.":"Depth map loaded.","ok");
+  }).catch(function(err){setStatus(err.message,"bad")});
+});
+[["range","rangeO",function(v){return (+v).toFixed(2)}],["size","sizeO",function(v){return (+v).toFixed(1)+"×"}],
+ ["detail","detailO",function(v){return v+" px"}],["cut","cutO",function(v){return Math.round(v*100)+"%"}]].forEach(function(r){
+  var el=$(r[0]),out=$(r[1]);
+  var upd=function(){out.textContent=r[2](el.value)};upd();
+  el.addEventListener("input",function(){upd();if(r[0]==="size")dirty=true;else schedule()});
+});
+$("invert").addEventListener("change",schedule);
+$("sway").addEventListener("change",function(){interacted=0;dirty=true});
+
+/* ---------- in-browser depth model (Depth Anything V2 Small, int8, hosted with this page) ---------- */
+var sessionP=null;
+function loadScript(src){return new Promise(function(res,rej){var s=document.createElement("script");s.src=src;s.onload=res;s.onerror=function(){rej(new Error("The depth runtime file didn't load."))};document.head.appendChild(s)})}
+function fetchBytes(u){return fetch(u).then(function(r){if(!r.ok)throw new Error("A model file is missing ("+r.status+").");return r.arrayBuffer()})}
+function getSession(){
+  if(sessionP)return sessionP;
+  setStatus("Loading the depth runtime…");
+  sessionP=loadScript("lib/ort.wasm.min.js").then(function(){
+    ort.env.wasm.wasmPaths=new URL("lib/",document.baseURI).href;ort.env.wasm.numThreads=1;
+    setStatus("Downloading the depth model (about 27 MB, first time only)…");
+    return Promise.all([fetchBytes("model/dav2s.1.wasm"),fetchBytes("model/dav2s.2.wasm")]);
+  }).then(function(p){
+    var a=new Uint8Array(p[0].byteLength+p[1].byteLength);a.set(new Uint8Array(p[0]),0);a.set(new Uint8Array(p[1]),p[0].byteLength);
+    setStatus("Starting the model…");
+    return ort.InferenceSession.create(a,{executionProviders:["wasm"]});
+  });
+  sessionP.catch(function(){sessionP=null});
+  return sessionP;
+}
+function runDepth(session){
+  var pd=dims(photoSrc),sc=420/Math.max(pd.w,pd.h);
+  var w=Math.max(14,Math.round(pd.w*sc/14)*14),h=Math.max(14,Math.round(pd.h*sc/14)*14);
+  var px=grab(photoSrc,w,h),n=w*h,f=new Float32Array(3*n),m=[0.485,0.456,0.406],sd=[0.229,0.224,0.225],i,c;
+  for(i=0;i<n;i++)for(c=0;c<3;c++)f[c*n+i]=(px[i*4+c]/255-m[c])/sd[c];
+  return session.run({pixel_values:new ort.Tensor("float32",f,[1,3,h,w])}).then(function(out){
+    var d=out[Object.keys(out)[0]].data,lo=Infinity,hi=-Infinity;
+    for(i=0;i<n;i++){if(d[i]<lo)lo=d[i];if(d[i]>hi)hi=d[i]}
+    var cc=document.createElement("canvas");cc.width=w;cc.height=h;
+    var x=cc.getContext("2d"),id=x.createImageData(w,h),sp=(hi-lo)||1;
+    for(i=0;i<n;i++){var v=Math.round(255*(d[i]-lo)/sp);id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255}
+    x.putImageData(id,0,0);return cc;
+  });
+}
+$("runAI").addEventListener("click",function(){
+  var btn=$("runAI"),t0=performance.now();btn.disabled=true;
+  getSession().then(function(s){
+    setStatus("Estimating depth…");
+    return new Promise(function(r){setTimeout(r,40)}).then(function(){return runDepth(s)});
+  }).then(function(cc){
+    aiCanvas=cc;$("invert").checked=false;setMode("ai");schedule();
+    setStatus("AI depth ready in "+((performance.now()-t0)/1000).toFixed(1)+" s.","ok");
+  }).catch(function(err){
+    setStatus("The depth model didn't run here: "+(err&&err.message?err.message:"blocked")+" Use a depth map from ComfyUI instead.","bad");
+  }).then(function(){btn.disabled=false});
+});
+
+/* ---------- export: 3DGS .ply inside a stored .zip ---------- */
+var CRC=(function(){var t=new Uint32Array(256),n,k,c;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u8){var c=0xFFFFFFFF,i;for(i=0;i<u8.length;i++)c=CRC[(c^u8[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function buildPLY(){
+  var n=scene.n,b=scene.buf,mul=+$("size").value,SH=0.28209479177387814;
+  var head="ply\nformat binary_little_endian 1.0\nelement vertex "+n+"\n"+
+    ["x","y","z","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2","rot_0","rot_1","rot_2","rot_3"].map(function(p){return "property float "+p}).join("\n")+
+    "\nend_header\n";
+  var hb=new TextEncoder().encode(head),body=new Float32Array(n*14),i,o,q,s,logit=Math.log(0.98/0.02);
+  for(i=0;i<n;i++){
+    o=i*7;q=i*14;s=Math.log(Math.max(1e-6,b[o+6]*mul/4.2));
+    body[q]=b[o];body[q+1]=-b[o+1];body[q+2]=-b[o+2];
+    body[q+3]=(b[o+3]-0.5)/SH;body[q+4]=(b[o+4]-0.5)/SH;body[q+5]=(b[o+5]-0.5)/SH;
+    body[q+6]=logit;body[q+7]=s;body[q+8]=s;body[q+9]=s;
+    body[q+10]=1;body[q+11]=0;body[q+12]=0;body[q+13]=0;
+  }
+  var out=new Uint8Array(hb.length+body.byteLength);out.set(hb,0);out.set(new Uint8Array(body.buffer),hb.length);
+  return out;
+}
+function buildZip(name,data){
+  var nm=new TextEncoder().encode(name),crc=crc32(data),sz=data.length,lh=30+nm.length,cd=46+nm.length;
+  var out=new Uint8Array(lh+sz+cd+22),v=new DataView(out.buffer),p=0;
+  function w16(x){v.setUint16(p,x,true);p+=2}function w32(x){v.setUint32(p,x,true);p+=4}
+  w32(0x04034b50);w16(20);w16(0);w16(0);w16(0);w16(0x5D6C);w32(crc);w32(sz);w32(sz);w16(nm.length);w16(0);
+  out.set(nm,p);p+=nm.length;out.set(data,p);p+=sz;
+  var cdStart=p;
+  w32(0x02014b50);w16(20);w16(20);w16(0);w16(0);w16(0);w16(0x5D6C);w32(crc);w32(sz);w32(sz);w16(nm.length);w16(0);w16(0);w16(0);w16(0);w32(0);w32(0);
+  out.set(nm,p);p+=nm.length;
+  w32(0x06054b50);w16(0);w16(0);w16(1);w16(1);w32(cd);w32(cdStart);w16(0);
+  return out;
+}
+$("export").addEventListener("click",function(){
+  if(!scene||!scene.n){setStatus("Nothing to export yet.","warn");return}
+  setStatus("Packing "+scene.n.toLocaleString("en-GB")+" splats…");
+  setTimeout(function(){
+    try{
+      var blob=new Blob([buildPLY()],{type:"application/octet-stream"});
+      var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="splatbox-"+photoName+".ply";
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(a.href)},60000);
+      setStatus("Saved splatbox-"+photoName+".ply. Open it in a splat viewer such as SuperSplat.","ok");
+    }catch(e){setStatus("The save didn't go through: "+(e&&e.message||"unknown"),"bad")}
+  },30);
+});
+
+/* ---------- app: version + update ---------- */
+var VERSION="Version 001";
+$("ver").textContent="Splatbox "+VERSION;
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
+$("upd").addEventListener("click",function(){
+  setStatus("Checking for a new version…");
+  var done=function(){location.reload()};
+  (window.caches?caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}):Promise.resolve()).then(function(){
+    return navigator.serviceWorker?navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}):0;
+  }).then(done,done);
+});
+
+/* ---------- start ---------- */
+if(!gl){
+  $("hud").textContent="";setStatus("This browser can't draw 3D (WebGL is off), so the preview can't run.","bad");
+}else{
+  initGL();
+  var s=makeSample();photoSrc=s.photo;depthSrc=s.depth;
+  showMode();rebuild();
+  setStatus("Example scene loaded. Choose your own photo above and add its depth map.");
+  requestAnimationFrame(loop);
+}
+})();
+</script>
+</body></html>
