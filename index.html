@@ -123,6 +123,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .tool[aria-pressed="true"]::after{top:22%;bottom:22%;left:-1px;right:auto;width:2px;height:auto;background:linear-gradient(180deg,var(--accent2),var(--accent))}
   .pop{left:12px;right:auto;bottom:auto;top:64px;width:340px;max-height:calc(100% - 84px)}
 }
+#train{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l)}
+#train .tbar{display:flex;align-items:center;gap:10px;padding:10px 12px}
+#train .tbar b{font-weight:600}
+#tcv{position:static;inset:auto;width:100%;height:100%;min-height:0;object-fit:contain;background:var(--stage);display:block;touch-action:none}
+#train .tinfo{padding:12px 16px 4px}
+#tStage{font-weight:600}
+#tBar{height:8px;border-radius:99px;background:var(--raise2);overflow:hidden;margin:8px 0}
+#tFill{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .3s}
+#tStats{font:12px var(--font-mono);color:var(--mute);min-height:1.4em}
+#tNote{font-size:13px;color:var(--mute);margin:6px 0 0}
+#train .trow{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 16px 14px}
+.card .kind{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:99px;background:#000a;font:11px var(--font-mono)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -159,7 +171,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   <nav class="rail" id="rail" aria-label="Tools"></nav>
 </div>
 
+<div id="train" hidden>
+  <div class="tbar"><button class="ico" id="tBack" type="button" aria-label="Stop and go back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><b id="tTitle">Photos</b></div>
+  <canvas id="tcv"></canvas>
+  <div class="tinfo"><div id="tStage">Getting ready…</div><div id="tBar"><i id="tFill"></i></div><div id="tStats"></div><p id="tNote"></p></div>
+  <div class="trow"><button class="btn" id="tPause" type="button" disabled>Pause</button><button class="btn primary" id="tFinish" type="button" disabled>Finish and open</button></div>
+</div>
 <input id="newIn" type="file" accept="image/*" hidden>
+<input id="multiIn" type="file" accept="image/*" multiple hidden>
 <input id="swapIn" type="file" accept="image/*" hidden>
 <script>
 (function(){
@@ -167,14 +186,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 006";
+var VERSION="Version 007";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:768,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
   fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
-  cam:"orbit",dur:6,loop:false};
+  cam:"orbit",dur:6,loop:false,turn:0};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
@@ -614,6 +633,9 @@ var ICON={
   export:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
 };
 var TOOLS=[["photo","Photo"],["depth","Depth"],["look","Look"],["colour","Colour"],["fx","FX"],["camera","Camera"],["export","Export"]];
+var PHOTO_ONLY={photo:1,depth:1},SCENE_ONLY={scene:1};
+TOOLS.splice(0,0,["scene","Scene"]);
+ICON.scene='<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>';
 var rail=$("rail");
 TOOLS.forEach(function(t){
   var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=t[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",t[1]);
@@ -625,6 +647,9 @@ function chk(k,label){return '<label class="chk"><input type="checkbox" data-k="
 function seg(k,items,wrap){return '<div class="seg'+(wrap?' wrap':'')+'">'+items.map(function(i){return '<button type="button" data-k="'+k+'" data-v="'+i[0]+'" aria-pressed="false">'+i[1]+'</button>'}).join("")+'</div>'}
 var SWATCH=["#0a0c0d","#1b2430","#2a1d17","#0e2a2c","#efece6","#ffffff"];
 var PANES={
+  scene:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
+    '<button class="btn" type="button" data-act="turn">Turn the scene 90°</button>'+
+    '<p class="note">If the scene loads upside down or on its side, tap this until it looks right. Points are the trained splats shown as dots, so Colour, Look, FX, Camera and Export all work on them.</p>'},
   photo:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<button class="btn" type="button" data-act="swap">Change photo</button><p class="note">Changing the photo keeps your settings and works out the depth again.</p>'},
   depth:function(){return '<button class="btn primary" type="button" data-act="runAI">Estimate depth with AI</button>'+
@@ -643,8 +668,9 @@ var PANES={
     '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
     '<p class="note">Recording plays the move once and saves a video of the viewer.</p>'},
   export:function(){return '<div class="stats" id="stats"></div><button class="btn primary" type="button" data-act="ply">Export .ply</button>'+
+    (cur&&cur.kind==="photos"?'<button class="btn" type="button" data-act="plyOrig">Export trained splats (.ply)</button>':'')+
     '<button class="btn" type="button" data-act="png">Save image (PNG)</button>'+
-    '<p class="note">The .ply opens in SuperSplat or any splat viewer. It includes colour and gap fill, but not fog, defocus, slice or shape.</p>'}
+    '<p class="note">The .ply opens in SuperSplat or any splat viewer. It includes colour and gap fill, but not fog, defocus, slice or shape.'+(cur&&cur.kind==="photos"?" For photo scans, the first button saves the scene as dots with your colour changes. The second saves the real trained splats, without colour changes.":"")+'</p>'}
 };
 var FMT=(function(){
   var pm=function(v){v=+v;return v>0?"+"+v:""+v},pc=function(v){return Math.round(v*100)+"%"};
@@ -664,6 +690,10 @@ function syncControls(){
   var nm=$("c-name");if(nm&&cur)nm.value=cur.name;
   var st=$("stats");if(st&&scene)st.textContent=scene.n.toLocaleString("en-GB")+" splats  ·  about "+(scene.n*56/1e6).toFixed(1)+" MB";
   syncPlay();
+}
+function applyRail(){
+  var ph=cur&&cur.kind==="photos";
+  Array.prototype.forEach.call(rail.children,function(b){var t=b.dataset.tool;b.hidden=ph?!!PHOTO_ONLY[t]:!!SCENE_ONLY[t]});
 }
 function openTool(id){
   curTool=id;
@@ -703,6 +733,8 @@ $("popB").addEventListener("click",function(e){
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="ply")exportPLY();
+  else if(a==="plyOrig"&&cur&&cur.ply)saveBlob(cur.ply,"splatbox-"+photoName+"-trained.ply");
+  else if(a==="turn"&&plyRaw){S.turn=((S.turn|0)+1)%4;buildFromRaw();saveSoon()}
   else if(a==="png")exportPNG();
 });
 
@@ -755,7 +787,7 @@ function newProject(name,src,depthCanvas){
   });
 }
 function openProject(p,preloaded){
-  cur=p;S=Object.assign({},DEF,p.settings||{});
+  cur=p;plyRaw=null;applyRail();S=Object.assign({},DEF,p.settings||{});
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
   $("pname").textContent=p.name;
   var photoP=preloaded&&preloaded.photo?Promise.resolve(preloaded.photo):loadImg(p.photo);
@@ -796,6 +828,9 @@ function renderHome(){
   var add=document.createElement("button");add.type="button";add.className="card new";
   add.innerHTML='<span class="plus"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New project</span>';
   add.addEventListener("click",function(){$("newIn").click()});grid.appendChild(add);
+  var addM=document.createElement("button");addM.type="button";addM.className="card new";
+  addM.innerHTML='<span class="plus"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="2"/><path d="M8 3h11a2 2 0 012 2v11"/></svg></span><span>Photos (many)</span>';
+  addM.addEventListener("click",function(){$("multiIn").click()});grid.appendChild(addM);
   return dbAll().catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
     list=(list||[]).sort(function(a,b){return b.updated-a.updated});
     $("emptyMsg").hidden=list.length>0;
@@ -815,8 +850,9 @@ function renderHome(){
       more.innerHTML='<svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>';
       more.addEventListener("click",function(e){e.stopPropagation();openMenu(c,p)});
       c.appendChild(more);
-      c.addEventListener("click",function(){openProject(p)});
-      c.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openProject(p)}});
+      if(p.kind==="photos"){var kd=document.createElement("span");kd.className="kind";kd.textContent=(p.srcs?p.srcs.length:"")+" photos"+(p.ply?"":" · not trained");c.appendChild(kd)}
+      c.addEventListener("click",function(){openAny(p)});
+      c.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAny(p)}});
       grid.appendChild(c);
     });
   });
@@ -836,6 +872,183 @@ function openMenu(card,p){
   m.appendChild(dup);m.appendChild(del);card.appendChild(m);
 }
 document.addEventListener("click",function(e){if(!e.target.closest(".menu"))closeMenus()});
+
+
+/* ---------- Photos project: Splat.js (on-device structure-from-motion + splat training, WebGPU) ---------- */
+var plyRaw=null,TR=null;
+function openAny(p){
+  if(p.kind==="photos")return p.ply?openPhotosProject(p):startTraining(p);
+  return openProject(p);
+}
+function parsePly(ab){
+  var u8=new Uint8Array(ab),head=new TextDecoder("latin1").decode(u8.subarray(0,Math.min(u8.length,16384))),e=head.indexOf("end_header\n");
+  if(e<0)return null;
+  var off=e+11,n=+((/element vertex (\d+)/.exec(head)||[])[1]||0),props=[],re=/property float (\w+)/g,m,hh=head.slice(0,e);
+  while((m=re.exec(hh)))props.push(m[1]);
+  var ix={};props.forEach(function(k,j){ix[k]=j});
+  var need=["x","y","z","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2"];
+  for(var q=0;q<need.length;q++)if(!(need[q] in ix))return null;
+  var st=props.length,f=new Float32Array(ab.slice(off,off+n*st*4)),C0=0.28209479177387814;
+  var pos=new Float32Array(n*3),col=new Float32Array(n*3),sz=new Float32Array(n),k=0,i,b,al;
+  for(i=0;i<n;i++){
+    b=i*st;al=1/(1+Math.exp(-f[b+ix.opacity]));
+    if(!(al>0.12))continue;
+    var x=f[b+ix.x],y=f[b+ix.y],z=f[b+ix.z];
+    if(!isFinite(x+y+z))continue;
+    pos[k*3]=x;pos[k*3+1]=y;pos[k*3+2]=z;
+    col[k*3]=Math.min(1,Math.max(0,0.5+C0*f[b+ix.f_dc_0]));col[k*3+1]=Math.min(1,Math.max(0,0.5+C0*f[b+ix.f_dc_1]));col[k*3+2]=Math.min(1,Math.max(0,0.5+C0*f[b+ix.f_dc_2]));
+    sz[k]=Math.exp((f[b+ix.scale_0]+f[b+ix.scale_1]+f[b+ix.scale_2])/3);
+    k++;
+  }
+  if(!k)return null;
+  /* centre + scale so the scene fits the viewer; drop far outliers */
+  var cx=0,cy=0,cz=0;for(i=0;i<k;i++){cx+=pos[i*3];cy+=pos[i*3+1];cz+=pos[i*3+2]}
+  cx/=k;cy/=k;cz/=k;
+  var r=new Float32Array(k);for(i=0;i<k;i++)r[i]=Math.hypot(pos[i*3]-cx,pos[i*3+1]-cy,pos[i*3+2]-cz);
+  var samp=[];for(i=0;i<k;i+=Math.max(1,(k/4000)|0))samp.push(r[i]);samp.sort(function(a,b){return a-b});
+  var p90=samp[Math.floor(samp.length*0.9)]||1,lim=p90*3.5,sc=0.6/p90,w=0;
+  var P=new Float32Array(k*3),Cc=new Float32Array(k*3),Z=new Float32Array(k);
+  for(i=0;i<k;i++){
+    if(r[i]>lim)continue;
+    P[w*3]=(pos[i*3]-cx)*sc;P[w*3+1]=(pos[i*3+1]-cy)*sc;P[w*3+2]=(pos[i*3+2]-cz)*sc;
+    Cc[w*3]=col[i*3];Cc[w*3+1]=col[i*3+1];Cc[w*3+2]=col[i*3+2];
+    Z[w]=Math.min(0.08,Math.max(0.003,4.2*sz[i]*sc));w++;
+  }
+  return {n:w,pos:P,col:Cc,sz:Z,total:n};
+}
+function buildFromRaw(){
+  var R=plyRaw;if(!R)return;
+  var n=R.n,buf=new Float32Array(n*7),base=new Float32Array(R.col),t=((S.turn|0)%4+4)%4,a=t*Math.PI/2,c=Math.round(Math.cos(a)),sn=Math.round(Math.sin(a)),zc=-(1+1.9/2),i,o;
+  for(i=0;i<n;i++){
+    var y=R.pos[i*3+1],z=R.pos[i*3+2];
+    o=i*7;buf[o]=R.pos[i*3];buf[o+1]=y*c-z*sn;buf[o+2]=zc+(y*sn+z*c);buf[o+6]=R.sz[i];
+  }
+  scene={n:n,buf:buf,base:base,R:1.9,tx:TY,aspect:1};
+  regrade();
+  $("hud").textContent=n.toLocaleString("en-GB")+" splats";
+  if($("stats"))$("stats").textContent=n.toLocaleString("en-GB")+" splats  ·  shown as dots";
+}
+function openPhotosProject(p){
+  cur=p;S=Object.assign({},DEF,p.settings||{});
+  photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
+  $("pname").textContent=p.name;photoSrc=null;depthImg=null;
+  busy(true,"Opening…");
+  return p.ply.arrayBuffer().then(function(ab){
+    var raw=parsePly(ab);if(!raw)throw new Error("Couldn't read the trained splats in this project.");
+    plyRaw=raw;applyRail();resetView();anim=null;showEditor();closeTool();buildFromRaw();dirty=true;busy(false);
+  }).catch(function(err){busy(false);setStatus(err.message,"bad")});
+}
+function smallBlob(file,side){
+  return loadImg(file).then(function(im){var c=fitCanvas(im,side);return toBlob(c,"image/jpeg",0.9)});
+}
+$("multiIn").addEventListener("change",function(e){
+  var files=Array.prototype.slice.call(e.target.files||[]);e.target.value="";
+  if(!files.length)return;
+  if(files.length<3){setStatus("Pick at least 3 photos. 20 or more of the same place or object, taken from slightly different spots, works best.","warn");return}
+  busy(true,"Preparing "+files.length+" photos…");
+  var out=[],i=0;
+  (function next(){
+    if(i>=files.length)return done();
+    $("busyT").textContent="Preparing photo "+(i+1)+" of "+files.length+"…";
+    smallBlob(files[i],1024).then(function(b){out.push(b);i++;next()}).catch(function(err){busy(false);setStatus("Couldn't read photo "+(i+1)+": "+err.message,"bad")});
+  })();
+  function done(){
+    loadImg(files[0]).then(prepPhoto).then(function(pp){
+      var pr={id:uid(),name:"Photo scan "+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"}),created:Date.now(),updated:Date.now(),
+        photo:pp.photo,thumb:pp.thumb,depth:null,settings:Object.assign({},DEF,{turn:2}),kind:"photos",srcs:out,ply:null};
+      return dbPut(pr).catch(function(){setStatus("Couldn't save to the device, so this scan won't be kept.","warn")}).then(function(){busy(false);return startTraining(pr)});
+    }).catch(function(err){busy(false);setStatus(err.message,"bad")});
+  }
+});
+
+var STAGE_TXT={decode:"Reading photos",features:"Finding features",matching:"Matching photos",pass:"Solving cameras",register:"Placing cameras",solved:"Cameras found",seed:"Making first points",train:"Training"};
+function tSet(k,v){var el=$(k);if(el)el.textContent=v}
+function fmtEta(sec){if(!isFinite(sec)||sec<0)return "…";var m=Math.floor(sec/60);return m>=1?m+" min":Math.max(1,Math.round(sec))+" s"}
+function wakeOn(){try{if(navigator.wakeLock)navigator.wakeLock.request("screen").then(function(w){if(TR)TR.wake=w;else w.release()}).catch(function(){})}catch(_){}}
+document.addEventListener("visibilitychange",function(){if(TR&&!document.hidden)wakeOn()});
+function trTeardown(){
+  if(!TR)return;var t=TR;TR=null;
+  try{if(t.s)t.s.dispose()}catch(_){}
+  try{if(t.wake)t.wake.release()}catch(_){}
+  $("train").hidden=true;
+}
+function startTraining(p){
+  $("home").hidden=true;$("train").hidden=false;
+  tSet("tTitle",p.name);tSet("tStage","Getting ready…");tSet("tStats","");tSet("tNote","Keep this screen open and the phone awake while it trains. Photo scans take a while on a phone, often 10 to 30 minutes.");
+  $("tFill").style.width="0";$("tPause").disabled=true;$("tFinish").disabled=true;$("tPause").textContent="Pause";
+  TR={p:p,s:null,wake:null,finishing:false,lost:false,max:10000,confirm:false};
+  wakeOn();
+  var me=TR;
+  if(!navigator.gpu){tSet("tStage","This browser doesn't offer WebGPU.");tSet("tNote","Training photo scans needs WebGPU, and this browser doesn't have it. The single-photo projects still work.");return Promise.resolve()}
+  tSet("tStage","Loading the trainer…");
+  return import("./lib/splatjs/index.js").then(function(mod){
+    if(TR!==me)return;
+    var s=mod.createSession({maxIters:me.max,initTarget:60000,holdout:-1,lowMem:true,
+      maxViewW:Math.ceil(screen.width||800),maxViewH:Math.ceil(screen.height||800),
+      sfm:{workers:3,uiYield:true},trainer:{maxSplats:150000,capMult:8}});
+    me.s=s;
+    s.on("stage",function(e){
+      if(TR!==me||!e)return;
+      var lab=STAGE_TXT[e.stage]||e.stage;
+      if(e.stage!=="train"){tSet("tStage",lab+(e.total>1?" · "+e.done+" of "+e.total:""));var fr=e.total>0?e.done/e.total:0,w=e.stage==="decode"?3:e.stage==="features"?3+fr*12:e.stage==="matching"?15+fr*10:(e.stage==="pass"||e.stage==="register")?25+fr*10:35;$("tFill").style.width=w+"%"}
+    });
+    s.on("metrics",function(m){
+      if(TR!==me||!m)return;
+      var it=m.iter||0,ips=m.itersPerSec||0,eta=ips>0?(me.max-it)/ips:NaN;
+      tSet("tStage","Training · "+Math.min(100,Math.round(it/me.max*100))+"%");
+      $("tFill").style.width=(35+Math.min(1,it/me.max)*65)+"%";
+      tSet("tStats",(m.splats||0).toLocaleString("en-GB")+" splats · "+Math.round(ips)+" it/s · about "+fmtEta(eta)+" left"+(m.psnrTrain?" · PSNR "+(+m.psnrTrain).toFixed(1):""));
+    });
+    s.on("log",function(m){if(TR===me&&typeof m==="string")tSet("tNote",m.slice(0,140))});
+    s.on("event",function(e){
+      if(TR!==me||!e)return;
+      if(e.kind==="train-complete")finishTraining();
+      else if(e.kind==="device-lost"){me.lost=true;tSet("tStage","The phone took back the graphics chip");tSet("tNote","This usually happens when the screen locks or you switch apps. Your cameras are kept, so you can restart training without redoing that part.");$("tPause").textContent="Restart training";$("tPause").disabled=false;$("tFinish").disabled=true}
+    });
+    return s.load(me.p.srcs).then(function(){return s.solve()}).then(function(){return s.seed()}).then(function(){
+      if(TR!==me)return;
+      attachView(me);
+      s.start();$("tPause").disabled=false;$("tFinish").disabled=false;
+    });
+  }).catch(function(err){
+    if(TR!==me)return;
+    tSet("tStage","Training stopped");var em=(err&&err.message)||"Something went wrong.";tSet("tNote",/adapter|WebGPU/i.test(em)?"This phone's browser has WebGPU switched off or unsupported ("+em+"). Photo scans can't train here.":em);
+  });
+}
+function attachView(t){
+  try{
+    var cvs=$("tcv"),meta=t.s.trainer.camMeta&&t.s.trainer.camMeta[0];
+    if(meta){cvs.width=meta.w;cvs.height=meta.h;cvs.style.objectFit="contain"}
+    t.s.view.attach(cvs);
+    if(meta)t.s.view.lookThrough(0);
+  }catch(err){tSet("tNote","Training is running, but the live preview couldn't start: "+err.message)}
+}
+function finishTraining(){
+  var t=TR;if(!t||t.finishing||!t.s)return;t.finishing=true;
+  busy(true,"Packing the splats…");
+  Promise.resolve(t.s.training?t.s.finish():null).then(function(){return t.s.exportPlyBlob()}).then(function(blob){
+    t.p.ply=blob;t.p.updated=Date.now();
+    return dbPut(t.p).catch(function(){setStatus("Couldn't save the result on the device. Opening it anyway.","warn")}).then(function(){return t.p});
+  }).then(function(p){trTeardown();busy(false);return openPhotosProject(p)}).catch(function(err){
+    busy(false);if(TR===t){t.finishing=false;tSet("tNote","Couldn't pack the result: "+err.message)}
+  });
+}
+$("tPause").addEventListener("click",function(){
+  var t=TR;if(!t||!t.s)return;
+  if(t.lost){
+    $("tPause").disabled=true;tSet("tStage","Restarting…");
+    t.s.recover().then(function(){t.lost=false;attachView(t);t.s.start();$("tPause").textContent="Pause";$("tPause").disabled=false;$("tFinish").disabled=false})
+      .catch(function(err){tSet("tNote","Couldn't restart: "+err.message)});
+    return;
+  }
+  if(t.s.training){t.s.pause();$("tPause").textContent="Resume"}else{t.s.start();$("tPause").textContent="Pause"}
+});
+$("tFinish").addEventListener("click",finishTraining);
+$("tBack").addEventListener("click",function(){
+  var t=TR;if(!t){$("train").hidden=true;showHome();return}
+  if(!t.confirm){t.confirm=true;tSet("tNote","Tap back again to stop. Training progress isn't kept, but your photos are, so you can start again from the home screen.");setTimeout(function(){if(TR===t)t.confirm=false},4000);return}
+  trTeardown();showHome();
+});
 
 function afterPhoto(){
   aiCached().then(function(c){
