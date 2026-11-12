@@ -84,7 +84,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .toast{position:absolute;left:50%;transform:translateX(-50%);top:calc(64px + var(--safe-t));max-width:calc(100% - 28px);padding:8px 14px;border-radius:12px;background:#0b0d10ee;border:1px solid var(--line);font-size:13px;color:var(--fg);pointer-events:none;text-align:center}
 .toast.ok{color:var(--ok)} .toast.warn{color:var(--warn)} .toast.bad{color:var(--bad)}
 
-.rail{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:var(--sheet);border-top:1px solid var(--line);padding-bottom:var(--safe-b);position:relative;z-index:3}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--sheet);border-top:1px solid var(--line);padding-bottom:var(--safe-b);position:relative;z-index:3}
 .tool{appearance:none;border:0;background:transparent;color:var(--mute);min-height:58px;display:grid;place-items:center;align-content:center;gap:2px;font:500 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;position:relative;padding:0}
 .tool[aria-pressed="true"]{color:var(--fg)}
 .tool[aria-pressed="true"]::after{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
@@ -118,7 +118,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 
 @media(min-width:760px){
   #editor{grid-template-rows:none;grid-template-columns:72px minmax(0,1fr)}
-  .rail{order:-1;grid-template-columns:none;grid-auto-rows:64px;align-content:start;border-top:0;border-right:1px solid var(--line);padding:calc(8px + var(--safe-t)) 0 0}
+  .rail{order:-1;grid-auto-flow:row;grid-auto-columns:auto;grid-auto-rows:64px;align-content:start;border-top:0;border-right:1px solid var(--line);padding:calc(8px + var(--safe-t)) 0 0}
   .tool{min-height:64px}
   .tool[aria-pressed="true"]::after{top:22%;bottom:22%;left:-1px;right:auto;width:2px;height:auto;background:linear-gradient(180deg,var(--accent2),var(--accent))}
   .pop{left:12px;right:auto;bottom:auto;top:64px;width:340px;max-height:calc(100% - 84px)}
@@ -131,6 +131,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .tool:hover,.btn:hover,.seg button:hover,.ico:hover{filter:brightness(1.15)}
   #train .tinfo,#train .trow{width:min(820px,100%);margin:0 auto}
 }
+.modeseg{pointer-events:auto;display:flex;gap:2px;padding:3px;border:1px solid #ffffff1f;background:#0b0d10b3;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px}
+.modeseg button{min-height:38px;padding:0 16px;border:0;border-radius:9px;background:transparent;color:var(--mute);font:600 13px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.modeseg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--accent-ink)}
+@media(max-width:620px){.pname{display:none}.top{justify-content:space-between}}
 #editor.nogui .top,#editor.nogui .rail,#editor.nogui .pop,#editor.nogui .hud{display:none!important}
 #editor.nogui{grid-template-columns:minmax(0,1fr)}
 #ov{pointer-events:none;z-index:2}.nogui #ov{display:none}
@@ -170,7 +174,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
   <div class="hscroll" id="hscroll">
     <h2>Projects</h2>
-    <p class="empty" id="emptyMsg" hidden>No projects yet. Add a photo, or drop a few photos here to scan them into a 3D scene you can look around, colour, animate and export.</p>
+    <p class="empty" id="emptyMsg" hidden>No projects yet. Start a new project to get an empty 3D space, then add splats, models, photo scans or a photo from the menus.</p>
     <div class="grid" id="grid"></div>
     <div class="hfoot"><span id="ver"></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
   </div>
@@ -181,12 +185,13 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <canvas id="gl" aria-label="Splat preview. Left-drag to orbit, right-drag to pan, wheel to zoom, double-click to focus."></canvas>
     <div class="top">
       <button class="ico" id="back" type="button" aria-label="Back to projects"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true">Edit</button><button type="button" data-mode="render" aria-pressed="false">Render</button></div>
       <div class="pname" id="pname"></div>
       <button class="ico" id="hideGui" type="button" aria-label="Hide the interface (H)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button class="ico" id="reset" type="button" aria-label="Reset view"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
     </div>
     <button id="showGui" type="button" hidden aria-label="Show the interface (H)">Show interface</button>
-    <div id="dropHint" hidden>Drop photos to start a project</div>
+    <div id="dropHint" hidden>Drop a .ply or 3D model to add it</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
     <div class="hud" id="hud"></div>
@@ -206,7 +211,6 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 </div>
 <input id="newIn" type="file" accept="image/*" hidden>
 <input id="multiIn" type="file" accept="image/*" multiple hidden>
-<input id="swapIn" type="file" accept="image/*" hidden>
 <input id="cubeIn" type="file" accept=".cube,text/plain" hidden>
 <input id="objPly" type="file" accept=".ply" hidden>
 <input id="objMesh" type="file" accept=".glb,.gltf,.obj" hidden>
@@ -216,18 +220,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 014";
+var VERSION="Version 015";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
-  size:1.1,detail:768,shape:0,bg:"#0a0c0d",
+  size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
   fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"orbit",fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45};
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"orbit",fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
-var photoSrc=null, depthImg=null, photoName="example", cur=null;
+var photoSrc=null, depthImg=null, photoName="example", cur=null, MODE="edit";
 var scene=null, zoom=1, TG=[0,0,0], vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
 var toastT=0;
 function setStatus(msg,kind){
@@ -304,16 +308,15 @@ function normalise(D){
   return out;
 }
 
-/* ---------- build splats from photo + depth ---------- */
-function rebuild(){
-  if(!photoSrc)return;
-  var pd=dims(photoSrc),aspect=pd.w/pd.h,long=S.detail;
+/* ---------- photo + depth -> dots (saved afterwards as a splat object) ---------- */
+function makeDots(photoSrc,depthImg,P){
+  var pd=dims(photoSrc),aspect=pd.w/pd.h,long=P.detail;
   var W=aspect>=1?long:Math.round(long*aspect),H=aspect>=1?Math.round(long/aspect):long;
-  var R=S.range,cut=S.cut,rgba=grab(photoSrc,W,H),N=W*H,D=new Float32Array(N),i,j;
+  var R=P.range,cut=P.cut,rgba=grab(photoSrc,W,H),N=W*H,D=new Float32Array(N),i,j;
   if(depthImg){
     var dd=grab(depthImg,W,H);
     for(i=0;i<N;i++)D[i]=(0.299*dd[i*4]+0.587*dd[i*4+1]+0.114*dd[i*4+2])/255;
-    if(S.smooth>0)D=boxBlur(D,W,H,S.smooth);
+    if(P.smooth>0)D=boxBlur(D,W,H,P.smooth);
   }else{
     var L=new Float32Array(N);
     for(i=0;i<N;i++)L[i]=(0.299*rgba[i*4]+0.587*rgba[i*4+1]+0.114*rgba[i*4+2])/255;
@@ -321,9 +324,9 @@ function rebuild(){
     for(j=0;j<H;j++)for(i=0;i<W;i++)D[j*W+i]=0.7*(j/H)+0.3*(1-Lb[j*W+i]);
   }
   D=normalise(D);
-  if(S.invert)for(i=0;i<N;i++)D[i]=1-D[i];
+  if(P.invert)for(i=0;i<N;i++)D[i]=1-D[i];
   var tx=TY*aspect,cap=N*2,buf=new Float32Array(cap*7),base=new Float32Array(cap*3),n=0,o=0,b=0;
-  var fill=S.fill>0,thr=fill?0.16-0.13*S.fill:9,sz=2*TY/H*1.25;
+  var fill=P.fill>0,thr=fill?0.16-0.13*P.fill:9,sz=2*TY/H*1.25;
   for(j=0;j<H;j++){
     for(i=0;i<W;i++){
       var idx=j*W+i,d=D[idx];
@@ -348,12 +351,9 @@ function rebuild(){
       }
     }
   }
-  scene={n:n,buf:buf.subarray(0,n*7),base:base.subarray(0,n*3),R:R,tx:tx,aspect:aspect};
-  regrade();
-  $("hud").textContent=n.toLocaleString("en-GB")+" splats";
-  if($("stats"))$("stats").textContent=n.toLocaleString("en-GB")+" splats  ·  about "+(n*56/1e6).toFixed(1)+" MB";
+  for(i=0;i<n;i++){buf[i*7+3]=base[i*3];buf[i*7+4]=base[i*3+1];buf[i*7+5]=base[i*3+2]}
+  return {n:n,buf:buf.subarray(0,n*7),base:base.subarray(0,n*3),R:R,tx:tx,aspect:aspect};
 }
-function schedule(){clearTimeout(timer);timer=setTimeout(rebuild,50)}
 
 /* ---------- colour grade (baked into the splat colours, so it exports) ---------- */
 var gT=0;
@@ -366,7 +366,7 @@ function regrade(){
   var m0=0.213+c*0.787-s*0.213,m1=0.715-c*0.715-s*0.715,m2=0.072-c*0.072+s*0.928,
       m3=0.213-c*0.213+s*0.143,m4=0.715+c*0.285+s*0.140,m5=0.072-c*0.072-s*0.283,
       m6=0.213-c*0.213-s*0.787,m7=0.715-c*0.715+s*0.715,m8=0.072+c*0.928+s*0.072;
-  var plain=!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm;
+  var plain=MODE==="edit"||(!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm);
   for(i=0;i<n;i++){
     o=i*7;b=i*3;
     if(plain){buf[o+3]=B[b];buf[o+4]=B[b+1];buf[o+5]=B[b+2];continue}
@@ -391,6 +391,19 @@ function gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain){
     }
     out[o]=r<0?0:r>1?255:r*255;out[o+1]=gg<0?0:gg>1?255:gg*255;out[o+2]=bl<0?0:bl>1?255:bl*255;out[o+3]=A[i]*255;
   }
+}
+
+/* the same grade as a function, used when baking it into an exported file */
+function gradeFn(){
+  if(!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm)return null;
+  var ex=Math.pow(2,S.exp/100*1.5),cf=1+S.con/100,sa=1+S.sat/100,wm=S.warm/100*0.09,hr=S.hue*Math.PI/180,c=Math.cos(hr),s=Math.sin(hr);
+  var m0=0.213+c*0.787-s*0.213,m1=0.715-c*0.715-s*0.715,m2=0.072-c*0.072+s*0.928,m3=0.213-c*0.213+s*0.143,m4=0.715+c*0.285+s*0.140,m5=0.072-c*0.072-s*0.283,m6=0.213-c*0.213-s*0.787,m7=0.715-c*0.715+s*0.715,m8=0.072+c*0.928+s*0.072;
+  return function(r,g,b){
+    r*=ex;g*=ex;b*=ex;r=(r-0.5)*cf+0.5;g=(g-0.5)*cf+0.5;b=(b-0.5)*cf+0.5;
+    var r2=m0*r+m1*g+m2*b,g2=m3*r+m4*g+m5*b,b2=m6*r+m7*g+m8*b,l=0.299*r2+0.587*g2+0.114*b2;
+    r=l+(r2-l)*sa+wm;g=l+(g2-l)*sa+wm*0.15;b=l+(b2-l)*sa-wm;
+    return [r<0?0:r>1?1:r,g<0?0:g>1?1:g,b<0?0:b>1?1:b];
+  };
 }
 
 /* ---------- WebGL ---------- */
@@ -440,7 +453,7 @@ function initHelpers(){
 }
 function buildHelpers(){
   HN=0;if(!scene||!scene.bb)return;
-  if(!(S.gridX||S.gridY||S.gridZ||S.axes))return;
+  if(MODE!=="edit"||!(S.gridX||S.gridY||S.gridZ||S.axes))return;
   var b=scene.bb,cx=(b.x0+b.x1)/2,cy=(b.y0+b.y1)/2,cz=(b.z0+b.z1)/2,ext=Math.max(b.x1-b.x0,b.z1-b.z0,b.y1-b.y0,0.4)*0.75,step=0.1,half=Math.ceil(ext/step)*step,v=[];
   function ln(a,c,col){v.push(a[0],a[1],a[2],col[0],col[1],col[2],col[3],c[0],c[1],c[2],col[0],col[1],col[2],col[3])}
   function plane(axis,at){
@@ -492,13 +505,17 @@ var PFS="#version 300 es\nprecision highp float;precision highp sampler3D;\n"+
 " if(uGrain>0.001){vec2 gp=floor(gl_FragCoord.xy/uGS);float n=hash(gp+uTime*37.0)-0.5;float n2=hash(gp*1.7+uTime*19.0+7.0)-0.5;float l=dot(col,vec3(0.299,0.587,0.114));\n"+
 "  col+=(vec3(n)+vec3(n2,-n2,n2*0.5)*0.35)*uGrain*0.45*(1.0-abs(l-0.5)*1.2);}\n"+
 " o=vec4(col,1.0);}";
-function postActive(){return GL2&&(S.vig>0||S.vigBlur>0||S.dist!==0||S.ca>0||S.grain>0||(S.look!=="none"&&S.lookMix>0))}
+function postActive(){return GL2&&MODE==="render"&&(S.vig>0||S.vigBlur>0||S.dist!==0||S.ca>0||S.grain>0||(S.look!=="none"&&S.lookMix>0))}
 function initPost(){
   if(PF.prog)return PF.prog!==-1;
   var pr=gl.createProgram();gl.attachShader(pr,shader(gl.VERTEX_SHADER,PVS));gl.attachShader(pr,shader(gl.FRAGMENT_SHADER,PFS));gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){PF.prog=-1;try{console.error("post shader: "+gl.getProgramInfoLog(pr))}catch(_){}return false}
   PF.prog=pr;PF.u={};["uT","uL","uRes","uDist","uCA","uVig","uVigS","uVigB","uGrain","uGS","uTime","uLM","uLN","uHasL"].forEach(function(n){PF.u[n]=gl.getUniformLocation(pr,n)});
-  PF.fbo=gl.createFramebuffer();PF.tex=gl.createTexture();PF.rb=gl.createRenderbuffer();return true;
+  PF.fbo=gl.createFramebuffer();PF.tex=gl.createTexture();PF.rb=gl.createRenderbuffer();
+  /* a 1x1x1 stand-in for the LUT, so the 3D sampler never shares texture unit 0 with the 2D one (that made every lens draw fail) */
+  PF.dummy=gl.createTexture();gl.bindTexture(gl.TEXTURE_3D,PF.dummy);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage3D(gl.TEXTURE_3D,0,gl.RGB8,1,1,1,0,gl.RGB,gl.UNSIGNED_BYTE,new Uint8Array([128,128,128]));
+  gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_R,gl.CLAMP_TO_EDGE);
+  return true;
 }
 function ensureFBO(w,h){
   if(PF.w===w&&PF.h===h)return;
@@ -519,7 +536,7 @@ function endPost(){
   gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(PF.prog);var u=PF.u;
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,PF.tex);gl.uniform1i(u.uT,0);
   var hasL=S.look!=="none"&&PF.lut?1:0;
-  if(hasL){gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_3D,PF.lut);gl.uniform1i(u.uL,2)}
+  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_3D,hasL?PF.lut:PF.dummy);gl.uniform1i(u.uL,2);gl.activeTexture(gl.TEXTURE0);
   gl.uniform1i(u.uHasL,hasL);gl.uniform1f(u.uLM,S.lookMix);gl.uniform1f(u.uLN,PF.lutN);
   gl.uniform2f(u.uRes,PF.w,PF.h);gl.uniform1f(u.uDist,S.dist/100);gl.uniform1f(u.uCA,S.ca);gl.uniform1f(u.uVig,S.vig);gl.uniform1f(u.uVigS,S.vigSoft);gl.uniform1f(u.uVigB,S.vigBlur);
   gl.uniform1f(u.uGrain,S.grain);gl.uniform1f(u.uGS,Math.max(1,S.grainSize*(PF.h/Math.max(1,cv.clientHeight))));gl.uniform1f(u.uTime,anim?(performance.now()%1000)/1000+Math.floor(performance.now()/1000)%97:0);
@@ -617,6 +634,7 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 " float mid=0.5*(a+c);float rad=length(vec2(0.5*(a-c),b));float l1=mid+rad;float l2=max(mid-rad,0.1);\n"+
 " vec2 e=vec2(b,l1-a);if(dot(e,e)<1e-10)e=(a>=c)?vec2(1.,0.):vec2(0.,1.);\n"+
 " vec2 v1=normalize(e);vec2 v2=vec2(-v1.y,v1.x);\n"+
+" if(uMode==3){l1=2.5;l2=2.5;v1=vec2(1.,0.);v2=vec2(0.,1.);}\n"+
 " vec4 cp=uProj*pv;vec2 q=aQ*3.0;\n"+
 " vec2 off=(q.x*sqrt(l1)*v1+q.y*sqrt(l2)*v2)*2.0/uVp;\n"+
 " gl_Position=vec4(cp.xy/cp.w+off,cp.z/cp.w,1.0);vPos=q;\n"+
@@ -630,7 +648,7 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "}";
 var GFS="#version 300 es\nprecision mediump float;precision highp int;in vec4 vCol;in vec2 vPos;uniform int uMode;out vec4 o;\n"+
 "void main(){float r2=dot(vPos,vPos);if(r2>9.0)discard;float a;\n"+
-" if(uMode==1){if(r2>2.2)discard;a=min(1.0,vCol.a*4.0);}else a=exp(-0.5*r2)*vCol.a;\n"+
+" if(uMode==1||uMode==3){if(r2>2.2)discard;a=min(1.0,vCol.a*4.0);}else a=exp(-0.5*r2)*vCol.a;\n"+
 " if(a<0.004)discard;o=vec4(vCol.rgb*a,a);}";
 function initGS(){
   if(GSP)return GSP!==-1;
@@ -651,7 +669,7 @@ function applyRec(o,r){
   if(!r)return o;
   if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;
   if(r.crop)o.crop=Object.assign(newCrop(),r.crop);if(r.name)o.name=r.name;if(r.color)o.color=r.color;if(r.inten!=null)o.inten=r.inten;
-  if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id&&!o.main)o.id=r.id;
+  if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;
   return o;
 }
 function mat4mul(a,b){var o=new Float32Array(16),i,j,k,s;for(i=0;i<4;i++)for(j=0;j<4;j++){s=0;for(k=0;k<4;k++)s+=a[k*4+i]*b[j*4+k];o[j*4+i]=s}return o}
@@ -746,7 +764,7 @@ function sortGS(g,VM){
 function lightsData(force){
   var lp=new Float32Array(16),lc=new Float32Array(12),n=0;
   OBJS.forEach(function(o){
-    if(n>=4||!o.vis||(o.kind!=="sun"&&o.kind!=="point"))return;
+    if(n>=4||!o.vis||MODE==="edit"||(o.kind!=="sun"&&o.kind!=="point"))return;
     var c=hex2rgb(o.color||"#ffffff"),it=o.inten==null?1:o.inten;
     if(o.kind==="sun"){var l=Math.hypot(o.R[1],o.R[4],o.R[7])||1;lp.set([o.R[1]/l,o.R[4]/l,o.R[7]/l,0],n*4)}
     else lp.set([o.pos[0],o.pos[1],ZC+o.pos[2],1],n*4);
@@ -756,6 +774,8 @@ function lightsData(force){
   return {lp:lp,lc:lc,n:n};
 }
 function meshObjs(){return OBJS.filter(function(o){return o.kind==="mesh"&&o.vis&&o.mesh})}
+/* Edit shows the scene as it will export; Render adds the view-only effects */
+function RV(){return MODE==="render"?S:Object.assign({},S,{fog:0,defocus:0,sliceA:0,sliceB:1,lit:0,render:"splat",focusRange:0})}
 var gsTrail=0;
 function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   if(!initGS())return false;
@@ -766,17 +786,17 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   }
   if(!list.length)return true;
   list.sort(function(a,b){return a.z-b.z});
-  var Lt=S.lit>0.001?lightsData(true):{n:0,lp:new Float32Array(16),lc:new Float32Array(12)},hasMesh=meshObjs().length>0;
+  var Z=RV(),Lt=Z.lit>0.001?lightsData(true):{n:0,lp:new Float32Array(16),lc:new Float32Array(12)},hasMesh=meshObjs().length>0;
   gl.useProgram(GSP);
   if(hasMesh){gl.enable(gl.DEPTH_TEST);gl.depthMask(false)}else gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
   gl.bindBuffer(gl.ARRAY_BUFFER,GS.q);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.vertexAttribDivisor(0,0);
   gl.uniformMatrix4fv(u.uView,false,V);gl.uniformMatrix4fv(u.uProj,false,Pm);
   gl.uniform2f(u.uVp,w,h);gl.uniform1f(u.uPx,h/(2*tyv));gl.uniform1f(u.uMul,S.size/1.1);
-  gl.uniform1f(u.uFog,S.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,S.focus);gl.uniform1f(u.uDef,S.defocus);gl.uniform1f(u.uFR,S.focusRange);
-  gl.uniform2f(u.uSlice,Math.min(S.sliceA,S.sliceB),Math.max(S.sliceA,S.sliceB));
-  gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1i(u.uMode,S.render==="solid"?1:S.render==="depth"?2:0);
-  gl.uniform1f(u.uLit,S.lit>0.001?S.lit:0);gl.uniform3f(u.uAmb,S.amb,S.amb,S.amb);gl.uniform1i(u.uLN,Lt.n);gl.uniform4fv(u.uLP,Lt.lp);gl.uniform3fv(u.uLC,Lt.lc);gl.uniform3f(u.uCam,eye[0],eye[1],eye[2]);
+  gl.uniform1f(u.uFog,Z.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,Z.focus);gl.uniform1f(u.uDef,Z.defocus);gl.uniform1f(u.uFR,Z.focusRange);
+  gl.uniform2f(u.uSlice,Math.min(Z.sliceA,Z.sliceB),Math.max(Z.sliceA,Z.sliceB));
+  gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1i(u.uMode,Z.render==="solid"?1:Z.render==="depth"?2:Z.render==="points"?3:0);
+  gl.uniform1f(u.uLit,Z.lit>0.001?Z.lit:0);gl.uniform3f(u.uAmb,Z.amb,Z.amb,Z.amb);gl.uniform1i(u.uLN,Lt.n);gl.uniform4fv(u.uLP,Lt.lp);gl.uniform3fv(u.uLC,Lt.lc);gl.uniform3f(u.uCam,eye[0],eye[1],eye[2]);
   gl.uniform1i(u.uG,0);gl.uniform1i(u.uC,1);gl.uniform1i(u.uN,2);
   list.forEach(function(it){
     var g=it.o.gs,VM=it.VM,lv=g.lastV;
@@ -1009,16 +1029,9 @@ function drawScene(ao){
   if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
   var bg=hex2rgb(S.bg);
   gl.viewport(0,0,w,h);gl.clearColor(bg[0],bg[1],bg[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-  if(!scene||!scene.n)return;
-  /* keep the splat centred in the part of the stage the open tool panel isn't covering */
-  var vx=0,vy=0,vw=w,vh=h,pe=$("pop");
-  if(!pe.hidden&&!GUIHID){
-    var k=h/Math.max(1,cv.clientHeight);
-    if(window.innerWidth>=760){var cut=Math.round((pe.offsetWidth+24)*k);if(cut<w*0.7){vx=cut;vw=w-cut}}
-    else{var cutH=Math.round((pe.offsetHeight+10)*k);if(cutH<h*0.7){vy=cutH;vh=h-cutH}}
-  }
-  gl.viewport(vx,vy,vw,vh);
-  w=vw;h=vh;
+  if(!scene)return;
+  /* the view never shifts when a panel opens (the old recentre also broke the lens shader's screen coords) */
+  var vx=0,vy=0,vw=w,vh=h;
   beginPost(vx,vy,vw,vh,bg);
   var o=ao||OFF0;
   var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
@@ -1029,19 +1042,8 @@ function drawScene(ao){
   var Vm=lookAt(eye,tg,upv),Pm=persp(2*Math.atan(tyv),vA,0.01,500);
   var kk=cv.width/Math.max(1,cv.clientWidth);
   LASTM={V:Vm,P:Pm,vx:vx,vy:vy,vw:w,vh:h,k:kk,tyv:tyv,vA:vA,dist:dist,eye:eye};
-  drawHelpers(Vm,Pm);
-  if(GL2)drawMeshes(Vm,Pm,eye);
-  if(scene.gs&&GL2&&S.render!=="points"&&drawSplats(Vm,Pm,w,h,tyv,dist,bg,true,eye)){endPost();return}
-  var mo=OBJS[0]&&OBJS[0].main?OBJS[0]:null;
-  if(dotsStale)bindDots();
-  gl.uniformMatrix4fv(loc.uView,false,mo?mat4mul(Vm,objModel(mo)):Vm);
-  gl.uniformMatrix4fv(loc.uProj,false,Pm);
-  gl.uniform1f(loc.uPx,h/(2*tyv));gl.uniform1f(loc.uMul,S.size);
-  gl.uniform1f(loc.uZR,Math.max(scene.R,0.001));gl.uniform1f(loc.uFog,S.fog);gl.uniform3f(loc.uBg,bg[0],bg[1],bg[2]);
-  gl.uniform1f(loc.uFocus,S.focus);gl.uniform1f(loc.uDef,S.defocus);gl.uniform1f(loc.uFR,S.focusRange);gl.uniform1f(loc.uShape,S.shape);
-  gl.uniform2f(loc.uSlice,Math.min(S.sliceA,S.sliceB),Math.max(S.sliceA,S.sliceB));
-  if(!mo||mo.vis)gl.drawArrays(gl.POINTS,0,scene.n);
-  if(GL2&&OBJS.length>1)drawSplats(Vm,Pm,w,h,tyv,dist,bg,false,eye);
+  if(MODE==="edit")drawHelpers(Vm,Pm);
+  if(GL2){drawMeshes(Vm,Pm,eye);drawSplats(Vm,Pm,w,h,tyv,dist,bg,true,eye)}
   endPost();
 }
 
@@ -1113,15 +1115,19 @@ function zoomAt(f,cx,cy){
 }
 function pickAt(cx,cy){
   var L=LASTM;if(!L||!scene)return null;var nd=ndcAt(cx,cy);if(!nd)return null;
-  var V=L.V,P=L.P,g=scene.gs,pos=g?g.pos:scene.buf,st=g?3:7,n=g?g.n:scene.n,al=g?g.alpha:null,rad2=Math.pow(14*L.k,2),best=null,bz=1e9;
-  for(var i=0;i<n;i++){
-    if(al&&al[i]<0.4)continue;
-    var x=pos[i*st],y=pos[i*st+1],z=pos[i*st+2],vz=V[2]*x+V[6]*y+V[10]*z+V[14];
-    if(vz>-0.05||-vz>=bz)continue;
-    var vx_=V[0]*x+V[4]*y+V[8]*z+V[12],vy_=V[1]*x+V[5]*y+V[9]*z+V[13],w=-vz;
-    var ex=(P[0]*vx_/w-nd.x)*0.5*L.vw,ey=(P[5]*vy_/w-nd.y)*0.5*L.vh;
-    if(ex*ex+ey*ey<rad2){bz=-vz;best=[x,y,z]}
-  }
+  var V=L.V,P=L.P,rad2=Math.pow(14*L.k,2),best=null,bz=1e9;
+  OBJS.forEach(function(o){
+    if(o.kind!=="splat"||!o.vis||!o.gs)return;
+    var g=o.gs,M=objModel(o),VM=mat4mul(V,M),pos=g.pos,al=g.alpha,n=g.n;
+    for(var i=0;i<n;i++){
+      if(al[i]<0.4)continue;
+      var x=pos[i*3],y=pos[i*3+1],z=pos[i*3+2],vz=VM[2]*x+VM[6]*y+VM[10]*z+VM[14];
+      if(vz>-0.05||-vz>=bz)continue;
+      var vx_=VM[0]*x+VM[4]*y+VM[8]*z+VM[12],vy_=VM[1]*x+VM[5]*y+VM[9]*z+VM[13],w=-vz;
+      var ex=(P[0]*vx_/w-nd.x)*0.5*L.vw,ey=(P[5]*vy_/w-nd.y)*0.5*L.vh;
+      if(ex*ex+ey*ey<rad2){bz=-vz;best=[M[0]*x+M[4]*y+M[8]*z+M[12],M[1]*x+M[5]*y+M[9]*z+M[13],M[2]*x+M[6]*y+M[10]*z+M[14]]}
+    }
+  });
   return best;
 }
 function focusOn(cx,cy){
@@ -1152,7 +1158,7 @@ function boxCorners(o){
 }
 function distSeg(px,py,ax,ay,bx,by){var dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l)):0;return Math.hypot(px-(ax+t*dx),py-(ay+t*dy))}
 function gzGeo(){
-  var o=SEL;if(!o||!o.vis||!LASTM)return null;
+  var o=SEL;if(MODE!=="edit"||!o||!o.vis||!LASTM)return null;
   var wp=worldOf(o),pc=projW(wp);if(!pc)return null;
   var wpp=2*LASTM.tyv*pc[2]/Math.max(1,LASTM.vh/LASTM.k),g={c:pc,wp:wp,wpp:wpp,arm:ARM*wpp,ends:[],rings:[]},i,t;
   for(i=0;i<3;i++){g.ends.push(projW([wp[0]+AXV[i][0]*g.arm,wp[1]+AXV[i][1]*g.arm,wp[2]+AXV[i][2]*g.arm]))}
@@ -1180,20 +1186,11 @@ function drawOverlay(){
   var W=Math.round(cw*dpr),H=Math.round(ch*dpr);
   if(ov.width!==W||ov.height!==H){ov.width=W;ov.height=H}
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,cw,ch);
-  if(GUIHID||!LASTM||!(OBJS.length>1||curTool==="objects"))return;
+  if(MODE!=="edit"||GUIHID||!LASTM)return;
   var ACC="#ff7849";
   OBJS.forEach(function(o){
     if(!o.vis)return;var sel=o===SEL,p;
-    if(o.kind==="sun"||o.kind==="point"){
-      p=projW(worldOf(o));if(!p)return;
-      c.strokeStyle=sel?ACC:"#ffd86b";c.fillStyle=sel?ACC:"#ffd86b";c.lineWidth=1.6;c.beginPath();c.arc(p[0],p[1],7,0,6.2832);c.stroke();
-      if(o.kind==="sun"){
-        for(var i=0;i<8;i++){var an=i*Math.PI/4;c.beginPath();c.moveTo(p[0]+Math.cos(an)*10,p[1]+Math.sin(an)*10);c.lineTo(p[0]+Math.cos(an)*15,p[1]+Math.sin(an)*15);c.stroke()}
-        var d=[o.R[1],o.R[4],o.R[7]],wp=worldOf(o),q=projW([wp[0]-d[0]*0.45,wp[1]-d[1]*0.45,wp[2]-d[2]*0.45]);
-        if(q){c.setLineDash([4,4]);c.beginPath();c.moveTo(p[0],p[1]);c.lineTo(q[0],q[1]);c.stroke();c.setLineDash([])}
-      }else{c.beginPath();c.arc(p[0],p[1],2.4,0,6.2832);c.fill()}
-      return;
-    }
+    if(!isGeo(o))return;
     var cs=boxCorners(o);
     if(sel&&cs&&cs.every(function(q){return q})){
       c.strokeStyle=ACC;c.lineWidth=1.3;c.globalAlpha=0.9;c.beginPath();
@@ -1262,21 +1259,18 @@ function gizmoEnd(e){if(!GD||e.pointerId!==GD.id)return;e.stopImmediatePropagati
 cv.addEventListener("pointerup",gizmoEnd,true);cv.addEventListener("pointercancel",gizmoEnd,true);
 /* tap an object in the view to select it */
 function tapObj(e){
-  if(!(OBJS.length>1||curTool==="objects"))return false;
+  if(MODE!=="edit")return false;
   var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,best=null,ba=1e12;
   OBJS.forEach(function(o){
-    if(!o.vis)return;var area=null;
-    if(o.kind==="sun"||o.kind==="point"){var p=projW(worldOf(o));if(p&&Math.hypot(p[0]-x,p[1]-y)<16)area=50}
-    else{
-      var cs=boxCorners(o);if(cs&&cs.every(function(q){return q})){
-        var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;cs.forEach(function(q){x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1])});
-        if(x>=x0&&x<=x1&&y>=y0&&y<=y1)area=(x1-x0)*(y1-y0)+100;
-      }
+    if(!o.vis||!isGeo(o))return;var area=null;
+    var cs=boxCorners(o);if(cs&&cs.every(function(q){return q})){
+      var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;cs.forEach(function(q){x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1])});
+      if(x>=x0&&x<=x1&&y>=y0&&y<=y1)area=(x1-x0)*(y1-y0)+100;
     }
     if(area!=null&&area<ba){ba=area;best=o}
   });
-  if(best){SEL=best;dirty=true;if(curTool==="objects")openTool("objects");return true}
-  if(curTool==="objects"){SEL=null;dirty=true;openTool("objects");return true}
+  if(best){SEL=best;dirty=true;if(OBJTOOL[curTool])openTool(curTool,true);return true}
+  if(SEL&&OBJTOOL[curTool]){SEL=null;dirty=true;openTool(curTool,true);return true}
   return false;
 }
 cv.addEventListener("contextmenu",function(e){e.preventDefault()});
@@ -1391,7 +1385,7 @@ function getSession(){
   sessionP.catch(function(){sessionP=null});
   return sessionP;
 }
-function runDepth(session){
+function runDepth(session,photoSrc){
   var pd=dims(photoSrc),sc=420/Math.max(pd.w,pd.h);
   var w=Math.max(14,Math.round(pd.w*sc/14)*14),h=Math.max(14,Math.round(pd.h*sc/14)*14);
   var px=grab(photoSrc,w,h),n=w*h,f=new Float32Array(3*n),m=[0.485,0.456,0.406],sd=[0.229,0.224,0.225],i,c;
@@ -1405,29 +1399,9 @@ function runDepth(session){
     x.putImageData(id,0,0);return cc;
   });
 }
-function doAI(){
-  var btn=document.querySelector("[data-act=runAI]"),t0=performance.now();if(btn)btn.disabled=true;
-  var cached=false;
-  return aiCached().then(function(c){
-    cached=c;busy(true,c?"Estimating depth…":"Downloading AI model (about 40 MB)…");
-    setStatus(c?"":"First run downloads the AI model, about 40 MB. One time only.");
-    return getSession();
-  }).then(function(sess){
-    busy(true,"Estimating depth…");
-    return new Promise(function(r){setTimeout(r,40)}).then(function(){return runDepth(sess)});
-  }).then(function(cc){
-    depthImg=cc;S.invert=false;schedule();
-    toBlob(cc,"image/png").then(function(b){if(cur){cur.depth=b;saveSoon()}});
-    setStatus("3D ready in "+((performance.now()-t0)/1000).toFixed(1)+" s. Drag to look around.","ok");
-    syncControls();
-  }).catch(function(err){
-    setStatus("The depth model didn't run here: "+(err&&err.message?err.message:"blocked")+". The rough preview is still shown.","bad");
-  }).then(function(){var b=document.querySelector("[data-act=runAI]");if(b)b.disabled=false;busy(false)});
-}
-
 /* ---------- export ---------- */
-function buildPLY(){
-  var n=scene.n,b=scene.buf,mul=S.size,SH=0.28209479177387814;
+function buildPLY(n,b,mul){
+  var SH=0.28209479177387814;
   var head="ply\nformat binary_little_endian 1.0\nelement vertex "+n+"\n"+
     ["x","y","z","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2","rot_0","rot_1","rot_2","rot_3"].map(function(p){return "property float "+p}).join("\n")+
     "\nend_header\n";
@@ -1445,15 +1419,6 @@ function buildPLY(){
 function saveBlob(blob,name){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
   document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},60000);
-}
-function exportPLY(){
-  if(!scene||!scene.n){setStatus("Nothing to export yet.","warn");return}
-  setStatus("Packing "+scene.n.toLocaleString("en-GB")+" splats…");
-  setTimeout(function(){
-    try{saveBlob(new Blob([buildPLY()],{type:"application/octet-stream"}),"splatbox-"+photoName+".ply");
-      setStatus("Saved splatbox-"+photoName+".ply. Open it in SuperSplat or any splat viewer.","ok")}
-    catch(e){setStatus("The save didn't go through: "+(e&&e.message||"unknown"),"bad")}
-  },30);
 }
 function exportPNG(){
   if(!scene)return;
@@ -1491,10 +1456,20 @@ var ICON={
   camera:'<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>',
   export:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
 };
-var TOOLS=[["photo","Photo"],["depth","Depth"],["look","Look"],["colour","Colour"],["fx","FX"],["camera","Camera"],["export","Export"]];
-var PHOTO_ONLY={photo:1,depth:1},SCENE_ONLY={scene:1};
-TOOLS.splice(0,0,["scene","Scene"]);TOOLS.splice(TOOLS.length-1,0,["objects","Objects"]);SCENE_ONLY.objects=1;TOOLS.splice(4,0,["lens","Lens"]);ICON.lens='<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 4v4M4 12h4M20 12h-4M12 20v-4"/>';
-ICON.scene='<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/>';
+var EDIT_T={add:1,objects:1,crop:1,orient:1,file:1},OBJTOOL={objects:1,crop:1,orient:1,light:1};
+var TOOLS=[["add","Add"],["objects","Objects"],["crop","Crop"],["orient","Orient"],["file","File"],
+  ["camera","Camera"],["lens","Lens"],["fx","Depth"],["look","Look"],["colour","Colour"],["light","Light"],["display","Display"],["capture","Capture"]];
+ICON.fx=ICON.depth;
+ICON.colour='<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/>';
+ICON.lens='<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 4v4M4 12h4M20 12h-4M12 20v-4"/>';
+ICON.objects='<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="1.6"/>';
+ICON.add='<path d="M12 5v14M5 12h14"/>';
+ICON.crop='<path d="M6 2v14a2 2 0 002 2h14"/><path d="M2 6h14a2 2 0 012 2v14"/>';
+ICON.orient='<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M18 9l3 3-3 3"/>';
+ICON.file='<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>';
+ICON.light='<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>';
+ICON.display='<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>';
+ICON.capture='<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 7l1.5-3h5L16 7"/>';
 var rail=$("rail");
 TOOLS.forEach(function(t){
   var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=t[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",t[1]);
@@ -1505,89 +1480,124 @@ function sl(k,label,min,max,step){return '<div class="sl"><label for="c-'+k+'">'
 function chk(k,label){return '<label class="chk"><input type="checkbox" data-k="'+k+'"> '+label+'</label>'}
 function seg(k,items,wrap){return '<div class="seg'+(wrap?' wrap':'')+'">'+items.map(function(i){return '<button type="button" data-k="'+k+'" data-v="'+i[0]+'" aria-pressed="false">'+i[1]+'</button>'}).join("")+'</div>'}
 var SWATCH=["#0a0c0d","#1b2430","#2a1d17","#0e2a2c","#efece6","#ffffff"];
-var PANES={
-  scene:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
-    '<p class="lbl">Orientation</p><div class="row2"><button class="btn small" type="button" data-act="autolevel">Auto-level</button><button class="btn small" type="button" data-act="flip">Flip upside down</button></div>'+
-    sl("tiltX","Tilt forward / back",-45,45,0.5)+sl("tiltZ","Tilt left / right",-45,45,0.5)+sl("spin","Spin",-180,180,1)+
-    '<button class="btn small" type="button" data-act="resetOrient">Reset orientation</button>'+
-    '<p class="note">Auto-level finds the ground and makes it flat. If the scene still leans or is upside down, trim it here. Orbiting always spins around the vertical axis.</p>'},
-  photo:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
-    '<button class="btn" type="button" data-act="swap">Change photo</button><p class="note">Changing the photo keeps your settings and works out the depth again.</p>'},
-  depth:function(){return '<button class="btn primary" type="button" data-act="runAI">Estimate depth with AI</button>'+
-    '<p class="note">Runs on your device with Depth Anything V2 Small. The first run downloads about 40 MB, once. After that it works offline.</p>'+
-    sl("range","Depth range",0.2,2,0.05)+sl("smooth","Smooth depth",0,4,1)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+chk("invert","Flip depth (near and far swapped)")},
-  look:function(){return (cur&&cur.kind==="photos"?'<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+'<p class="note">Splats = real soft Gaussians. Solid = hard-edged ellipses. Points = simple dots. Depth = colour by distance.</p>':'')+'<p class="lbl">Helpers</p>'+chk("gridY","Floor grid (X / Z plane)")+chk("gridX","Side grid (Y / Z plane)")+chk("gridZ","Back grid (X / Y plane)")+chk("axes","Axes: X red, Y green, Z blue")+'<p class="lbl">Dot shape</p>'+seg("shape",[[0,"Round"],[1,"Square"],[2,"Diamond"],[3,"Ring"]])+
-    sl("size","Splat size",0.6,2.6,0.1)+sl("detail","Detail (long side)",192,768,64)+
-    '<p class="lbl">Background</p><div class="sw">'+SWATCH.map(function(c){return '<button type="button" data-k="bg" data-v="'+c+'" style="background:'+c+'" aria-label="Background '+c+'" aria-pressed="false"></button>'}).join("")+
-    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'},
-  lens:function(){return sl("vig","Vignette",0,1,0.02)+sl("vigSoft","Vignette softness",0,1,0.02)+sl("vigBlur","Vignette blur",0,1,0.02)+sl("dist","Lens distortion",-100,100,1)+sl("ca","Chromatic aberration",0,1,0.02)+
-    sl("grain","Film grain",0,1,0.02)+sl("grainSize","Grain size",1,4,0.25)+
-    '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+(cur.lutName||"Imported LUT").slice(0,18)+'</button>':'')+'</div>'+
-    sl("lookMix","Look strength",0,1,0.05)+'<button class="btn small" type="button" data-act="cube">Import .cube LUT</button>'+
-    '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
-    '<p class="note">Looks are hand-built approximations of film stocks and camera styles, not manufacturer LUTs. For an exact match, import your own .cube file. Lens effects show in the viewer, PNG and video. They are not saved into the .ply.</p>'},
-  colour:function(){return sl("exp","Exposure",-100,100,1)+sl("con","Contrast",-100,100,1)+sl("sat","Saturation",-100,100,1)+sl("hue","Hue",-180,180,1)+sl("warm","Warmth",-100,100,1)+
-    '<button class="btn small" type="button" data-act="resetColour">Reset colour</button><p class="note">Colour changes are saved into the exported .ply.</p>'},
-  fx:function(){return sl("fog","Depth fog",0,1,0.05)+sl("defocus","Depth of field (blur amount)",0,1,0.05)+sl("focus","Focus distance",0,1,0.02)+sl("focusRange","Sharp zone (in focus depth)",0,0.6,0.02)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
-    '<button class="btn small" type="button" data-act="resetFx">Reset FX</button><p class="note">FX are for viewing, video and images. They aren\'t saved into the .ply.</p>'},
-  camera:function(){return '<p class="lbl">Controls</p>'+seg("ctrl",[["orbit","Turntable"],["fly","Fly"],["trackball","Free"]])+
-    sl("fov","Lens (field of view)",20,100,1)+sl("sens","Mouse speed",0.3,3,0.1)+
-    '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
-    '<p class="keys"><b>Left-drag</b> orbit · <b>Right/Shift-drag</b> pan · <b>Wheel</b> zoom to cursor · <b>Double-click</b> focus on that spot<br><b>W A S D</b> move · <b>Q E</b> down/up · <b>Arrows</b> look · <b>Shift</b> faster<br><b>Alt-drag</b> or <b>[ ]</b> roll · <b>L</b> level · <b>F</b> frame all · <b>R</b> reset<br><b>Numpad 1 / 3 / 7</b> front / side / top (Ctrl = opposite)</p>'+
-    '<p class="lbl">Move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
-    sl("dur","Length",2,12,1)+chk("loop","Loop")+
-    '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
-    '<p class="note">Recording plays the move once and saves a video of the viewer.</p>'},
-  export:function(){return '<div class="stats" id="stats"></div><button class="btn primary" type="button" data-act="ply">Export .ply</button>'+
-    (cur&&cur.kind==="photos"?'<button class="btn" type="button" data-act="plyOrig">Export trained splats (.ply)</button>'+(OBJS.length>1?'<button class="btn" type="button" data-act="plyScene">Export whole scene (.ply)</button>':''):'')+
-    '<button class="btn" type="button" data-act="png">Save image (PNG)</button>'+
-    '<p class="note">The .ply opens in SuperSplat or any splat viewer. It includes colour and gap fill, but not fog, defocus, slice or shape.'+(cur&&cur.kind==="photos"?" For photo scans, the first button saves the scene as dots with your colour changes. The second saves the real trained splats, without colour changes.":"")+'</p>'}
-};
-/* ---------- Objects pane (outliner + transform + crop + lights) ---------- */
-ICON.objects='<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="1.6"/>';
-function objKindLabel(o){return o.main?"scan":o.kind==="splat"?"splat":o.kind==="mesh"?"model":o.kind==="sun"?"sun":"light"}
+function isLight(o){return o.kind==="sun"||o.kind==="point"}
+function isGeo(o){return o.kind==="splat"||o.kind==="mesh"}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function objKindLabel(o){return o.kind==="splat"?"splat":o.kind==="mesh"?"model":o.kind==="sun"?"sun":"light"}
 function objRow(o){
-  var nm=(o.main&&cur?cur.name:o.name)||"Object";
+  var nm=o.name||"Object";
   return '<div class="orow" data-oid="'+o.id+'" aria-selected="'+(o===SEL)+'">'+
     '<button type="button" data-oid="'+o.id+'" data-oact="vis" aria-label="'+(o.vis?"Hide":"Show")+' '+esc(nm)+'" aria-pressed="'+o.vis+'">'+(o.vis?"◉":"○")+'</button>'+
     '<button type="button" class="oname" data-oid="'+o.id+'" data-oact="sel">'+esc(nm)+'</button>'+
     '<span class="okind">'+objKindLabel(o)+'</span>'+
-    (o.main?'<span></span>':'<button type="button" data-oid="'+o.id+'" data-oact="del" aria-label="Delete '+esc(nm)+'">✕</button>')+'</div>';
+    '<button type="button" data-oid="'+o.id+'" data-oact="del" aria-label="Delete '+esc(nm)+'">✕</button></div>';
 }
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function osl(k,label,min,max,step){return '<div class="sl"><label for="oo-'+k+'">'+label+'</label><output id="oov-'+k+'"></output><input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function numIn(k,step){return '<input class="num" type="number" step="'+step+'" data-o="'+k+'" aria-label="'+k+'">'}
-PANES.objects=function(){
-  var h='<div class="olist" role="list">'+OBJS.map(objRow).join("")+'</div>'+
-    '<div class="row2"><button class="btn small" type="button" data-act="oAddSplat">Add splat (.ply)</button><button class="btn small" type="button" data-act="oAddMesh">Add 3D model</button></div>'+
-    '<div class="row2"><button class="btn small" type="button" data-act="oAddSun">Add sun</button><button class="btn small" type="button" data-act="oAddPoint">Add point light</button></div>';
-  var o=SEL;
-  if(o){
-    h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Object name" '+(o.main?'disabled':'')+'>'+
-      '<div class="seg" role="group" aria-label="Gizmo"><button type="button" data-gm="move" aria-pressed="false">Move</button><button type="button" data-gm="rotate" aria-pressed="false">Rotate</button><button type="button" data-gm="scale" aria-pressed="false">Scale</button></div>'+
-      '<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.01")+numIn("p1","0.01")+numIn("p2","0.01")+'</div>';
-    if(o.kind!=="point")h+='<p class="lbl">Rotation (degrees)</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>';
-    if(o.kind==="splat"||o.kind==="mesh")h+='<p class="lbl">Scale</p>'+numIn("s","0.05");
-    if(o.kind==="sun"||o.kind==="point")h+='<p class="lbl">Light</p><input type="color" class="txt" data-o="lcol" aria-label="Light colour">'+osl("linten","Intensity",0,4,0.05);
-    if(o.kind==="splat")h+='<p class="lbl">3D crop</p><label class="chk"><input type="checkbox" data-o="cropOn"> Crop with a box</label><label class="chk"><input type="checkbox" data-o="cropInv"> Remove inside the box instead</label>'+
+function objList(filter,empty){
+  var l=OBJS.filter(filter);
+  return '<div class="olist" role="list">'+(l.length?l.map(objRow).join(""):'<p class="note">'+empty+'</p>')+'</div>';
+}
+var PANES={
+  add:function(){return '<p class="lbl">Bring in</p>'+
+    '<button class="btn" type="button" data-act="oAddSplat">Splat file (.ply)</button>'+
+    '<button class="btn" type="button" data-act="oAddMesh">3D model (.glb, .obj)</button>'+
+    '<p class="lbl">Make a splat</p>'+
+    '<button class="btn" type="button" data-act="addPhotos">Photos to splat (scan)</button>'+
+    '<p class="note">Pick 20 or more photos of the same place or object from slightly different spots. Training runs on your graphics card (needs WebGPU) and nothing leaves this PC. The result lands here as an object.</p>'+
+    '<button class="btn" type="button" data-act="addPhoto">Photo to 3D (AI depth)</button>'+
+    sl("range","Depth range",0.2,2,0.05)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+sl("detail","Detail (long side)",192,768,64)+
+    '<p class="note">Photo to 3D runs Depth Anything V2 Small on your device. The first run downloads about 40 MB, once. The sliders above apply to the next photo you make. Lights are in Render, under Light.</p>'},
+  objects:function(){
+    var geo=OBJS.filter(isGeo),h=objList(isGeo,'Nothing here yet. Use Add to bring in a splat, a 3D model, a photo scan or a photo.'),o=SEL&&isGeo(SEL)?SEL:null;
+    if(o){
+      h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Object name">'+
+        '<div class="seg" role="group" aria-label="Gizmo"><button type="button" data-gm="move" aria-pressed="false">Move</button><button type="button" data-gm="rotate" aria-pressed="false">Rotate</button><button type="button" data-gm="scale" aria-pressed="false">Scale</button></div>'+
+        '<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.01")+numIn("p1","0.01")+numIn("p2","0.01")+'</div>'+
+        '<p class="lbl">Rotation (degrees)</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
+        '<p class="lbl">Scale</p>'+numIn("s","0.05")+
+        '<div class="row2"><button class="btn small" type="button" data-act="oFocus">Focus view</button><button class="btn small" type="button" data-act="oReset">Reset transform</button></div>'+
+        '<button class="btn small" type="button" data-act="oDel">Delete this object</button>';
+    }else if(geo.length)h+='<p class="note">Tap an object in the list, or in the view, to select it. Then drag the gizmo in the view, or type exact values.</p>';
+    h+='<p class="keys"><b>G</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
+    return h;
+  },
+  crop:function(){
+    var sp=OBJS.filter(function(o){return o.kind==="splat"});
+    if(!sp.length)return '<p class="note">Add a splat first. Then you can cut away the parts you don\'t want with a box. The cut is kept when you export.</p>';
+    var h=sp.length>1?objList(function(o){return o.kind==="splat"},""):"",o=SEL&&SEL.kind==="splat"?SEL:null;
+    if(!o)return h+'<p class="note">Pick a splat in the list, or tap it in the view.</p>';
+    return h+'<p class="lbl">3D crop: '+esc(o.name)+'</p><label class="chk"><input type="checkbox" data-o="cropOn"> Crop with a box</label><label class="chk"><input type="checkbox" data-o="cropInv"> Remove inside the box instead</label>'+
       osl("cx0","X from",0,1,0.01)+osl("cx1","X to",0,1,0.01)+osl("cy0","Y from (bottom)",0,1,0.01)+osl("cy1","Y to (top)",0,1,0.01)+osl("cz0","Z from",0,1,0.01)+osl("cz1","Z to",0,1,0.01)+
-      '<button class="btn small" type="button" data-act="oCropReset">Reset crop</button>';
-    h+='<div class="row2"><button class="btn small" type="button" data-act="oFocus">Focus view</button><button class="btn small" type="button" data-act="oReset">Reset transform</button></div>';
-    if(o.kind==="splat")h+='<button class="btn small" type="button" data-act="oFlip">Flip upside down</button>';
-  }else h+='<p class="note">Tap an object in the list, or in the view, to select it. Then drag the gizmo in the view, or type exact values.</p>';
-  h+='<p class="lbl">Lighting</p>'+sl("lit","Light the splats",0,1,0.05)+sl("amb","Ambient light",0,1,0.05)+
-    '<p class="note">Splats have their lighting baked in. "Light the splats" estimates surface direction from each splat, so sun and point lights add a rough relight. At 0 your scan looks exactly as captured. 3D models are always lit. Up to 4 lights are used.</p>'+
-    '<p class="keys"><b>G</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
-  return h;
+      '<button class="btn small" type="button" data-act="oCropReset">Reset crop</button>'+
+      '<p class="note">The crop is part of the object, so it follows the splat into the exported .ply.</p>';
+  },
+  orient:function(){
+    var sp=OBJS.filter(function(o){return o.kind==="splat"}),o=SEL&&SEL.kind==="splat"?SEL:null;
+    var h=sp.length>1?objList(function(o){return o.kind==="splat"},""):"";
+    if(sp.length){
+      h+='<p class="lbl">Orientation'+(o?': '+esc(o.name):'')+'</p>'+(o?'<div class="row2"><button class="btn small" type="button" data-act="aLevel">Auto-level</button><button class="btn small" type="button" data-act="aFlip">Flip upside down</button></div><button class="btn small" type="button" data-act="aResetRot">Reset rotation</button>':'<p class="note">Pick a splat in the list, or tap it in the view.</p>');
+    }else h+='<p class="note">Add a splat to level it. The helpers below work any time.</p>';
+    h+='<p class="lbl">Helpers (Edit only, never exported)</p>'+chk("gridY","Floor grid (X / Z plane)")+chk("gridX","Side grid (Y / Z plane)")+chk("gridZ","Back grid (X / Y plane)")+chk("axes","Axes: X red, Y green, Z blue")+
+      '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
+      '<p class="note">Auto-level finds the ground and makes it flat. If it ends up upside down, use Flip. For fine tuning, use the rotation boxes in Objects.</p>';
+    return h;
+  },
+  file:function(){return '<label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
+    '<p class="note">Changes save by themselves.</p>'+
+    '<div class="row2"><button class="btn small" type="button" data-act="fNew">New project</button><button class="btn small" type="button" data-act="fCopy">Save as a copy</button></div>'+
+    '<button class="btn small" type="button" data-act="fHome">Open another project</button>'+
+    '<p class="lbl">Export</p><div class="stats" id="stats"></div>'+
+    '<button class="btn primary" type="button" data-act="ply">Export scene (.ply)</button>'+
+    chk("bakeGrade","Bake my Colour grade into the file")+
+    '<p class="note">Saves every visible splat with its moves, rotation, scale and crop. Not included: 3D models, lights, lens effects, looks, fog and depth of field. Those are Render only. The .ply opens in SuperSplat or any splat viewer.</p>'},
+  camera:function(){return '<p class="lbl">Controls</p>'+seg("ctrl",[["orbit","Turntable"],["fly","Fly"],["trackball","Free"]])+
+    sl("fov","Lens (field of view)",20,100,1)+sl("sens","Mouse speed",0.3,3,0.1)+
+    '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
+    '<p class="keys"><b>Left-drag</b> orbit · <b>Right/Shift-drag</b> pan · <b>Wheel</b> zoom to cursor · <b>Double-click</b> focus on that spot<br><b>W A S D</b> move · <b>Q E</b> down/up · <b>Arrows</b> look · <b>Shift</b> faster<br><b>Alt-drag</b> or <b>[ ]</b> roll · <b>L</b> level · <b>F</b> frame all · <b>R</b> reset<br><b>Numpad 1 / 3 / 7</b> front / side / top (Ctrl = opposite)</p>'},
+  lens:function(){return sl("vig","Vignette",0,1,0.02)+sl("vigSoft","Vignette softness",0,1,0.02)+sl("vigBlur","Vignette blur",0,1,0.02)+sl("dist","Lens distortion",-100,100,1)+sl("ca","Chromatic aberration",0,1,0.02)+
+    sl("grain","Film grain",0,1,0.02)+sl("grainSize","Grain size",1,4,0.25)+
+    '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
+    '<p class="note">Lens effects show in the viewer, PNG and video. They are never saved into the .ply.</p>'},
+  fx:function(){return sl("defocus","Depth of field (blur amount)",0,1,0.05)+sl("focus","Focus distance",0,1,0.02)+sl("focusRange","Sharp zone (in focus depth)",0,0.6,0.02)+sl("fog","Depth fog",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
+    '<button class="btn small" type="button" data-act="resetFx">Reset depth</button><p class="note">Depth effects are for viewing, video and images. They aren\'t saved into the .ply.</p>'},
+  look:function(){return '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+esc((cur.lutName||"Imported LUT").slice(0,18))+'</button>':'')+'</div>'+
+    sl("lookMix","Look strength",0,1,0.05)+'<button class="btn small" type="button" data-act="cube">Import .cube LUT</button>'+
+    '<p class="note">Looks are hand-built approximations of film stocks and camera styles, not manufacturer LUTs. For an exact match, import your own .cube file. Render only, never exported.</p>'},
+  colour:function(){return sl("exp","Exposure",-100,100,1)+sl("con","Contrast",-100,100,1)+sl("sat","Saturation",-100,100,1)+sl("hue","Hue",-180,180,1)+sl("warm","Warmth",-100,100,1)+
+    '<button class="btn small" type="button" data-act="resetColour">Reset colour</button><p class="note">The grade shows in Render. It only goes into the .ply if you tick "Bake my Colour grade" in File.</p>'},
+  light:function(){
+    var o=SEL&&isLight(SEL)?SEL:null,h=sl("lit","Light the splats",0,1,0.05)+sl("amb","Ambient light",0,1,0.05)+
+      '<div class="row2"><button class="btn small" type="button" data-act="oAddSun">Add sun</button><button class="btn small" type="button" data-act="oAddPoint">Add point light</button></div>'+
+      objList(isLight,'No lights yet. Add a sun or a point light.');
+    if(o){
+      h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Light name">';
+      if(o.kind==="point")h+='<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>';
+      else h+='<p class="lbl">Direction (rotation, degrees)</p><div class="xyz">'+numIn("r0","5")+numIn("r1","5")+numIn("r2","5")+'</div>';
+      h+='<p class="lbl">Light</p><input type="color" class="txt" data-o="lcol" aria-label="Light colour">'+osl("linten","Intensity",0,4,0.05)+
+        '<button class="btn small" type="button" data-act="oDel">Delete this light</button>';
+    }
+    return h+'<p class="note">Splats have their lighting baked in. "Light the splats" estimates surface direction from each splat, so sun and point lights add a rough relight. At 0 your scan looks exactly as captured. 3D models are always lit. Up to 4 lights are used. Lights are Render only and are not exported.</p>';
+  },
+  display:function(){return '<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+
+    '<p class="note">Splats = real soft Gaussians. Solid = hard-edged ellipses. Points = simple dots. Depth = colour by distance.</p>'+
+    sl("size","Splat size",0.6,2.6,0.1)+
+    '<p class="lbl">Background</p><div class="sw">'+SWATCH.map(function(c){return '<button type="button" data-k="bg" data-v="'+c+'" style="background:'+c+'" aria-label="Background '+c+'" aria-pressed="false"></button>'}).join("")+
+    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'},
+  capture:function(){return '<p class="lbl">Camera move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
+    sl("dur","Length",2,12,1)+chk("loop","Loop")+
+    '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
+    '<button class="btn" type="button" data-act="png">Save image (PNG)</button>'+
+    '<p class="note">Recording plays the move once and saves a video of the viewer, with your lens, look and depth effects.</p>'}
 };
 function syncObjFields(){
-  var o=SEL,pb=$("popB");if(curTool!=="objects"||!pb)return;
+  var o=SEL,pb=$("popB");if(!OBJTOOL[curTool]||!pb)return;
   Array.prototype.forEach.call(pb.querySelectorAll("[data-gm]"),function(b){b.setAttribute("aria-pressed",String(b.dataset.gm===GM))});
   if(!o)return;
   var ae=document.activeElement,E=eulerOf(o.R);
   Array.prototype.forEach.call(pb.querySelectorAll("[data-o]"),function(el){
     if(el===ae)return;var k=el.dataset.o,v=null;
-    if(k==="name")v=o.main&&cur?cur.name:o.name;
+    if(k==="name")v=o.name;
     else if(k.length===2&&k[0]==="p")v=+o.pos[+k[1]].toFixed(3);
     else if(k.length===2&&k[0]==="r")v=+E[+k[1]].toFixed(1);
     else if(k==="s")v=+o.scl.toFixed(3);
@@ -1601,30 +1611,33 @@ function syncObjFields(){
 }
 var objSaveT=0;
 function persistObjs(){
-  if(!cur||cur.kind!=="photos")return;
-  var m=OBJS[0];if(m&&m.main)cur.scanXf={pos:m.pos.slice(),R:m.R.slice(),scl:m.scl,vis:m.vis,crop:Object.assign({},m.crop)};
-  cur.objs=OBJS.filter(function(o){return !o.main}).map(function(o){
+  if(!cur)return;
+  refreshSpace();
+  cur.objs=OBJS.map(function(o){
     var r={id:o.id,kind:o.kind,name:o.name,pos:o.pos.slice(),R:o.R.slice(),scl:o.scl,vis:o.vis,crop:Object.assign({},o.crop)};
     if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.blob){r.blob=o.blob;r.fmt=o.fmt}return r;
   });
   saveSoon();
 }
-function refreshObjs(){if(curTool==="objects")openTool("objects");dirty=true}
+function refreshObjs(){if(OBJTOOL[curTool])openTool(curTool,true);dirty=true}
 function findObj(id){for(var i=0;i<OBJS.length;i++)if(OBJS[i].id===id)return OBJS[i];return null}
 function removeObj(o){
-  if(!o||o.main)return;
+  if(!o)return;
   if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh);
   OBJS=OBJS.filter(function(x){return x!==o});if(SEL===o)SEL=null;persistObjs();refreshObjs();
 }
-function disposeObjs(){OBJS.forEach(function(o){if(!o.main){if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh)}});OBJS=[];SEL=null}
-function ensureScanObj(){
-  if(!scene||!scene.gs)return;
-  var o=OBJS[0];
-  if(!o||!o.main){o=mkObj("splat",cur&&cur.name||"Scan");o.id="scan";o.main=true;if(cur&&cur.scanXf)applyRec(o,cur.scanXf);OBJS.unshift(o)}
-  if(o.gs&&o.gs!==scene.gs)freeGS(o.gs);
-  o.gs=scene.gs;
+function disposeObjs(){OBJS.forEach(function(o){if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh)});OBJS=[];SEL=null}
+function spawnPos(){var k=OBJS.filter(isGeo).length;return k?[1.4*k,0,0]:[0,0,0]}
+/* level a splat using the ground found in the splat itself */
+function autoLevelObj(o){
+  if(!o||!o.blob)return;
+  return o.blob.arrayBuffer().then(function(ab){
+    var raw=parsePly(ab),uv=raw&&autoUp(raw);
+    if(!uv)throw new Error("Couldn't find the ground in this one. Use Flip or the rotation boxes in Objects.");
+    o.R=obMat(uv,[0,0,-1]);persistObjs();syncObjFields();dirty=true;
+    setStatus("Levelled using the ground in the splat. Use Flip if it's upside down.","ok");
+  }).catch(function(err){setStatus(err.message,"warn")});
 }
-function spawnPos(){var k=OBJS.filter(function(o){return !o.main&&(o.kind==="splat"||o.kind==="mesh")}).length;return [1.5*(k+1),0,0]}
 function addSplatObj(raw,name,blob,rec){
   var o=applyRec(mkObj("splat",name),rec||{name:name});if(!rec)o.pos=spawnPos();
   o.gs=bakeSplats(raw,ident3(),ZC);uploadGSGeo(o.gs);o.blob=blob;o.fmt="ply";OBJS.push(o);return o;
@@ -1649,27 +1662,34 @@ function loadObjs(list){
     }).catch(function(err){try{console.error("object load: "+(err&&err.message))}catch(_){}});
   },Promise.resolve()).then(function(){regrade();refreshObjs()});
 }
-function afterAdd(o,msg){SEL=o;persistObjs();regrade();if(curTool!=="objects")openTool("objects");else refreshObjs();setStatus(msg,"ok")}
-$("objPly").addEventListener("change",function(e){
-  var f=e.target.files[0];e.target.value="";if(!f||!cur||!scene||!GL2)return;
+function afterAdd(o,msg){
+  if(OBJS.filter(isGeo).length===1)frameAll();
+  SEL=o;persistObjs();regrade();if(curTool!=="objects")openTool("objects");else refreshObjs();setStatus(msg,"ok");
+}
+function addPlyFile(f){
+  if(!f||!cur||!GL2)return;
+  if(MODE!=="edit")setMode("edit");
   busy(true,"Reading splats…");
-  f.arrayBuffer().then(function(ab){
+  return f.arrayBuffer().then(function(ab){
     var raw=parsePly(ab);if(!raw)throw new Error("That .ply isn't a Gaussian splat file this app can read.");
-    var o=addSplatObj(raw,f.name.replace(/\.ply$/i,"").slice(0,40)||"Splat",f);busy(false);afterAdd(o,"Added "+o.name+" next to your scan. Drag the gizmo to place it.");
+    var o=addSplatObj(raw,f.name.replace(/\.ply$/i,"").slice(0,40)||"Splat",f);busy(false);afterAdd(o,"Added "+o.name+". Use Orient if it needs levelling, and drag the gizmo to place it.");
   }).catch(function(err){busy(false);setStatus(err.message,"bad")});
-});
-$("objMesh").addEventListener("change",function(e){
-  var f=e.target.files[0];e.target.value="";if(!f||!cur||!scene||!GL2)return;
+}
+function addMeshFile(f){
+  if(!f||!cur||!GL2)return;
+  if(MODE!=="edit")setMode("edit");
   var fmt=/\.obj$/i.test(f.name)?"obj":"glb";
   busy(true,"Reading model…");
-  f.arrayBuffer().then(function(ab){
+  return f.arrayBuffer().then(function(ab){
     var m=parseMesh(ab,fmt);if(!m)throw new Error("Couldn't find any triangles in that model.");
     var o=addMeshObj(m,f.name.replace(/\.[^.]+$/,"").slice(0,40)||"Model",f,fmt);busy(false);afterAdd(o,"Added "+o.name+". Models use flat colours (textures aren't shown yet).");
   }).catch(function(err){busy(false);setStatus(err.message||"Couldn't read that model.","bad")});
-});
+}
+$("objPly").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addPlyFile(f)});
+$("objMesh").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addMeshFile(f)});
 function objField(el){
   var o=SEL;if(!o)return;var k=el.dataset.o,v=el.type==="checkbox"?el.checked:el.value,n;
-  if(k==="name"){if(!o.main){o.name=String(v).slice(0,40)||"Object";var rw=document.querySelector('.orow[data-oid="'+o.id+'"] .oname');if(rw)rw.textContent=o.name}}
+  if(k==="name"){o.name=String(v).slice(0,40)||"Object";var rw=document.querySelector('.orow[data-oid="'+o.id+'"] .oname');if(rw)rw.textContent=o.name}
   else if(k.length===2&&k[0]==="p"){n=parseFloat(v);if(isFinite(n))o.pos[+k[1]]=n}
   else if(k.length===2&&k[0]==="r"){
     var f=function(q){var x=parseFloat($("popB").querySelector('[data-o="r'+q+'"]').value);return isFinite(x)?x:0};
@@ -1701,28 +1721,31 @@ $("popB").addEventListener("click",function(e){
   else if(a==="oReset"&&SEL){SEL.pos=[0,0,0];SEL.R=ident3();SEL.scl=1;if(SEL.kind==="sun"){SEL.R=rotFromTo([0,1,0],[0.42,0.78,0.46]);SEL.pos=[0,1,0]}if(SEL.kind==="point")SEL.pos=[0.5,0.7,0.6];persistObjs();syncObjFields();dirty=true}
   else if(a==="oFlip"&&SEL){SEL.R=orthonorm(mm(rotAxis([1,0,0],Math.PI),SEL.R));persistObjs();syncObjFields();dirty=true}
   else if(a==="oCropReset"&&SEL){SEL.crop=newCrop();persistObjs();syncObjFields();dirty=true}
+  else if(a==="oDel"&&SEL){removeObj(SEL)}
+  else if(a==="aLevel"&&SEL&&SEL.kind==="splat"){autoLevelObj(SEL)}
+  else if(a==="aFlip"&&SEL&&SEL.kind==="splat"){SEL.R=orthonorm(mm(rotAxis([1,0,0],Math.PI),SEL.R));persistObjs();syncObjFields();dirty=true;setStatus("Flipped upside down.","ok")}
+  else if(a==="aResetRot"&&SEL){SEL.R=ident3();persistObjs();syncObjFields();dirty=true}
 });
 document.addEventListener("keydown",function(e){
   var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
-  if($("editor").hidden||e.ctrlKey||e.metaKey||e.altKey||!cur||cur.kind!=="photos")return;
+  if($("editor").hidden||e.ctrlKey||e.metaKey||e.altKey||!cur||MODE!=="edit")return;
   var c=e.code;
   if(c==="KeyG"){GM="move";syncObjFields();dirty=true}
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
   else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
-  else if((c==="Delete"||c==="Backspace")&&SEL&&!SEL.main){e.preventDefault();removeObj(SEL)}
+  else if((c==="Delete"||c==="Backspace")&&SEL&&isGeo(SEL)){e.preventDefault();removeObj(SEL)}
 });
 /* export every visible splat in the scene as one .ply, with moves, rotation, scale and crop baked in */
 function exportScenePLY(){
-  var C0=0.28209479177387814,parts=[],total=0;
+  var C0=0.28209479177387814,parts=[],total=0,gf=S.bakeGrade?gradeFn():null;
   setStatus("Packing the whole scene…");
   var jobs=OBJS.filter(function(o){return o.kind==="splat"&&o.vis}).map(function(o){
-    if(o.main)return Promise.resolve({o:o,raw:plyRaw,M:sceneM()});
     return o.blob.arrayBuffer().then(function(ab){return {o:o,raw:parsePly(ab),M:ident3()}});
   });
   Promise.all(jobs).then(function(js){
     js.forEach(function(j){
-      if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.main?o.gs.ext:o.gs.ext,c=o.crop,keep=[],i;
+      if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.gs.ext,c=o.crop,keep=[],i;
       var cx0=e.x0+(e.x1-e.x0)*c.x0,cx1=e.x0+(e.x1-e.x0)*c.x1,cy0=e.y0+(e.y1-e.y0)*c.y0,cy1=e.y0+(e.y1-e.y0)*c.y1,cz0=e.z0+(e.z1-e.z0)*c.z0,cz1=e.z0+(e.z1-e.z0)*c.z1;
       var rows=new Float32Array(n*17),k=0,RM=mm(Ro,M);
       for(i=0;i<n;i++){
@@ -1733,7 +1756,7 @@ function exportScenePLY(){
         var q00=1-2*(qy*qy+qz*qz),q01=2*(qx*qy-qw*qz),q02=2*(qx*qz+qw*qy),q10=2*(qx*qy+qw*qz),q11=1-2*(qx*qx+qz*qz),q12=2*(qy*qz-qw*qx),q20=2*(qx*qz-qw*qy),q21=2*(qy*qz+qw*qx),q22=1-2*(qx*qx+qy*qy);
         var F=[RM[0]*q00+RM[1]*q10+RM[2]*q20,RM[0]*q01+RM[1]*q11+RM[2]*q21,RM[0]*q02+RM[1]*q12+RM[2]*q22,RM[3]*q00+RM[4]*q10+RM[5]*q20,RM[3]*q01+RM[4]*q11+RM[5]*q21,RM[3]*q02+RM[4]*q12+RM[5]*q22,RM[6]*q00+RM[7]*q10+RM[8]*q20,RM[6]*q01+RM[7]*q11+RM[8]*q21,RM[6]*q02+RM[7]*q12+RM[8]*q22];
         var q=quatFromMat(F),a=Math.min(0.999,Math.max(0.001,R.alpha[i])),o2=k*17;
-        rows[o2]=fx;rows[o2+1]=fy;rows[o2+2]=fz;rows[o2+6]=(R.col[i*3]-0.5)/C0;rows[o2+7]=(R.col[i*3+1]-0.5)/C0;rows[o2+8]=(R.col[i*3+2]-0.5)/C0;
+        rows[o2]=fx;rows[o2+1]=fy;rows[o2+2]=fz;var cc3=gf?gf(R.col[i*3],R.col[i*3+1],R.col[i*3+2]):[R.col[i*3],R.col[i*3+1],R.col[i*3+2]];rows[o2+6]=(cc3[0]-0.5)/C0;rows[o2+7]=(cc3[1]-0.5)/C0;rows[o2+8]=(cc3[2]-0.5)/C0;
         rows[o2+9]=Math.log(a/(1-a));rows[o2+10]=Math.log(R.scl[i*3]*s);rows[o2+11]=Math.log(R.scl[i*3+1]*s);rows[o2+12]=Math.log(R.scl[i*3+2]*s);
         rows[o2+13]=q[0];rows[o2+14]=q[1];rows[o2+15]=q[2];rows[o2+16]=q[3];k++;
       }
@@ -1762,18 +1785,32 @@ function syncControls(){
     else if(el.tagName==="BUTTON")el.setAttribute("aria-pressed",String(String(S[k])===el.dataset.v));
   });
   var nm=$("c-name");if(nm&&cur)nm.value=cur.name;
-  var st=$("stats");if(st&&scene)st.textContent=scene.n.toLocaleString("en-GB")+" splats  ·  about "+(scene.n*56/1e6).toFixed(1)+" MB";
+  var st=$("stats");if(st)st.textContent=spaceStats();
   syncPlay();
 }
 function applyRail(){
-  var ph=cur&&cur.kind==="photos";
-  Array.prototype.forEach.call(rail.children,function(b){var t=b.dataset.tool;b.hidden=ph?!!PHOTO_ONLY[t]:!!SCENE_ONLY[t]});
+  Array.prototype.forEach.call(rail.children,function(b){var t=b.dataset.tool;b.hidden=EDIT_T[t]?MODE!=="edit":MODE!=="render"});
 }
-function openTool(id){
-  curTool=id;
+function syncModeUI(){Array.prototype.forEach.call(document.querySelectorAll("#modeSeg button"),function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===MODE))})}
+/* Edit = what ends up in the file. Render = how it looks (lens, looks, light, depth) and never exports. */
+function setMode(m){
+  if(m===MODE)return;
+  stopAnim();closeTool();MODE=m;GH=null;GD=null;
+  if(SEL&&((m==="render"&&isGeo(SEL))||(m==="edit"&&isLight(SEL))))SEL=null;
+  applyRail();syncModeUI();buildHelpers();regrade();dirty=true;
+}
+$("modeSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode)});
+/* when a tool about objects opens, pick the object it is about if there is only one */
+function autoSel(id){
+  var want=id==="light"?isLight:(id==="crop"||id==="orient")?function(o){return o.kind==="splat"}:isGeo;
+  if(SEL&&want(SEL))return;
+  var l=OBJS.filter(want);SEL=l.length===1?l[0]:null;
+}
+function openTool(id,keep){
+  curTool=id;if(OBJTOOL[id]&&!keep)autoSel(id);
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed",String(b.dataset.tool===id))});
   var t=TOOLS.filter(function(x){return x[0]===id})[0];
-  $("popT").textContent=t[1];$("popB").innerHTML=PANES[id]();$("pop").hidden=false;syncControls();if(id==="objects")syncObjFields();
+  $("popT").textContent=t[1];$("popB").innerHTML=PANES[id]();$("pop").hidden=false;syncControls();if(OBJTOOL[id])syncObjFields();
 }
 function closeTool(){
   if(!curTool)return;curTool=null;$("pop").hidden=true;
@@ -1782,14 +1819,13 @@ function closeTool(){
 rail.addEventListener("click",function(e){var b=e.target.closest(".tool");if(!b)return;if(curTool===b.dataset.tool)closeTool();else openTool(b.dataset.tool)});
 $("popX").addEventListener("click",closeTool);
 
-var REB={range:1,smooth:1,cut:1,invert:1,fill:1,detail:1},ORI={tiltX:1,tiltZ:1,spin:1},GRD={exp:1,con:1,sat:1,hue:1,warm:1};
+var GRD={exp:1,con:1,sat:1,hue:1,warm:1};
 var HELP={gridX:1,gridY:1,gridZ:1,axes:1},LENS={vig:1,vigSoft:1,vigBlur:1,dist:1,ca:1,grain:1,grainSize:1,lookMix:1,look:1,focusRange:1};
 function setK(k,v){
   S[k]=v;
   if(k==="look")applyLook();
   if(HELP[k]){setTimeout(buildHelpers,0)}
-  if(k==="render"&&scene&&scene.gs&&$("stats"))$("stats").textContent=scene.gs.n.toLocaleString("en-GB")+" splats  ·  "+(v==="points"?"shown as dots":"true splats");
-  if(REB[k])schedule();else if(GRD[k])regradeSoon();else if(ORI[k]&&plyRaw){clearTimeout(oriT);oriT=setTimeout(buildFromRaw,40)}
+  if(GRD[k])regradeSoon();
   dirty=true;saveSoon();
 }
 $("popB").addEventListener("input",function(e){
@@ -1804,22 +1840,20 @@ $("popB").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.k){var v=b.dataset.v;setK(b.dataset.k,b.dataset.k==="shape"?+v:v);syncControls();return}
   var a=b.dataset.act;
-  if(a==="runAI")doAI();
-  else if(a==="swap")$("swapIn").click();
-  else if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
+  if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
   else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="cube")$("cubeIn").click();
-  else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize","look","lookMix"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="level"){levelHorizon()}
   else if(a==="frame"){frameAll()}
-  else if(a==="ply")exportPLY();
-  else if(a==="plyScene")exportScenePLY();
-  else if(a==="plyOrig"&&cur&&cur.ply)saveBlob(cur.ply,"splatbox-"+photoName+"-trained.ply");
-  else if(a==="flip"&&plyRaw){S.flip=!S.flip;buildFromRaw();saveSoon()}
-  else if(a==="autolevel"&&plyRaw){var uv=autoUp(plyRaw);if(uv){cur.up=uv;cur.fwd=[0,0,-1];S.tiltX=0;S.tiltZ=0;S.flip=false;S.turn=0;buildFromRaw();syncControls();saveSoon();setStatus("Levelled using the ground in the scene. Use Flip if it's upside down.","ok")}}
-  else if(a==="resetOrient"&&plyRaw){S.tiltX=0;S.tiltZ=0;S.spin=0;S.flip=false;buildFromRaw();syncControls();saveSoon()}
+  else if(a==="ply")exportScenePLY();
+  else if(a==="addPhotos")$("multiIn").click();
+  else if(a==="addPhoto")$("newIn").click();
+  else if(a==="fHome")goHome();
+  else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
+  else if(a==="fCopy"){saveNow().then(function(){var c=Object.assign({},cur,{id:uid(),name:(cur.name||"Project")+" copy",created:Date.now(),updated:Date.now()});return dbPut(c).then(function(){cur=c;$("pname").textContent=c.name;syncControls();setStatus("Saved a copy. You're now working in the copy.","ok")})}).catch(function(){setStatus("Couldn't save a copy.","bad")})}
   else if(a==="png")exportPNG();
 });
 
@@ -1863,43 +1897,71 @@ function prepPhoto(src){
   var pc=fitCanvas(src,1600),tc=fitCanvas(pc,360);
   return Promise.all([toBlob(pc,"image/jpeg",0.9),toBlob(tc,"image/jpeg",0.8)]).then(function(b){return {canvas:pc,photo:b[0],thumb:b[1]}});
 }
-function newProject(name,src,depthCanvas){
-  return prepPhoto(src).then(function(pp){
-    return (depthCanvas?toBlob(depthCanvas,"image/png"):Promise.resolve(null)).then(function(db_){
-      var p={id:uid(),name:name,created:Date.now(),updated:Date.now(),photo:pp.photo,thumb:pp.thumb,depth:db_,settings:Object.assign({},DEF)};
-      return dbPut(p).catch(function(){setStatus("Couldn't save to the device, so this project won't be kept.","warn")}).then(function(){return {p:p,canvas:pp.canvas}});
-    });
-  });
+function newSpaceRec(name){return {id:uid(),name:name||"Untitled space",kind:"space",created:Date.now(),updated:Date.now(),thumb:null,settings:Object.assign({},DEF),objs:[]}}
+function createSpace(name){
+  var p=newSpaceRec(name);
+  return dbPut(p).catch(function(){setStatus("Couldn't save to the device, so this project won't be kept.","warn")}).then(function(){return openSpace(p)}).then(function(){return p});
 }
-function openProject(p,preloaded){
-  disposeObjs();cur=p;plyRaw=null;applyRail();S=Object.assign({},DEF,p.settings||{});
+/* an empty 3D space: the scene starts with nothing in it, everything is added from the menus */
+var SPACE_BB={x0:-0.6,x1:0.6,y0:-0.6,y1:0.6,z0:-1.95-0.6,z1:-1.95+0.6};
+function newScene(){
+  scene={n:0,buf:new Float32Array(0),base:new Float32Array(0),R:1.9,tx:TY,aspect:1,gs:null,bb:Object.assign({},SPACE_BB)};
+  upload();
+}
+function spaceStats(){
+  var sp=0,md=0;OBJS.forEach(function(o){if(o.kind==="splat"&&o.gs)sp+=o.gs.n;else if(o.kind==="mesh")md++});
+  return sp.toLocaleString("en-GB")+" splats"+(md?"  ·  "+md+" model"+(md>1?"s":""):"");
+}
+function refreshSpace(){
+  if(!scene)return;
+  var b=null;
+  OBJS.forEach(function(o){
+    if(!isGeo(o)||!o.vis)return;
+    var e=o.kind==="splat"?(o.gs&&o.gs.bb):(o.mesh&&o.mesh.ext);if(!e)return;
+    var M=objModel(o),i;
+    for(i=0;i<8;i++){
+      var x=i&1?e.x1:e.x0,y=i&2?e.y1:e.y0,z=i&4?e.z1:e.z0;
+      var X=M[0]*x+M[4]*y+M[8]*z+M[12],Y=M[1]*x+M[5]*y+M[9]*z+M[13],Z=M[2]*x+M[6]*y+M[10]*z+M[14];
+      if(!b)b={x0:X,x1:X,y0:Y,y1:Y,z0:Z,z1:Z};
+      else{b.x0=Math.min(b.x0,X);b.x1=Math.max(b.x1,X);b.y0=Math.min(b.y0,Y);b.y1=Math.max(b.y1,Y);b.z0=Math.min(b.z0,Z);b.z1=Math.max(b.z1,Z)}
+    }
+  });
+  scene.bb=b||Object.assign({},SPACE_BB);
+  buildHelpers();
+  var t=spaceStats();$("hud").textContent=OBJS.some(isGeo)?t:"";
+  var st=$("stats");if(st)st.textContent=t;
+}
+function openSpace(p){
+  disposeObjs();cur=p;S=Object.assign({},DEF,p.settings||{});MODE="edit";
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
   $("pname").textContent=p.name;
-  var photoP=preloaded&&preloaded.photo?Promise.resolve(preloaded.photo):loadImg(p.photo);
-  var depthP=preloaded&&"depth" in preloaded?Promise.resolve(preloaded.depth):(p.depth?loadImg(p.depth):Promise.resolve(null));
+  newScene();resetView();anim=null;PF.lutKey="";
+  showEditor();closeTool();applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");
-  return Promise.all([photoP,depthP]).then(function(r){
-    photoSrc=r[0];depthImg=r[1];resetView();anim=null;
-    showEditor();closeTool();PF.lutKey="";rebuild();applyLook();dirty=true;busy(false);
-  }).catch(function(err){busy(false);setStatus(err.message,"bad")});
+  return loadObjs(p.objs).then(function(){busy(false);refreshSpace();regrade();dirty=true}).catch(function(err){busy(false);setStatus(err.message,"bad")});
 }
 function showEditor(){
   $("home").hidden=true;$("editor").hidden=false;
   try{history.pushState({e:1},"")}catch(e){}
   dirty=true;
 }
+function captureThumb(){
+  if(!scene||!cur||!OBJS.some(isGeo))return Promise.resolve(null);
+  try{draw(null);return toBlob(fitCanvas(cv,360),"image/jpeg",0.8)}catch(_){return Promise.resolve(null)}
+}
 function goHome(){
   if(anim&&anim.rec)return;
   anim=null;closeTool();
-  saveNow().then(function(){showHome()});
+  captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).catch(function(){}).then(showHome);
 }
 function showHome(){
-  setGui(false);disposeObjs();$("editor").hidden=true;$("home").hidden=false;cur=null;renderHome();
+  setGui(false);disposeObjs();scene=null;$("editor").hidden=true;$("home").hidden=false;cur=null;renderHome();
 }
 $("back").addEventListener("click",function(){
   if(history.state&&history.state.e){history.back()}else goHome();
 });
 window.addEventListener("popstate",function(){if(!$("editor").hidden)goHome()});
+
 
 var thumbUrls=[];
 function fmtDate(t){
@@ -1912,10 +1974,7 @@ function renderHome(){
   var grid=$("grid");grid.innerHTML="";
   var add=document.createElement("button");add.type="button";add.className="card new";
   add.innerHTML='<span class="plus"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New project</span>';
-  add.addEventListener("click",function(){$("newIn").click()});grid.appendChild(add);
-  var addM=document.createElement("button");addM.type="button";addM.className="card new";
-  addM.innerHTML='<span class="plus"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="13" rx="2"/><path d="M8 3h11a2 2 0 012 2v11"/></svg></span><span>Photos (many)</span>';
-  addM.addEventListener("click",function(){$("multiIn").click()});grid.appendChild(addM);
+  add.addEventListener("click",function(){createSpace()});grid.appendChild(add);
   return dbAll().catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
     list=(list||[]).sort(function(a,b){return b.updated-a.updated});
     $("emptyMsg").hidden=list.length>0;
@@ -1925,8 +1984,8 @@ function renderHome(){
     }
     list.forEach(function(p){
       var c=document.createElement("div");c.className="card";c.tabIndex=0;c.setAttribute("role","button");
-      var url=URL.createObjectURL(p.thumb||p.photo);thumbUrls.push(url);
-      var th=document.createElement("span");th.className="th";th.style.backgroundImage='url("'+url+'")';
+      var th=document.createElement("span");th.className="th";
+      var tb=p.thumb||p.photo;if(tb){var url=URL.createObjectURL(tb);thumbUrls.push(url);th.style.backgroundImage='url("'+url+'")'}
       var meta=document.createElement("span");meta.className="meta";
       var nm=document.createElement("span");nm.className="nm";nm.textContent=p.name;
       var dt=document.createElement("span");dt.className="dt";dt.textContent=fmtDate(p.updated);
@@ -1935,7 +1994,8 @@ function renderHome(){
       more.innerHTML='<svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></svg>';
       more.addEventListener("click",function(e){e.stopPropagation();openMenu(c,p)});
       c.appendChild(more);
-      if(p.kind==="photos"){var kd=document.createElement("span");kd.className="kind";kd.textContent=(p.srcs?p.srcs.length:"")+" photos"+(p.ply?"":" · not trained");c.appendChild(kd)}
+      var cnt=p.kind==="space"?(p.objs||[]).filter(function(o){return o.kind==="splat"||o.kind==="mesh"}).length:(p.kind==="photos"?(p.srcs?p.srcs.length:0):1);
+      var kd=document.createElement("span");kd.className="kind";kd.textContent=p.kind==="space"?(cnt?cnt+(cnt>1?" objects":" object"):"empty"):(p.kind==="photos"?cnt+" photos"+(p.ply?"":" · not trained"):"photo");c.appendChild(kd);
       c.addEventListener("click",function(){openAny(p)});
       c.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAny(p)}});
       grid.appendChild(c);
@@ -1964,9 +2024,31 @@ var plyRaw=null,TR=null;
 var IS_DESK=matchMedia("(pointer:fine)").matches&&Math.min(screen.width,screen.height)>=700;
 var QUAL={fast:{n:"Fast",iters:15000,init:150000,max:400000},balanced:{n:"Balanced",iters:30000,init:250000,max:800000},high:{n:"High",iters:60000,init:400000,max:1500000}};
 var PHONEQ={n:"Phone",iters:10000,init:60000,max:150000};
+/* projects made before the empty-space change (photo + depth, or photo scans) become spaces the first time they are opened */
 function openAny(p){
-  if(p.kind==="photos")return p.ply?openPhotosProject(p):startTraining(p);
-  return openProject(p);
+  busy(true,"Opening…");
+  return migrateProject(p).then(function(q){
+    busy(false);
+    return openSpace(q).then(function(){
+      if(q.trainSrcs){var src=q.trainSrcs;q.trainSrcs=null;saveSoon();startTraining({name:q.name||"Photo scan",srcs:src})}
+    });
+  }).catch(function(err){busy(false);setStatus(err.message||"Couldn't open that project.","bad")});
+}
+function migrateProject(p){
+  if(p.kind==="space")return Promise.resolve(p);
+  var done=function(){p.kind="space";p.objs=p.objs||[];p.ply=null;p.srcs=null;return dbPut(p).catch(function(){}).then(function(){return p})};
+  if(p.kind==="photos"){
+    if(!p.ply){p.trainSrcs=p.srcs;return done()}
+    var s=Object.assign({},DEF,p.settings||{}),M=legacyM(p,s),sx=p.scanXf,R=sx&&sx.R?mm(sx.R,M):M;
+    p.objs=[{id:uid(),kind:"splat",name:p.name||"Scan",pos:sx&&sx.pos?sx.pos.slice():[0,0,0],R:R,scl:sx&&sx.scl||1,vis:sx?sx.vis!==false:true,crop:sx&&sx.crop||newCrop(),blob:p.ply,fmt:"ply"}].concat(p.objs||[]);
+    return done();
+  }
+  if(!p.depth||!p.photo)return done();
+  return Promise.all([loadImg(p.photo),loadImg(p.depth)]).then(function(r){
+    var s=Object.assign({},DEF,p.settings||{}),d=makeDots(r[0],r[1],s),bytes=buildPLY(d.n,d.buf,s.size);
+    p.objs=[{id:uid(),kind:"splat",name:p.name||"Photo",pos:[0,0,0],R:rotAxis([1,0,0],Math.PI),scl:1,vis:true,crop:newCrop(),blob:new Blob([bytes],{type:"application/octet-stream"}),fmt:"ply"}];
+    return done();
+  });
 }
 function parsePly(ab){
   var u8=new Uint8Array(ab),head=new TextDecoder("latin1").decode(u8.subarray(0,Math.min(u8.length,16384))),e=head.indexOf("end_header\n");
@@ -2014,16 +2096,18 @@ function parsePly(ab){
   return {n:w,pos:P,col:Cc,alpha:A,scl:Sc,quat:Q,sz:Z,dots:Int32Array.from(dots),total:n};
 }
 function cross3(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]}
-function sceneM(){
-  var p=cur||{},Ob;
-  if(p.up){
-    var up=p.up,fw=p.fwd||[0,0,-1],ul=Math.hypot(up[0],up[1],up[2])||1,Y=[up[0]/ul,up[1]/ul,up[2]/ul];
-    var d=fw[0]*Y[0]+fw[1]*Y[1]+fw[2]*Y[2],F=[fw[0]-d*Y[0],fw[1]-d*Y[1],fw[2]-d*Y[2]],fl=Math.hypot(F[0],F[1],F[2]);
-    if(fl<1e-4){F=Math.abs(Y[0])<0.9?[1,0,0]:[0,0,1];d=F[0]*Y[0]+F[1]*Y[1]+F[2]*Y[2];F=[F[0]-d*Y[0],F[1]-d*Y[1],F[2]-d*Y[2]];fl=Math.hypot(F[0],F[1],F[2])||1}
-    var Z=[-F[0]/fl,-F[1]/fl,-F[2]/fl],X=cross3(Y,Z);
-    Ob=[X[0],X[1],X[2],Y[0],Y[1],Y[2],Z[0],Z[1],Z[2]];
-  }else Ob=rotAxis([1,0,0],(((S.turn|0)%4+4)%4)*Math.PI/2);
-  var D=Math.PI/180,tr=mm(rotAxis([0,1,0],(S.spin||0)*D),mm(rotAxis([1,0,0],(S.tiltX||0)*D),rotAxis([0,0,1],((S.tiltZ||0)+(S.flip?180:0))*D)));
+/* the matrix that stands a scan up, from the camera-derived up and forward directions */
+function obMat(up,fw){
+  var ul=Math.hypot(up[0],up[1],up[2])||1,Y=[up[0]/ul,up[1]/ul,up[2]/ul];
+  var d=fw[0]*Y[0]+fw[1]*Y[1]+fw[2]*Y[2],F=[fw[0]-d*Y[0],fw[1]-d*Y[1],fw[2]-d*Y[2]],fl=Math.hypot(F[0],F[1],F[2]);
+  if(fl<1e-4){F=Math.abs(Y[0])<0.9?[1,0,0]:[0,0,1];d=F[0]*Y[0]+F[1]*Y[1]+F[2]*Y[2];F=[F[0]-d*Y[0],F[1]-d*Y[1],F[2]-d*Y[2]];fl=Math.hypot(F[0],F[1],F[2])||1}
+  var Z=[-F[0]/fl,-F[1]/fl,-F[2]/fl],X=cross3(Y,Z);
+  return [X[0],X[1],X[2],Y[0],Y[1],Y[2],Z[0],Z[1],Z[2]];
+}
+/* how an older photo-scan project used to orient its splats (only used when converting one) */
+function legacyM(p,s){
+  var Ob=p.up?obMat(p.up,p.fwd||[0,0,-1]):rotAxis([1,0,0],(((s.turn|0)%4+4)%4)*Math.PI/2);
+  var D=Math.PI/180,tr=mm(rotAxis([0,1,0],(s.spin||0)*D),mm(rotAxis([1,0,0],(s.tiltX||0)*D),rotAxis([0,0,1],((s.tiltZ||0)+(s.flip?180:0))*D)));
   return mm(tr,Ob);
 }
 /* work out which way is up from the splats themselves (for scans made before the cameras were kept) */
@@ -2047,39 +2131,6 @@ function bounds(P,n,st){
   var f=function(a,q){a.sort(function(x,y){return x-y});return a[Math.min(a.length-1,Math.max(0,Math.floor(a.length*q)))]};
   return {x0:f(xs,0.02),x1:f(xs,0.98),y0:f(ys,0.02),y1:f(ys,0.98),z0:f(zs,0.02),z1:f(zs,0.98)};
 }
-function buildFromRaw(){
-  var R=plyRaw;if(!R)return;
-  var M=sceneM(),zc=-(1+1.9/2),i,o,j;
-  /* dots (Points mode + .ply export) */
-  var nd=R.dots.length,buf=new Float32Array(nd*7),base=new Float32Array(nd*3);
-  for(j=0;j<nd;j++){
-    i=R.dots[j];var x=R.pos[i*3],y=R.pos[i*3+1],z=R.pos[i*3+2];o=j*7;
-    buf[o]=M[0]*x+M[1]*y+M[2]*z;buf[o+1]=M[3]*x+M[4]*y+M[5]*z;buf[o+2]=zc+M[6]*x+M[7]*y+M[8]*z;buf[o+6]=R.sz[i];
-    base[j*3]=R.col[i*3];base[j*3+1]=R.col[i*3+1];base[j*3+2]=R.col[i*3+2];
-  }
-  scene={n:nd,buf:buf,base:base,R:1.9,tx:TY,aspect:1};
-  /* true splats: covariance = M R S S^T R^T M^T, packed 3 texels per splat */
-  if(GL2){
-    scene.gs=bakeSplats(R,M,zc);scene.bb=bounds(scene.gs.pos,scene.gs.n,3);uploadGSGeo(scene.gs);ensureScanObj();
-  }else scene.bb=bounds(buf,nd,7);
-  buildHelpers();
-  regrade();
-  $("hud").textContent=(scene.gs?scene.gs.n:nd).toLocaleString("en-GB")+" splats";
-  if($("stats"))$("stats").textContent=(scene.gs?scene.gs.n:nd).toLocaleString("en-GB")+" splats  ·  "+(S.render==="points"?"shown as dots":"true splats");
-}
-function openPhotosProject(p){
-  disposeObjs();cur=p;S=Object.assign({},DEF,p.settings||{});
-  photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
-  $("pname").textContent=p.name;photoSrc=null;depthImg=null;
-  busy(true,"Opening…");
-  return p.ply.arrayBuffer().then(function(ab){
-    var raw=parsePly(ab);if(!raw)throw new Error("Couldn't read the trained splats in this project.");
-    plyRaw=raw;
-    if(!p.up){var uv=autoUp(raw);if(uv){p.up=uv;p.fwd=[0,0,-1];S.turn=0;saveSoon()}}
-    applyRail();resetView();anim=null;showEditor();closeTool();PF.lutKey="";buildFromRaw();applyLook();dirty=true;busy(false);
-    if(p.objs&&p.objs.length)loadObjs(p.objs);
-  }).catch(function(err){busy(false);setStatus(err.message,"bad")});
-}
 function smallBlob(file,side){
   var tick=new Promise(function(r){setTimeout(r,30)});
   if(window.createImageBitmap){
@@ -2095,7 +2146,7 @@ function smallBlobOld(file,side){
 }
 $("multiIn").addEventListener("change",function(e){
   var files=Array.prototype.slice.call(e.target.files||[]);e.target.value="";
-  if(!files.length)return;
+  if(!files.length||!cur)return;
   if(files.length<3){setStatus("Pick at least 3 photos. 20 or more of the same place or object, taken from slightly different spots, works best.","warn");return}
   busy(true,"Preparing "+files.length+" photos…");
   var out=[],i=0;
@@ -2105,13 +2156,11 @@ $("multiIn").addEventListener("change",function(e){
     smallBlob(files[i],IS_DESK?1600:1024).then(function(b){out.push(b);i++;next()}).catch(function(err){busy(false);setStatus("Couldn't read photo "+(i+1)+": "+err.message,"bad")});
   })();
   function done(){
-    loadImg(out[0]).then(prepPhoto).then(function(pp){
-      var pr={id:uid(),name:"Photo scan "+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"}),created:Date.now(),updated:Date.now(),
-        photo:pp.photo,thumb:pp.thumb,depth:null,settings:Object.assign({},DEF,{turn:2}),kind:"photos",srcs:out,ply:null};
-      return dbPut(pr).catch(function(){setStatus("Couldn't save to the device, so this scan won't be kept.","warn")}).then(function(){busy(false);return startTraining(pr)});
-    }).catch(function(err){busy(false);setStatus(err.message,"bad")});
+    busy(false);saveNow();
+    startTraining({name:"Photo scan "+new Date().toLocaleDateString("en-GB",{day:"numeric",month:"short"}),srcs:out});
   }
 });
+
 
 var STAGE_TXT={decode:"Reading photos",features:"Finding features",matching:"Matching photos",pass:"Solving cameras",register:"Placing cameras",solved:"Cameras found",seed:"Making first points",train:"Training"};
 function tSet(k,v){var el=$(k);if(el)el.textContent=v}
@@ -2125,7 +2174,7 @@ function trTeardown(){
   $("train").hidden=true;
 }
 function startTraining(p){
-  $("home").hidden=true;$("train").hidden=false;
+  $("home").hidden=true;$("editor").hidden=true;$("train").hidden=false;
   tSet("tTitle",p.name);tSet("tStage","Getting ready…");tSet("tStats","");tSet("tNote",IS_DESK?"":"Keep this screen open and the phone awake while it trains. Photo scans take a while on a phone, often 10 to 30 minutes.");$("tQ").hidden=true;
   $("tFill").style.width="0";$("tPause").disabled=true;$("tFinish").disabled=true;$("tPause").textContent="Pause";
   TR={p:p,s:null,wake:null,finishing:false,lost:false,max:10000,confirm:false,started:false};
@@ -2186,15 +2235,25 @@ function attachView(t){
     if(meta)t.s.view.lookThrough(0);
   }catch(err){tSet("tNote","Training is running, but the live preview couldn't start: "+err.message)}
 }
+function backToEditor(){
+  $("train").hidden=true;
+  if(cur){$("editor").hidden=false;dirty=true}else{showHome()}
+}
 function finishTraining(){
   var t=TR;if(!t||t.finishing||!t.s)return;t.finishing=true;
-  busy(true,"Packing the splats…");
+  tSet("tNote","Packing the splats…");
   Promise.resolve(t.s.training?t.s.finish():null).then(function(){return t.s.exportPlyBlob()}).then(function(blob){
-    t.p.ply=blob;t.p.updated=Date.now();
-    try{var cm=t.s.recon.cams,fs=[0,0,0];cm.forEach(function(c){fs[0]+=c.R[6];fs[1]+=c.R[7];fs[2]+=c.R[8]});t.p.up=t.s._camerasUp();t.p.fwd=fs;t.p.settings=Object.assign({},t.p.settings,{turn:0})}catch(_){}
-    return dbPut(t.p).catch(function(){setStatus("Couldn't save the result on the device. Opening it anyway.","warn")}).then(function(){return t.p});
-  }).then(function(p){trTeardown();busy(false);return openPhotosProject(p)}).catch(function(err){
-    busy(false);if(TR===t){t.finishing=false;tSet("tNote","Couldn't pack the result: "+err.message)}
+    var up=null,fwd=null;
+    try{var cm=t.s.recon.cams,fs=[0,0,0];cm.forEach(function(c){fs[0]+=c.R[6];fs[1]+=c.R[7];fs[2]+=c.R[8]});up=t.s._camerasUp();fwd=fs}catch(_){}
+    return blob.arrayBuffer().then(function(ab){
+      var raw=parsePly(ab);if(!raw)throw new Error("Couldn't read the trained splats.");
+      trTeardown();backToEditor();
+      var o=addSplatObj(raw,t.p.name||"Photo scan",blob);
+      if(up)o.R=obMat(up,fwd);
+      afterAdd(o,"Added your photo scan. Use Orient if it needs levelling.");
+    });
+  }).catch(function(err){
+    if(TR===t){t.finishing=false;tSet("tNote","Couldn't pack the result: "+err.message)}else setStatus("Couldn't add the scan: "+err.message,"bad");
   });
 }
 $("tQ").addEventListener("click",function(e){
@@ -2216,58 +2275,68 @@ $("tPause").addEventListener("click",function(){
 });
 $("tFinish").addEventListener("click",finishTraining);
 $("tBack").addEventListener("click",function(){
-  var t=TR;if(!t){$("train").hidden=true;showHome();return}
-  if(!t.confirm){t.confirm=true;tSet("tNote","Tap back again to stop. Training progress isn't kept, but your photos are, so you can start again from the home screen.");setTimeout(function(){if(TR===t)t.confirm=false},4000);return}
-  trTeardown();showHome();
+  var t=TR;if(!t){backToEditor();return}
+  if(!t.confirm){t.confirm=true;tSet("tNote","Tap back again to stop. Training progress isn't kept, so you would pick the photos again from Add, Photos to splat.");setTimeout(function(){if(TR===t)t.confirm=false},4000);return}
+  trTeardown();backToEditor();
 });
 
-function afterPhoto(){
-  aiCached().then(function(c){
-    if(c)doAI();
-    else{setStatus("Photo loaded. Open Depth to download the AI model (about 40 MB, once).","ok");openTool("depth")}
+function photoTo3D(src,name,depthCanvas){
+  if(!cur)return Promise.resolve();
+  var t0=performance.now();
+  var depP=depthCanvas?Promise.resolve(depthCanvas):aiCached().then(function(c){
+    busy(true,c?"Estimating depth…":"Downloading AI model (about 40 MB, once)…");
+    setStatus(c?"":"First run downloads the AI model, about 40 MB. One time only.");
+    return getSession();
+  }).then(function(sess){
+    busy(true,"Estimating depth…");
+    return new Promise(function(r){setTimeout(r,40)}).then(function(){return runDepth(sess,src)});
+  });
+  return depP.then(function(dc){
+    busy(true,"Building the 3D…");
+    return new Promise(function(r){setTimeout(r,30)}).then(function(){
+      var d=makeDots(src,dc,S),bytes=buildPLY(d.n,d.buf,1),blob=new Blob([bytes],{type:"application/octet-stream"}),raw=parsePly(bytes.buffer);
+      if(!raw)throw new Error("Nothing came out of that photo. Try a lower Cut far background.");
+      if(MODE!=="edit")setMode("edit");
+      var o=addSplatObj(raw,name,blob);o.R=rotAxis([1,0,0],Math.PI);
+      busy(false);afterAdd(o,"3D ready in "+((performance.now()-t0)/1000).toFixed(1)+" s. Drag to look around.");
+    });
+  }).catch(function(err){
+    busy(false);setStatus("The depth model didn't run here: "+(err&&err.message?err.message:"blocked"),"bad");
   });
 }
 function makeExample(){
   var s=makeSample();
-  newProject("Example mountains",s.photo,s.depth).then(function(r){
-    return openProject(r.p,{photo:r.canvas,depth:s.depth});
-  });
+  createSpace("Example mountains").then(function(){return photoTo3D(s.photo,"Mountains",s.depth)});
 }
-$("homeNew").addEventListener("click",function(){$("newIn").click()});
+$("homeNew").addEventListener("click",function(){createSpace()});
 $("newIn").addEventListener("change",function(e){
-  var f=e.target.files[0];e.target.value="";if(!f)return;
-  busy(true,"Preparing photo…");$("home").hidden=false;
+  var f=e.target.files[0];e.target.value="";if(!f||!cur)return;
+  busy(true,"Preparing photo…");
   loadImg(f).then(function(im){
-    var name=f.name.replace(/\.[^.]+$/,"").slice(0,60)||"Photo";
-    return newProject(name,im,null).then(function(r){return openProject(r.p,{photo:r.canvas,depth:null})}).then(afterPhoto);
+    var name=f.name.replace(/\.[^.]+$/,"").slice(0,40)||"Photo";
+    return photoTo3D(fitCanvas(im,1600),name,null);
   }).catch(function(err){busy(false);setStatus(err.message,"bad")});
 });
 $("cubeIn").addEventListener("change",function(e){
   var f=e.target.files[0];e.target.value="";if(!f||!cur)return;
   f.text().then(function(t){
     if(!parseCube(t)){setStatus("That .cube file isn't a 3D LUT this app can read (it needs LUT_3D_SIZE).","bad");return}
-    cur.lut=t;cur.lutName=f.name.replace(/\.cube$/i,"");PF.lutKey="";S.look="cube";if(S.lookMix<=0)S.lookMix=1;applyLook();saveNow();if(curTool==="lens")openTool("lens");setStatus("LUT loaded: "+cur.lutName,"ok");
-  }).catch(function(err){setStatus(err.message,"bad")});
-});
-$("swapIn").addEventListener("change",function(e){
-  var f=e.target.files[0];e.target.value="";if(!f||!cur)return;
-  loadImg(f).then(function(im){return prepPhoto(im)}).then(function(pp){
-    cur.photo=pp.photo;cur.thumb=pp.thumb;cur.depth=null;photoSrc=pp.canvas;depthImg=null;resetView();schedule();saveSoon();closeTool();afterPhoto();
+    cur.lut=t;cur.lutName=f.name.replace(/\.cube$/i,"");PF.lutKey="";S.look="cube";if(S.lookMix<=0)S.lookMix=1;applyLook();saveNow();if(curTool==="look")openTool("look");setStatus("LUT loaded: "+cur.lutName,"ok");
   }).catch(function(err){setStatus(err.message,"bad")});
 });
 
-/* ---------- desktop: drag photos in, install as an app ---------- */
+/* ---------- desktop: drop a splat or model into the open scene, install as an app ---------- */
 var dragN=0;
-window.addEventListener("dragenter",function(e){if(e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],"Files")>=0&&!$("home").hidden){dragN++;$("dropHint").hidden=false}});
+function hasFiles(e){return e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],"Files")>=0}
+window.addEventListener("dragenter",function(e){if(hasFiles(e)&&!$("editor").hidden){dragN++;$("dropHint").hidden=false}});
 window.addEventListener("dragleave",function(){dragN=Math.max(0,dragN-1);if(!dragN)$("dropHint").hidden=true});
 window.addEventListener("dragover",function(e){e.preventDefault()});
 window.addEventListener("drop",function(e){
   e.preventDefault();dragN=0;$("dropHint").hidden=true;
-  if($("home").hidden||!e.dataTransfer)return;
-  var fs=Array.prototype.filter.call(e.dataTransfer.files||[],function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|heic|avif)$/i.test(f.name)});
-  if(!fs.length)return;
-  var dt=new DataTransfer();fs.forEach(function(f){dt.items.add(f)});
-  var inp=fs.length===1?$("newIn"):$("multiIn");inp.files=dt.files;inp.dispatchEvent(new Event("change"));
+  if($("editor").hidden||!cur||!e.dataTransfer)return;
+  Array.prototype.forEach.call(e.dataTransfer.files||[],function(f){
+    if(/\.ply$/i.test(f.name))addPlyFile(f);else if(/\.(glb|obj)$/i.test(f.name))addMeshFile(f);
+  });
 });
 var instEv=null;
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();instEv=e;$("inst").hidden=false});
@@ -2285,8 +2354,8 @@ $("upd").addEventListener("click",function(){
 });
 
 /* ---------- start ---------- */
-if(!gl){
-  document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D (WebGL is off), so Splatbox can\'t run.</p>';
+if(!gl||!GL2){
+  document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';
 }else{
   initGL();requestAnimationFrame(loop);renderHome();
 }
