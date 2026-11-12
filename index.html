@@ -123,6 +123,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .tool[aria-pressed="true"]::after{top:22%;bottom:22%;left:-1px;right:auto;width:2px;height:auto;background:linear-gradient(180deg,var(--accent2),var(--accent))}
   .pop{left:12px;right:auto;bottom:auto;top:64px;width:340px;max-height:calc(100% - 84px)}
 }
+@media(min-width:960px){
+  .hscroll{padding-left:max(40px,calc((100% - 1300px)/2));padding-right:max(40px,calc((100% - 1300px)/2))}
+  .hbar{padding-left:max(40px,calc((100% - 1300px)/2));padding-right:max(40px,calc((100% - 1300px)/2))}
+  .pop{width:360px}
+  .card:hover{border-color:#ffffff40}
+  .tool:hover,.btn:hover,.seg button:hover,.ico:hover{filter:brightness(1.15)}
+  #train .tinfo,#train .trow{width:min(820px,100%);margin:0 auto}
+}
+#dropHint{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#0b0d10d9;border:3px dashed var(--accent);font:600 22px var(--font-ui);pointer-events:none}
+.keys{font:12px/1.7 var(--font-mono);color:var(--mute);margin:0}
+.keys b{color:var(--fg);font-weight:500}
+#tQ{margin:8px 0}
 #train{position:fixed;inset:0;z-index:40;background:var(--bg);display:grid;grid-template-rows:auto minmax(0,1fr) auto;padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l)}
 #train .tbar{display:flex;align-items:center;gap:10px;padding:10px 12px}
 #train .tbar b{font-weight:600}
@@ -146,9 +158,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
   <div class="hscroll" id="hscroll">
     <h2>Projects</h2>
-    <p class="empty" id="emptyMsg" hidden>No projects yet. Add a photo and Splatbox turns it into a 3D splat scene you can look around, colour, animate and export.</p>
+    <p class="empty" id="emptyMsg" hidden>No projects yet. Add a photo, or drop a few photos here to scan them into a 3D scene you can look around, colour, animate and export.</p>
     <div class="grid" id="grid"></div>
-    <div class="hfoot"><span id="ver"></span><button id="upd" type="button">Update app</button></div>
+    <div class="hfoot"><span id="ver"></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
   </div>
 </div>
 
@@ -160,6 +172,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="pname" id="pname"></div>
       <button class="ico" id="reset" type="button" aria-label="Reset view"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
     </div>
+    <div id="dropHint" hidden>Drop photos to start a project</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
     <div class="hud" id="hud"></div>
@@ -174,7 +187,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 <div id="train" hidden>
   <div class="tbar"><button class="ico" id="tBack" type="button" aria-label="Stop and go back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><b id="tTitle">Photos</b></div>
   <canvas id="tcv"></canvas>
-  <div class="tinfo"><div id="tStage">Getting ready…</div><div id="tBar"><i id="tFill"></i></div><div id="tStats"></div><p id="tNote"></p></div>
+  <div class="tinfo"><div id="tStage">Getting ready…</div><div class="seg" id="tQ" hidden></div><div id="tBar"><i id="tFill"></i></div><div id="tStats"></div><p id="tNote"></p></div>
   <div class="trow"><button class="btn" id="tPause" type="button" disabled>Pause</button><button class="btn primary" id="tFinish" type="button" disabled>Finish and open</button></div>
 </div>
 <input id="newIn" type="file" accept="image/*" hidden>
@@ -186,7 +199,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 008";
+var VERSION="Version 009";
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -476,14 +489,21 @@ function pangle(){var a=Array.from(ptrs.values());return Math.atan2(a[1].y-a[0].
 function centroid(){var a=Array.from(ptrs.values());return {x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2}}
 var tapT=0,tapX=0,tapY=0,moved=0;
 function resetView(){Rm=[1,0,0,0,1,0,0,0,1];zoom=1;panX=0;panY=0;vyaw=0;vpitch=0;dirty=true}
+var mousePan=false;
+cv.addEventListener("contextmenu",function(e){e.preventDefault()});
 cv.addEventListener("pointerdown",function(e){
+  mousePan=e.pointerType==="mouse"&&(e.button===1||e.button===2||e.shiftKey);
   try{cv.setPointerCapture(e.pointerId)}catch(_){}ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});lastD=pinch();
   stopAnim();vyaw=vpitch=0;if(ptrs.size===1)moved=0;
 });
 cv.addEventListener("pointermove",function(e){
   var p=ptrs.get(e.pointerId);if(!p||(anim&&anim.rec))return;
   var dx=e.clientX-p.x,dy=e.clientY-p.y;moved+=Math.abs(dx)+Math.abs(dy);
-  if(ptrs.size===1){
+  if(ptrs.size===1&&mousePan){
+    p.x=e.clientX;p.y=e.clientY;
+    var wpp1=2*lastTyv*(1+(scene?scene.R:1)/2)*zoom/Math.max(1,cv.clientHeight);
+    panX-=dx*wpp1;panY+=dy*wpp1;vyaw=vpitch=0;
+  }else if(ptrs.size===1){
     p.x=e.clientX;p.y=e.clientY;
     var ay=-dx*0.005,ap=dy*0.005;
     orbitBy(ay,ap);vyaw=ay;vpitch=ap;
@@ -508,7 +528,23 @@ function release(e){
   }
 }
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
-cv.addEventListener("wheel",function(e){e.preventDefault();zoom=clamp(zoom*Math.exp(e.deltaY*0.001),0.003,60);dirty=true},{passive:false});
+cv.addEventListener("wheel",function(e){e.preventDefault();var d=e.deltaY*(e.deltaMode===1?16:1);zoom=clamp(zoom*Math.exp(d*0.0012),0.003,60);dirty=true},{passive:false});
+cv.addEventListener("dblclick",function(){resetView()});
+document.addEventListener("keydown",function(e){
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
+  if($("editor").hidden)return;
+  var k=e.key,ids=TOOLS.map(function(x){return x[0]}).filter(function(id){return !rail.querySelector('[data-tool="'+id+'"]').hidden});
+  if(k==="Escape"){closeTool();return}
+  if(/^[1-9]$/.test(k)&&ids[+k-1]){e.preventDefault();var id=ids[+k-1];if(curTool===id)closeTool();else openTool(id);return}
+  if(k==="r"||k==="R"||k==="Home"){resetView();return}
+  if(k===" "){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false);return}
+  if(k==="ArrowLeft"){orbitBy(0.06,0);dirty=true}else if(k==="ArrowRight"){orbitBy(-0.06,0);dirty=true}
+  else if(k==="ArrowUp"){orbitBy(0,-0.06);dirty=true}else if(k==="ArrowDown"){orbitBy(0,0.06);dirty=true}
+  else if(k==="+"||k==="="){zoom=clamp(zoom/1.12,0.003,60);dirty=true}else if(k==="-"){zoom=clamp(zoom*1.12,0.003,60);dirty=true}
+  else return;
+  e.preventDefault();
+});
 $("reset").addEventListener("click",resetView);
 if(window.ResizeObserver){var ro=new ResizeObserver(function(){dirty=true});ro.observe($("stage"));ro.observe($("pop"))}
 window.addEventListener("resize",function(){dirty=true});
@@ -658,7 +694,8 @@ var PANES={
   look:function(){return '<p class="lbl">Splat shape</p>'+seg("shape",[[0,"Round"],[1,"Square"],[2,"Diamond"],[3,"Ring"]])+
     sl("size","Splat size",0.6,2.6,0.1)+sl("detail","Detail (long side)",192,768,64)+
     '<p class="lbl">Background</p><div class="sw">'+SWATCH.map(function(c){return '<button type="button" data-k="bg" data-v="'+c+'" style="background:'+c+'" aria-label="Background '+c+'" aria-pressed="false"></button>'}).join("")+
-    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'},
+    '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'+
+    (IS_DESK?'<p class="keys"><b>Left-drag</b> orbit · <b>Right-drag</b> or <b>Shift-drag</b> pan · <b>Wheel</b> zoom · <b>Double-click</b> or <b>R</b> reset · <b>Arrows</b> orbit · <b>+ −</b> zoom · <b>Space</b> play · <b>1–7</b> open tools · <b>Esc</b> close</p>':'')},
   colour:function(){return sl("exp","Exposure",-100,100,1)+sl("con","Contrast",-100,100,1)+sl("sat","Saturation",-100,100,1)+sl("hue","Hue",-180,180,1)+sl("warm","Warmth",-100,100,1)+
     '<button class="btn small" type="button" data-act="resetColour">Reset colour</button><p class="note">Colour changes are saved into the exported .ply.</p>'},
   fx:function(){return sl("fog","Depth fog",0,1,0.05)+sl("defocus","Defocus",0,1,0.05)+sl("focus","Focus distance",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
@@ -876,6 +913,9 @@ document.addEventListener("click",function(e){if(!e.target.closest(".menu"))clos
 
 /* ---------- Photos project: Splat.js (on-device structure-from-motion + splat training, WebGPU) ---------- */
 var plyRaw=null,TR=null;
+var IS_DESK=matchMedia("(pointer:fine)").matches&&Math.min(screen.width,screen.height)>=700;
+var QUAL={fast:{n:"Fast",iters:15000,init:150000,max:400000},balanced:{n:"Balanced",iters:30000,init:250000,max:800000},high:{n:"High",iters:60000,init:400000,max:1500000}};
+var PHONEQ={n:"Phone",iters:10000,init:60000,max:150000};
 function openAny(p){
   if(p.kind==="photos")return p.ply?openPhotosProject(p):startTraining(p);
   return openProject(p);
@@ -960,7 +1000,7 @@ $("multiIn").addEventListener("change",function(e){
   (function next(){
     if(i>=files.length)return done();
     $("busyT").textContent="Preparing photo "+(i+1)+" of "+files.length+"…";
-    smallBlob(files[i],1024).then(function(b){out.push(b);i++;next()}).catch(function(err){busy(false);setStatus("Couldn't read photo "+(i+1)+": "+err.message,"bad")});
+    smallBlob(files[i],IS_DESK?1600:1024).then(function(b){out.push(b);i++;next()}).catch(function(err){busy(false);setStatus("Couldn't read photo "+(i+1)+": "+err.message,"bad")});
   })();
   function done(){
     loadImg(out[0]).then(prepPhoto).then(function(pp){
@@ -984,18 +1024,29 @@ function trTeardown(){
 }
 function startTraining(p){
   $("home").hidden=true;$("train").hidden=false;
-  tSet("tTitle",p.name);tSet("tStage","Getting ready…");tSet("tStats","");tSet("tNote","Keep this screen open and the phone awake while it trains. Photo scans take a while on a phone, often 10 to 30 minutes.");
+  tSet("tTitle",p.name);tSet("tStage","Getting ready…");tSet("tStats","");tSet("tNote",IS_DESK?"":"Keep this screen open and the phone awake while it trains. Photo scans take a while on a phone, often 10 to 30 minutes.");$("tQ").hidden=true;
   $("tFill").style.width="0";$("tPause").disabled=true;$("tFinish").disabled=true;$("tPause").textContent="Pause";
-  TR={p:p,s:null,wake:null,finishing:false,lost:false,max:10000,confirm:false};
-  wakeOn();
+  TR={p:p,s:null,wake:null,finishing:false,lost:false,max:10000,confirm:false,started:false};
   var me=TR;
-  if(!navigator.gpu){tSet("tStage","This browser doesn't offer WebGPU.");tSet("tNote","Training photo scans needs WebGPU, and this browser doesn't have it. The single-photo projects still work.");return Promise.resolve()}
+  if(!navigator.gpu){tSet("tStage","WebGPU isn't available in this browser.");tSet("tNote","Open Splatbox in an up-to-date Chrome or Edge. If you're already in one, check that hardware acceleration is on in the browser settings.");$("tPause").disabled=true;return Promise.resolve()}
+  var qk="balanced";try{qk=localStorage.getItem("sbq")||"balanced"}catch(_){}if(!QUAL[qk])qk="balanced";
+  me.q=IS_DESK?QUAL[qk]:PHONEQ;
+  tSet("tStage",p.srcs.length+" photos ready");
+  if(IS_DESK){
+    var tq=$("tQ");tq.hidden=false;tq.innerHTML=Object.keys(QUAL).map(function(k){return '<button type="button" data-q="'+k+'" aria-pressed="'+(k===qk)+'">'+QUAL[k].n+'</button>'}).join("");
+    tSet("tNote","Fast is a quick preview. Balanced is a good default. High is sharpest but takes the longest. Training runs on your graphics card and nothing leaves this PC.");
+  }
+  $("tPause").textContent="Start training";$("tPause").disabled=false;
+  return Promise.resolve();
+}
+function runTraining(me){
+  me.started=true;$("tQ").hidden=true;$("tPause").disabled=true;$("tPause").textContent="Pause";me.max=me.q.iters;wakeOn();
   tSet("tStage","Loading the trainer…");
   return import("./lib/splatjs/index.js").then(function(mod){
     if(TR!==me)return;
-    var s=mod.createSession({maxIters:me.max,initTarget:60000,holdout:-1,lowMem:true,
+    var s=mod.createSession(Object.assign({maxIters:me.max,initTarget:me.q.init,holdout:-1,
       maxViewW:Math.ceil(screen.width||800),maxViewH:Math.ceil(screen.height||800),
-      sfm:{workers:3,uiYield:true},trainer:{maxSplats:150000,capMult:8}});
+      trainer:{maxSplats:me.q.max,capMult:8}},IS_DESK?{sfm:{workers:Math.max(2,Math.min(8,(navigator.hardwareConcurrency||4)-1))}}:{lowMem:true,sfm:{workers:3,uiYield:true}}));
     me.s=s;
     s.on("stage",function(e){
       if(TR!==me||!e)return;
@@ -1043,8 +1094,15 @@ function finishTraining(){
     busy(false);if(TR===t){t.finishing=false;tSet("tNote","Couldn't pack the result: "+err.message)}
   });
 }
+$("tQ").addEventListener("click",function(e){
+  var b=e.target.closest("[data-q]");if(!b||!TR||TR.started)return;
+  try{localStorage.setItem("sbq",b.dataset.q)}catch(_){}
+  TR.q=QUAL[b.dataset.q];Array.prototype.forEach.call($("tQ").children,function(x){x.setAttribute("aria-pressed",String(x===b))});
+});
 $("tPause").addEventListener("click",function(){
-  var t=TR;if(!t||!t.s)return;
+  var t=TR;if(!t)return;
+  if(!t.started){runTraining(t);return}
+  if(!t.s)return;
   if(t.lost){
     $("tPause").disabled=true;tSet("tStage","Restarting…");
     t.s.recover().then(function(){t.lost=false;attachView(t);t.s.start();$("tPause").textContent="Pause";$("tPause").disabled=false;$("tFinish").disabled=false})
@@ -1087,6 +1145,24 @@ $("swapIn").addEventListener("change",function(e){
     cur.photo=pp.photo;cur.thumb=pp.thumb;cur.depth=null;photoSrc=pp.canvas;depthImg=null;resetView();schedule();saveSoon();closeTool();afterPhoto();
   }).catch(function(err){setStatus(err.message,"bad")});
 });
+
+/* ---------- desktop: drag photos in, install as an app ---------- */
+var dragN=0;
+window.addEventListener("dragenter",function(e){if(e.dataTransfer&&Array.prototype.indexOf.call(e.dataTransfer.types||[],"Files")>=0&&!$("home").hidden){dragN++;$("dropHint").hidden=false}});
+window.addEventListener("dragleave",function(){dragN=Math.max(0,dragN-1);if(!dragN)$("dropHint").hidden=true});
+window.addEventListener("dragover",function(e){e.preventDefault()});
+window.addEventListener("drop",function(e){
+  e.preventDefault();dragN=0;$("dropHint").hidden=true;
+  if($("home").hidden||!e.dataTransfer)return;
+  var fs=Array.prototype.filter.call(e.dataTransfer.files||[],function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|webp|heic|avif)$/i.test(f.name)});
+  if(!fs.length)return;
+  var dt=new DataTransfer();fs.forEach(function(f){dt.items.add(f)});
+  var inp=fs.length===1?$("newIn"):$("multiIn");inp.files=dt.files;inp.dispatchEvent(new Event("change"));
+});
+var instEv=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();instEv=e;$("inst").hidden=false});
+window.addEventListener("appinstalled",function(){instEv=null;$("inst").hidden=true});
+$("inst").addEventListener("click",function(){if(!instEv)return;instEv.prompt();instEv.userChoice.then(function(){instEv=null;$("inst").hidden=true})});
 
 /* ---------- app: version + update ---------- */
 $("ver").textContent="Splatbox "+VERSION;
