@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 027
+- Keyframe diamonds next to everything you can animate (colour, depth and lens sliders; position, rotation and scale; camera lens and focus distance; light intensity; crop box; the eye toggle in object lists). Grey = not animated, orange outline = animated, filled = a key at the playhead. Click to key, click a filled one to remove.
+- Auto-key: change something that already has keys, at a new time, and a key is written there. Works for sliders, number boxes, the gizmo and flying an animated camera. A drag is one Ctrl+Z step.
+- Timeline: click a row in the list to select it, then Key it keys that row at the playhead (the track picker still works for adding new ones).
+- Deleting a key now lets the value follow the timeline instead of snapping back.
+- Diamonds are hidden on phones (view and play only).
+
 ## Version 026
 - New: timeline dock. Tap the timeline button (top bar, desktop only) for a dope sheet along the bottom of the view. Closed by default.
 - One row per animated property, a diamond per key. Click the ruler or drag to scrub, drag diamonds to retime them, Shift-click to pick several, Delete removes keys.

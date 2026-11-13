@@ -93,6 +93,13 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .tool[aria-pressed="true"]{color:var(--fg)}
 .tool[aria-pressed="true"]::after{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
 
+.kd{width:22px;height:22px;padding:0;margin-left:6px;border:0;background:transparent;cursor:pointer;display:inline-grid;place-items:center;vertical-align:middle}
+.kd::before{content:"";width:9px;height:9px;transform:rotate(45deg);border:1.5px solid var(--mute);background:transparent}
+.kd:hover::before{border-color:var(--fg)}
+.kd.anim::before{border-color:var(--accent)}
+.kd.on::before{background:var(--accent);border-color:var(--accent2)}
+.orow .kd{margin:0}
+@media(max-width:759px){.kd{display:none}}
 .tld{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(268px,46%);display:flex;flex-direction:column;background:#10131af5;border-top:1px solid #ffffff22;box-shadow:0 -10px 30px #0008}
 .tld[hidden]{display:none}
 .tlh{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow-x:auto;flex:none;border-bottom:1px solid var(--line);font:12px var(--font-mono);color:var(--mute);white-space:nowrap}
@@ -259,7 +266,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 026";
+var VERSION="Version 027";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 
@@ -1255,6 +1262,7 @@ function loop(t){
   if(!dirty)return;
   dirty=false;
   if(THRU&&ACAM){camFromView(ACAM);clearTimeout(camT);camT=setTimeout(persistObjs,600);if(curTool==="camera"&&t-camSyncT>120){camSyncT=t;syncObjFields()}}
+  tlAutoCheck();
   draw(null);
 }
 
@@ -1660,7 +1668,9 @@ TOOLS.forEach(function(t){
   b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+ICON[t[0]]+'</svg><span>'+t[1]+'</span>';
   rail.appendChild(b);
 });
-function sl(k,label,min,max,step){return '<div class="sl"><label for="c-'+k+'">'+label+'</label><output id="o-'+k+'"></output><input id="c-'+k+'" data-k="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+function kd(id){return '<button class="kd" type="button" data-kd="'+id+'" aria-label="Keyframe at the playhead" title="Keyframe at the playhead"></button>'}
+function kdO(o,f){return o?kd("o:"+o.id+":"+f):""}
+function sl(k,label,min,max,step){return '<div class="sl"><label for="c-'+k+'">'+label+(TL_S.indexOf(k)>=0?kd("s:"+k):"")+'</label><output id="o-'+k+'"></output><input id="c-'+k+'" data-k="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function chk(k,label){return '<label class="chk"><input type="checkbox" data-k="'+k+'"> '+label+'</label>'}
 function seg(k,items,wrap){return '<div class="seg'+(wrap?' wrap':'')+'">'+items.map(function(i){return '<button type="button" data-k="'+k+'" data-v="'+i[0]+'" aria-pressed="false">'+i[1]+'</button>'}).join("")+'</div>'}
 var SWATCH=["#0a0c0d","#1b2430","#2a1d17","#0e2a2c","#efece6","#ffffff"];
@@ -1671,12 +1681,12 @@ function objKindLabel(o){return o.kind==="splat"?"splat":o.kind==="mesh"?"model"
 function objRow(o){
   var nm=o.name||"Object";
   return '<div class="orow" data-oid="'+o.id+'" aria-selected="'+(o===SEL)+'">'+
-    '<button type="button" data-oid="'+o.id+'" data-oact="vis" aria-label="'+(o.vis?"Hide":"Show")+' '+esc(nm)+'" aria-pressed="'+o.vis+'">'+(o.vis?"◉":"○")+'</button>'+
+    '<button type="button" data-oid="'+o.id+'" data-oact="vis" aria-label="'+(o.vis?"Hide":"Show")+' '+esc(nm)+'" aria-pressed="'+o.vis+'">'+(o.vis?"◉":"○")+'</button>'+kdO(o,"vis")+
     '<button type="button" class="oname" data-oid="'+o.id+'" data-oact="sel">'+esc(nm)+'</button>'+
     '<span class="okind">'+objKindLabel(o)+'</span>'+
     '<button type="button" data-oid="'+o.id+'" data-oact="del" aria-label="Delete '+esc(nm)+'">✕</button></div>';
 }
-function osl(k,label,min,max,step){return '<div class="sl"><label for="oo-'+k+'">'+label+'</label><output id="oov-'+k+'"></output><input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+function osl(k,label,min,max,step){var kf=k==="cfov"?"fov":k==="linten"?"inten":null;return '<div class="sl"><label for="oo-'+k+'">'+label+(kf?kdO(SEL,kf):"")+'</label><output id="oov-'+k+'"></output><input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function numIn(k,step){return '<input class="num" type="number" step="'+step+'" data-o="'+k+'" aria-label="'+k+'">'}
 function objList(filter,empty){
   var l=OBJS.filter(filter);
@@ -1697,9 +1707,9 @@ var PANES={
     if(o){
       h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Object name">'+
         '<div class="seg" role="group" aria-label="Gizmo"><button type="button" data-gm="move" aria-pressed="false">Move</button><button type="button" data-gm="rotate" aria-pressed="false">Rotate</button><button type="button" data-gm="scale" aria-pressed="false">Scale</button></div>'+
-        '<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.01")+numIn("p1","0.01")+numIn("p2","0.01")+'</div>'+
-        '<p class="lbl">Rotation (degrees)</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
-        '<p class="lbl">Scale</p>'+numIn("s","0.05")+
+        '<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.01")+numIn("p1","0.01")+numIn("p2","0.01")+'</div>'+
+        '<p class="lbl">Rotation (degrees)'+kdO(o,"rot")+'</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
+        '<p class="lbl">Scale'+kdO(o,"scl")+'</p>'+numIn("s","0.05")+
         '<div class="row2"><button class="btn small" type="button" data-act="oFocus">Focus view</button><button class="btn small" type="button" data-act="oReset">Reset transform</button></div>'+
         '<button class="btn small" type="button" data-act="oDel">Delete this object</button>';
     }else if(geo.length)h+='<p class="note">Tap an object in the list, or in the view, to select it. Then drag the gizmo in the view, or type exact values.</p>';
@@ -1712,7 +1722,7 @@ var PANES={
     if(!sp.length)return '<p class="note">Add a splat first. Then you can cut away the parts you don\'t want with a box. The cut is kept when you export.</p>';
     var h=sp.length>1?objList(function(o){return o.kind==="splat"},""):"",o=SEL&&SEL.kind==="splat"?SEL:null;
     if(!o)return h+'<p class="note">Pick a splat in the list, or tap it in the view.</p>';
-    return h+'<p class="lbl">3D crop: '+esc(o.name)+'</p><label class="chk"><input type="checkbox" data-o="cropOn"> Crop with a box</label><label class="chk"><input type="checkbox" data-o="cropInv"> Remove inside the box instead</label>'+
+    return h+'<p class="lbl">3D crop: '+esc(o.name)+kdO(o,"crop")+'</p><label class="chk"><input type="checkbox" data-o="cropOn"> Crop with a box</label><label class="chk"><input type="checkbox" data-o="cropInv"> Remove inside the box instead</label>'+
       osl("cx0","X from",0,1,0.01)+osl("cx1","X to",0,1,0.01)+osl("cy0","Y from (bottom)",0,1,0.01)+osl("cy1","Y to (top)",0,1,0.01)+osl("cz0","Z from",0,1,0.01)+osl("cz1","Z to",0,1,0.01)+
       '<button class="btn small" type="button" data-act="oCropReset">Reset crop</button>'+
       '<p class="note">The crop is part of the object, so it follows the splat into the exported .ply.</p>';
@@ -1748,9 +1758,9 @@ var PANES={
       else h+='<button class="btn small" type="button" data-act="camPlace">Place camera at the free view</button>'+
         '<div class="seg" role="group" aria-label="Gizmo"><button type="button" data-gm="move" aria-pressed="false">Move</button><button type="button" data-gm="rotate" aria-pressed="false">Rotate</button></div>';
       h+=osl("cfov","Camera lens (field of view)",15,110,1)+
-        '<p class="lbl">Focus distance (depth effects centre here)</p>'+numIn("cfd","0.05")+
-        '<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>'+
-        '<p class="lbl">Rotation (degrees)</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
+        '<p class="lbl">Focus distance (depth effects centre here)'+kdO(o,"fdist")+'</p>'+numIn("cfd","0.05")+
+        '<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>'+
+        '<p class="lbl">Rotation (degrees)'+kdO(o,"rot")+'</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
         tlPanelHTML()+
         '<button class="btn small" type="button" data-act="oDel">Delete this camera</button>';
     }else if(cams().length)h+='<p class="note">Pick a camera in the list, or tap its shape in the view.</p>';
@@ -1779,7 +1789,7 @@ var PANES={
       objList(isLight,'No lights yet. Add a sun or a point light.');
     if(o){
       h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Light name">';
-      if(o.kind==="point")h+='<p class="lbl">Position</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>';
+      if(o.kind==="point")h+='<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>';
       else h+='<p class="lbl">Direction (rotation, degrees)</p><div class="xyz">'+numIn("r0","5")+numIn("r1","5")+numIn("r2","5")+'</div>';
       h+='<p class="lbl">Light</p><input type="color" class="txt" data-o="lcol" aria-label="Light colour">'+osl("linten","Intensity",0,4,0.05)+
         '<button class="btn small" type="button" data-act="oDel">Delete this light</button>';
@@ -2105,7 +2115,7 @@ function undoPush(c){
   while(UNDO.done.length>60||UNDO.bytes>240e6){var x=UNDO.done.shift();UNDO.bytes-=x.bytes||0}
   undoUI();
 }
-function undoDo(){var c=UNDO.done.pop();if(!c)return;UNDO.bytes-=c.bytes||0;c.undo();UNDO.undone.push(c);undoUI();setStatus("Undid: "+c.label,"ok")}
+function undoDo(){if(typeof tlAutoFlush==="function")tlAutoFlush();var c=UNDO.done.pop();if(!c)return;UNDO.bytes-=c.bytes||0;c.undo();UNDO.undone.push(c);undoUI();setStatus("Undid: "+c.label,"ok")}
 function redoDo(){var c=UNDO.undone.pop();if(!c)return;c.redo();UNDO.done.push(c);UNDO.bytes+=c.bytes||0;undoUI();setStatus("Redid: "+c.label,"ok")}
 function undoClear(){UNDO.done=[];UNDO.undone=[];UNDO.bytes=0;undoUI()}
 function undoUI(){var u=$("sxUndo"),r=$("sxRedo");if(u)u.disabled=!UNDO.done.length;if(r)r.disabled=!UNDO.undone.length}
@@ -2333,9 +2343,9 @@ document.addEventListener("keydown",function(e){
 
 /* ---------- V025 timeline engine: every animatable value is a named property, keys live in cur.timeline, one clock drives them all ---------- */
 var TL={tracks:{},fps:30,t:0};
-var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb","fov"];
+var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
 var TL_CROP=["x0","x1","y0","y1","z0","z1"];
-function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0}
+function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false}
 function tlHasKeys(){for(var k in TL.tracks)if(TL.tracks[k].k&&TL.tracks[k].k.length&&tlProp(k))return true;return false}
 function tlHasCam(){for(var k in TL.tracks){var d=tlProp(k);if(d&&d.obj&&d.obj.kind==="camera"&&TL.tracks[k].k.length)return true}return false}
 /* quaternion helpers (w,x,y,z) */
@@ -2395,20 +2405,20 @@ function tlSetTime(t){
     d.set(v);if(d.obj&&d.obj===ACAM)cam=true;
   }
   if(cam&&THRU&&ACAM)viewFromCam(ACAM);
-  dirty=true;if(TLU.open)tlDockDraw();
+  dirty=true;if(TLU.open)tlDockDraw();tlKdRefresh();
 }
 /* keys */
 function tlSnap(t){return Math.round(t*TL.fps)/TL.fps}
 function tlTrackCopy(id){var tr=TL.tracks[id];return tr?JSON.parse(JSON.stringify(tr)):null}
 function tlSetTrack(id,tr){if(tr&&tr.k&&tr.k.length)TL.tracks[id]=tr;else delete TL.tracks[id];tlChanged()}
-function tlChanged(){saveSoon();dirty=true;if(curTool==="camera")openTool("camera",true);if(typeof tlDockDraw==="function")tlDockDraw()}
+function tlChanged(quiet){if(!quiet&&TL.ready!==false)tlSetTime(TL.t);saveSoon();dirty=true;if(!quiet&&curTool==="camera")openTool("camera",true);if(typeof tlDockDraw==="function")tlDockDraw();tlKdRefresh()}
 function tlUndoCmd(label,ids,before){
   var after=ids.map(tlTrackCopy);
   return {label:label,bytes:2000,undo:function(){ids.forEach(function(id,i){tlSetTrack(id,before[i]?JSON.parse(JSON.stringify(before[i])):null)});tlSetTime(TL.t)},
     redo:function(){ids.forEach(function(id,i){tlSetTrack(id,after[i]?JSON.parse(JSON.stringify(after[i])):null)});tlSetTime(TL.t)}};
 }
 /* write (or replace) a key for one property at time t. v defaults to the property's current value. */
-function tlKey(id,t,v,ease,noUndo){
+function tlKey(id,t,v,ease,noUndo,quiet){
   var d=tlProp(id);if(!d)return false;
   t=tlSnap(Math.max(0,t));v=(v||d.get()).slice();
   var before=noUndo?null:[tlTrackCopy(id)],tr=TL.tracks[id]||(TL.tracks[id]={k:[]}),k=tr.k,i;
@@ -2416,7 +2426,7 @@ function tlKey(id,t,v,ease,noUndo){
   for(i=0;i<k.length;i++)if(Math.abs(k[i].t-t)<1e-6){k[i].v=v;if(ease)k[i].e=ease;break}
   if(i===k.length){k.push({t:t,v:v,e:ease||(d.step?"step":"smooth")});k.sort(function(a,b){return a.t-b.t})}
   if(!noUndo)undoPush(tlUndoCmd("keyframe",[id],before));
-  tlChanged();return true;
+  tlChanged(quiet);return true;
 }
 function tlDelKey(id,t){
   var tr=TL.tracks[id];if(!tr)return;var before=[tlTrackCopy(id)];
@@ -2470,8 +2480,49 @@ function tlAct(a,el){
   return false;
 }
 
+/* keyframe diamonds in the menus: grey = not animated, orange outline = animated, filled = a key sits at the playhead */
+function tlKdRefresh(){
+  var els=document.querySelectorAll("[data-kd]"),i,j;
+  for(i=0;i<els.length;i++){
+    var id=els[i].dataset.kd,tr=TL.tracks[id],on=false;
+    if(tr)for(j=0;j<tr.k.length;j++)if(Math.abs(tr.k[j].t-TL.t)<0.5/TL.fps)on=true;
+    els[i].classList.toggle("on",on);els[i].classList.toggle("anim",!!tr&&tr.k.length>0&&!on);
+  }
+}
+function tlKdToggle(id){
+  var d=tlProp(id);if(!d)return;
+  if(THRU&&d.obj&&d.obj===ACAM)camFromView(d.obj);
+  var tr=TL.tracks[id],hit=null;if(tr)tr.k.forEach(function(k){if(Math.abs(k.t-TL.t)<0.5/TL.fps)hit=k});
+  if(hit)tlDelKey(id,hit.t);else tlKey(id,TL.t);
+  TLU.row=id;tlKdRefresh();tlDockDraw();
+}
+document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-kd]");if(b){e.preventDefault();tlKdToggle(b.dataset.kd)}});
+new MutationObserver(tlKdRefresh).observe($("popB"),{childList:true,subtree:true});
+/* auto-key: change something that already has keys, at a new time, and a key is written there. Bursts (dragging) become one undo step. */
+var TLA={ids:{},before:{},timer:0};
+function tlSame(a,b,d){
+  var i;if(d.quat)return Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3])>1-1e-8;
+  var eps=/:fov$/.test(d.id)?0.01:/:fdist$/.test(d.id)?1e-3:1e-4;
+  for(i=0;i<a.length;i++)if(Math.abs(a[i]-b[i])>eps)return false;return true;
+}
+function tlAutoCheck(){
+  if(anim||TLU.drag||!cur||!TL.ready)return;
+  for(var id in TL.tracks){
+    var tr=TL.tracks[id];if(!tr.k.length)continue;var d=tlProp(id);if(!d)continue;
+    var now=d.get(),ev=tlEval(tr,TL.t,d);if(!ev||tlSame(now,ev,d))continue;
+    if(!TLA.ids[id]){TLA.ids[id]=1;TLA.before[id]=tlTrackCopy(id)}
+    tlKey(id,TL.t,now,null,true,true);
+    clearTimeout(TLA.timer);TLA.timer=setTimeout(tlAutoFlush,450);
+  }
+}
+function tlAutoFlush(){
+  clearTimeout(TLA.timer);var ids=Object.keys(TLA.ids);if(!ids.length)return;
+  var before=ids.map(function(id){return TLA.before[id]});TLA.ids={};TLA.before={};
+  undoPush(tlUndoCmd("keyframe",ids,before));
+}
+
 /* ---------- V026 timeline dock: dope sheet (rows = animated properties, diamonds = keys) ---------- */
-var TLU={open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1,hover:null};
+var TLU={row:null,open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1,hover:null};
 function tlRows(){
   var rows=[];for(var id in TL.tracks){var d=tlProp(id);if(d&&TL.tracks[id].k.length)rows.push({id:id,d:d,tr:TL.tracks[id]})}
   rows.sort(function(a,b){return a.d.group<b.d.group?-1:a.d.group>b.d.group?1:a.d.label<b.d.label?-1:1});return rows;
@@ -2498,7 +2549,7 @@ function tlDockDraw(){
   g.save();g.beginPath();g.rect(0,RH,W,H-RH);g.clip();
   for(i=0;i<rows.length;i++){
     var y=RH+i*RW-TLU.sy;if(y>H||y+RW<RH)continue;
-    g.fillStyle=i%2?"#12161c":"#0f1318";g.fillRect(LW,y,W-LW,RW);
+    g.fillStyle=rows[i].id===TLU.row?"#1c2735":(i%2?"#12161c":"#0f1318");g.fillRect(LW,y,W-LW,RW);
     var tr=rows[i].tr.k;
     g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
     for(j=0;j<tr.length-1;j++){var xa=tlT2X(tr[j].t),xb=tlT2X(tr[j+1].t);if(xb<LW||xa>W)continue;g.moveTo(Math.max(LW,xa),y+RW/2);g.lineTo(xb,y+RW/2)}g.stroke();
@@ -2515,7 +2566,7 @@ function tlDockDraw(){
   /* labels */
   g.fillStyle="#12151a";g.fillRect(0,0,LW,H);g.strokeStyle="#262b33";g.lineWidth=1;g.beginPath();g.moveTo(LW+.5,0);g.lineTo(LW+.5,H);g.stroke();
   g.save();g.beginPath();g.rect(0,RH,LW,H-RH);g.clip();g.font="12px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";
-  for(i=0;i<rows.length;i++){var yy=RH+i*RW-TLU.sy;if(yy>H||yy+RW<RH)continue;g.fillStyle=SEL&&rows[i].d.obj===SEL?"#ffb04a":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yy+RW/2)}
+  for(i=0;i<rows.length;i++){var yy=RH+i*RW-TLU.sy;if(yy>H||yy+RW<RH)continue;if(rows[i].id===TLU.row){g.fillStyle="#1c2735";g.fillRect(0,yy,LW,RW)}g.fillStyle=rows[i].id===TLU.row?"#ffb04a":SEL&&rows[i].d.obj===SEL?"#ffd9a0":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yy+RW/2)}
   if(!rows.length){g.fillStyle="#8a94a0";g.fillText("No keys yet.",10,RH+16);g.fillText("Add a track above,",10,RH+34);g.fillText("or key a camera.",10,RH+50)}
   g.restore();
   /* ruler */
@@ -2560,8 +2611,8 @@ function tlEaseSel(e){
   c.addEventListener("pointerdown",function(e){
     if(e.button!==0)return;c.focus();var p=pos(e);c.setPointerCapture(e.pointerId);
     if(p.y<TLU.RH){TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))));tlDockDraw();return}
-    if(p.x<TLU.LW){var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(rows[r]&&rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}tlDockDraw();return}
-    var h=tlHit(p.x,p.y);
+    if(p.x<TLU.LW){var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(rows[r]){TLU.row=rows[r].id;if(rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}}tlDockDraw();return}
+    var h=tlHit(p.x,p.y),rr=tlRows()[Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW)];if(rr)TLU.row=rr.id;
     if(h){
       if(e.shiftKey){if(tlSelHas(h.k))TLU.sel=TLU.sel.filter(function(s){return s.k!==h.k});else TLU.sel.push({id:h.id,k:h.k})}
       else if(!tlSelHas(h.k))TLU.sel=[{id:h.id,k:h.k}];
@@ -2610,7 +2661,7 @@ function tlEaseSel(e){
     else if(a==="fit")tlFit();
     else if(a==="del")tlDeleteSel();
     else if(a==="ease")tlEaseSel(el.dataset.e);
-    else if(a==="add"){var id=$("tlAdd").value;if(id){tlKey(id,TL.t);$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Pick a track first.","warn")}
+    else if(a==="add"){var id=$("tlAdd").value||TLU.row;if(id&&tlProp(id)){if(THRU&&tlProp(id).obj===ACAM)camFromView(ACAM);tlKey(id,TL.t);TLU.row=id;$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Click a row in the list, or pick a track, then press Key it.","warn")}
   });
   $("tlAdd").addEventListener("mousedown",tlAddOpts);$("tlAdd").addEventListener("focus",tlAddOpts);
   $("tlDur").addEventListener("change",function(){var v=clamp(+this.value||6,0.5,600);S.dur=v;this.value=v;saveSoon();tlFit();if(curTool==="camera")openTool("camera",true)});
@@ -2920,6 +2971,7 @@ function openSpace(p){
       if(vv.mode==="render")setMode("render");
       if(vv.thru){var tc=findObj(vv.thru);if(tc&&MODE==="render")enterThru(tc)}
     }
+    TL.ready=true;if(tlHasKeys())tlSetTime(0);
   }).catch(function(err){busy(false);setStatus(err.message,"bad")});
 }
 function showEditor(){
