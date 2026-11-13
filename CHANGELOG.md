@@ -1,6 +1,15 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 032
+- TouchDesigner export (Capture panel): camera path (json, csv, chan), 16-bit depth PNG per frame, optional colour frames and a point cloud .ply, all in one zip with a README.
+- SPZ: import .spz files (versions 2 and 3, also by drag and drop) and export the whole scene as .spz, about 10 times smaller than .ply.
+- Splat effects: Dissolve, Scatter and Pulse (Depth panel). All can be keyframed on the timeline. They show in Render mode, video and images.
+- Presets now travel inside "Back up everything", and can be exported and imported on their own.
+- After solving cameras for a photo scan, the app says "Solved X of Y photos".
+- One photo to 3D: add a photo (and a depth map if you have one, white = near) to get a 3D splat card.
+- Big scenes sort in a background thread, so orbiting stays smooth. Renders are unchanged.
+
 ## Version 031
 - Desktop app: render straight to ProRes 4444 (with transparency), ProRes 422 HQ, DNxHR HQX or MP4 (H.264). Pick it under Output in the Capture panel; PNG zip is still there.
 - ffmpeg is bundled inside the app, so there is nothing to install. It encodes frame by frame as the render runs, and asks where to save first.
