@@ -93,6 +93,19 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .tool[aria-pressed="true"]{color:var(--fg)}
 .tool[aria-pressed="true"]::after{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
 
+.tld{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(268px,46%);display:flex;flex-direction:column;background:#10131af5;border-top:1px solid #ffffff22;box-shadow:0 -10px 30px #0008}
+.tld[hidden]{display:none}
+.tlh{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow-x:auto;flex:none;border-bottom:1px solid var(--line);font:12px var(--font-mono);color:var(--mute);white-space:nowrap}
+.tlh .tb{min-height:34px;padding:0 12px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
+.tlh .tb:active{background:var(--raise2)}
+.tlh select,.tlh input{min-height:34px;background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:13px var(--font-ui);padding:0 8px}
+.tlh input{width:64px}.tlh select{max-width:180px}
+.tlt{min-width:150px;color:var(--fg)}.tlsep{flex:1}
+.tlw{position:relative;flex:1;min-height:0}
+.tlw canvas{position:absolute;inset:auto;left:0;top:0;outline:none;touch-action:none;cursor:default}
+.stage.tlopen .hud{bottom:min(276px,48%)}
+@media(max-width:759px){#tlBtn,.tld{display:none!important}}
+@media(min-width:760px){.stage.tlopen .pop{max-height:calc(100% - 84px - min(268px,46%))}}
 .pop{position:absolute;z-index:4;left:max(10px,var(--safe-l));right:max(10px,var(--safe-r));bottom:8px;max-height:min(54dvh,460px);display:flex;flex-direction:column;
   background:#12151af2;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid #ffffff1f;border-radius:16px;box-shadow:0 16px 40px #000b;overflow:hidden}
 .pop header{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 6px 16px;border-bottom:1px solid var(--line);font:600 13px var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
@@ -198,6 +211,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true">Edit</button><button type="button" data-mode="render" aria-pressed="false">Render</button></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
       <div class="pname" id="pname"></div>
+      <button class="ico" id="tlBtn" type="button" aria-label="Timeline" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 4l2 2-2 2M15 10l2 2-2 2M11 16l2 2-2 2"/></svg></button>
       <button class="ico" id="saveBtn" type="button" aria-label="Save project (Ctrl+S)"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/></svg></button>
       <button class="ico" id="hideGui" type="button" aria-label="Hide the interface (H)"><svg class="i" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <button class="ico" id="reset" type="button" aria-label="Reset view"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
@@ -207,6 +221,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
     <div class="hud" id="hud"></div>
+    <div class="tld" id="tld" hidden aria-label="Timeline">
+      <div class="tlh">
+        <button class="tb" type="button" data-tla="play" id="tlPlay">Play</button>
+        <span class="tlt" id="tlTime2">0.00 s</span>
+        <label class="tll">Length <input id="tlDur" type="number" min="0.5" max="600" step="0.5" value="6"> s</label>
+        <select id="tlAdd" aria-label="Add a track"><option value="">Add a track…</option></select><button class="tb" type="button" data-tla="add">Key it</button>
+        <span class="tlsep"></span>
+        <button class="tb" type="button" data-tla="ease" data-e="smooth" title="Smooth between the selected key and the next">Smooth</button><button class="tb" type="button" data-tla="ease" data-e="linear">Linear</button><button class="tb" type="button" data-tla="ease" data-e="step">Step</button>
+        <button class="tb" type="button" data-tla="del">Delete key</button><button class="tb" type="button" data-tla="fit">Fit</button><button class="tb" type="button" data-tla="close" aria-label="Close timeline">Close</button>
+      </div>
+      <div class="tlw" id="tlw"><canvas id="tlc" tabindex="0" aria-label="Dope sheet. Click the ruler to move the playhead, drag diamonds to retime, Delete removes keys, double-click a row to add a key."></canvas></div>
+    </div>
     <div class="pop" id="pop" hidden>
       <header><span id="popT"></span><button id="popX" type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
       <div class="body" id="popB"></div>
@@ -233,7 +259,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 025";
+var VERSION="Version 026";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 
@@ -1208,7 +1234,7 @@ function startAnim(rec){
   vyaw=vpitch=0;dirty=true;syncPlay();
 }
 function stopAnim(){if(anim&&!anim.rec){anim=null;dirty=true;syncPlay()}}
-function syncPlay(){var b=document.querySelector("[data-act=play]");if(b)b.textContent=anim&&!anim.rec?"Stop":"Play"}
+function syncPlay(){var b=document.querySelector("[data-act=play]"),w=anim&&!anim.rec?"Stop":"Play";if(b)b.textContent=w;var q=$("tlPlay");if(q)q.textContent=w}
 function loop(t){
   requestAnimationFrame(loop);
   if($("editor").hidden)return;
@@ -1224,7 +1250,7 @@ function loop(t){
       if(anim.loop){anim.t0=t;u=0}
       else{var wasRec=anim.rec;if(anim.tl){tlSetTime(anim.dur);draw(null)}else draw(camOff(anim.preset,1));anim=null;syncPlay();if(wasRec)finishRecord();dirty=true;return}
     }
-    if(anim.tl){tlSetTime(u*anim.dur);draw(null)}else draw(camOff(anim.preset,u));return;
+    if(anim.tl){tlSetTime(u*anim.dur);draw(null)}else{draw(camOff(anim.preset,u));if(TLU.open){TL.t=u*anim.dur;tlDockDraw()}}return;
   }
   if(!dirty)return;
   dirty=false;
@@ -1935,7 +1961,7 @@ document.addEventListener("keydown",function(e){
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
   else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
-  else if((c==="Delete"||c==="Backspace")&&SEL&&isGeo(SEL)&&curTool!=="select"){e.preventDefault();removeObj(SEL)}
+  else if((c==="Delete"||c==="Backspace")&&SEL&&isGeo(SEL)&&curTool!=="select"&&!TLU.sel.length){e.preventDefault();removeObj(SEL)}
 });
 /* export every visible splat in the scene as one .ply, with moves, rotation, scale and crop baked in */
 function exportScenePLY(){
@@ -2369,13 +2395,13 @@ function tlSetTime(t){
     d.set(v);if(d.obj&&d.obj===ACAM)cam=true;
   }
   if(cam&&THRU&&ACAM)viewFromCam(ACAM);
-  dirty=true;
+  dirty=true;if(TLU.open)tlDockDraw();
 }
 /* keys */
 function tlSnap(t){return Math.round(t*TL.fps)/TL.fps}
 function tlTrackCopy(id){var tr=TL.tracks[id];return tr?JSON.parse(JSON.stringify(tr)):null}
 function tlSetTrack(id,tr){if(tr&&tr.k&&tr.k.length)TL.tracks[id]=tr;else delete TL.tracks[id];tlChanged()}
-function tlChanged(){saveSoon();dirty=true;if(curTool==="camera")openTool("camera",true)}
+function tlChanged(){saveSoon();dirty=true;if(curTool==="camera")openTool("camera",true);if(typeof tlDockDraw==="function")tlDockDraw()}
 function tlUndoCmd(label,ids,before){
   var after=ids.map(tlTrackCopy);
   return {label:label,bytes:2000,undo:function(){ids.forEach(function(id,i){tlSetTrack(id,before[i]?JSON.parse(JSON.stringify(before[i])):null)});tlSetTime(TL.t)},
@@ -2443,6 +2469,156 @@ function tlAct(a,el){
   if(a==="tlClear"){tlClearCam(SEL&&isCam(SEL)?SEL:null);setStatus("Cleared the camera's keys.","ok");return true}
   return false;
 }
+
+/* ---------- V026 timeline dock: dope sheet (rows = animated properties, diamonds = keys) ---------- */
+var TLU={open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1,hover:null};
+function tlRows(){
+  var rows=[];for(var id in TL.tracks){var d=tlProp(id);if(d&&TL.tracks[id].k.length)rows.push({id:id,d:d,tr:TL.tracks[id]})}
+  rows.sort(function(a,b){return a.d.group<b.d.group?-1:a.d.group>b.d.group?1:a.d.label<b.d.label?-1:1});return rows;
+}
+function tlT2X(t){return TLU.LW+(t-TLU.v0)/Math.max(1e-6,TLU.v1-TLU.v0)*(TLU.W-TLU.LW)}
+function tlX2T(x){return TLU.v0+(x-TLU.LW)/Math.max(1,TLU.W-TLU.LW)*(TLU.v1-TLU.v0)}
+function tlFit(){TLU.v0=0;TLU.v1=Math.max(0.5,S.dur||6);tlDockDraw()}
+function tlKeyXY(id,i){var rows=tlRows(),r=-1,j;for(j=0;j<rows.length;j++)if(rows[j].id===id)r=j;if(r<0)return null;return {x:tlT2X(rows[r].tr.k[i].t),y:TLU.RH+r*TLU.RW+TLU.RW/2-TLU.sy}}
+function tlSelHas(k){for(var i=0;i<TLU.sel.length;i++)if(TLU.sel[i].k===k)return true;return false}
+function tlDockSize(){
+  var c=$("tlc"),w=c.parentNode;if(!w)return;TLU.dpr=Math.min(window.devicePixelRatio||1,2);
+  TLU.W=Math.max(100,w.clientWidth);TLU.H=Math.max(60,w.clientHeight);
+  c.width=Math.round(TLU.W*TLU.dpr);c.height=Math.round(TLU.H*TLU.dpr);c.style.width=TLU.W+"px";c.style.height=TLU.H+"px";
+}
+function tlDockDraw(){
+  if(!TLU.open)return;var c=$("tlc"),g=c.getContext("2d");if(!TLU.W)tlDockSize();
+  var W=TLU.W,H=TLU.H,LW=TLU.LW,RH=TLU.RH,RW=TLU.RW,rows=tlRows(),i,j;
+  g.setTransform(TLU.dpr,0,0,TLU.dpr,0,0);g.clearRect(0,0,W,H);
+  g.fillStyle="#0e1116";g.fillRect(0,0,W,H);
+  var maxSy=Math.max(0,rows.length*RW-(H-RH));TLU.sy=clamp(TLU.sy,0,maxSy);
+  /* time after the project length is dimmed */
+  var xe=tlT2X(Math.max(0.5,S.dur||6));if(xe<W){g.fillStyle="#00000055";g.fillRect(Math.max(LW,xe),RH,W-Math.max(LW,xe),H-RH)}
+  /* rows */
+  g.save();g.beginPath();g.rect(0,RH,W,H-RH);g.clip();
+  for(i=0;i<rows.length;i++){
+    var y=RH+i*RW-TLU.sy;if(y>H||y+RW<RH)continue;
+    g.fillStyle=i%2?"#12161c":"#0f1318";g.fillRect(LW,y,W-LW,RW);
+    var tr=rows[i].tr.k;
+    g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
+    for(j=0;j<tr.length-1;j++){var xa=tlT2X(tr[j].t),xb=tlT2X(tr[j+1].t);if(xb<LW||xa>W)continue;g.moveTo(Math.max(LW,xa),y+RW/2);g.lineTo(xb,y+RW/2)}g.stroke();
+    for(j=0;j<tr.length;j++){
+      var x=tlT2X(tr[j].t);if(x<LW-6||x>W+6)continue;var sel=tlSelHas(tr[j]);
+      g.save();g.translate(x,y+RW/2);g.rotate(Math.PI/4);
+      g.fillStyle=sel?"#ff6a3d":(tr[j].e==="step"?"#8a94a0":tr[j].e==="linear"?"#cfd6de":"#ffffff");
+      g.strokeStyle=sel?"#ffb04a":"#0008";g.lineWidth=1.5;
+      if(tr[j].e==="step"){g.fillRect(-4,-4,8,8);g.strokeRect(-4,-4,8,8)}else{g.beginPath();g.arc(0,0,0.01,0,0);g.fillRect(-4.5,-4.5,9,9);g.strokeRect(-4.5,-4.5,9,9)}
+      g.restore();
+    }
+  }
+  g.restore();
+  /* labels */
+  g.fillStyle="#12151a";g.fillRect(0,0,LW,H);g.strokeStyle="#262b33";g.lineWidth=1;g.beginPath();g.moveTo(LW+.5,0);g.lineTo(LW+.5,H);g.stroke();
+  g.save();g.beginPath();g.rect(0,RH,LW,H-RH);g.clip();g.font="12px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";
+  for(i=0;i<rows.length;i++){var yy=RH+i*RW-TLU.sy;if(yy>H||yy+RW<RH)continue;g.fillStyle=SEL&&rows[i].d.obj===SEL?"#ffb04a":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yy+RW/2)}
+  if(!rows.length){g.fillStyle="#8a94a0";g.fillText("No keys yet.",10,RH+16);g.fillText("Add a track above,",10,RH+34);g.fillText("or key a camera.",10,RH+50)}
+  g.restore();
+  /* ruler */
+  g.fillStyle="#161a21";g.fillRect(0,0,W,RH);g.strokeStyle="#262b33";g.beginPath();g.moveTo(0,RH+.5);g.lineTo(W,RH+.5);g.stroke();
+  var span=TLU.v1-TLU.v0,steps=[0.04,0.1,0.25,0.5,1,2,5,10,30,60],st=steps[steps.length-1];
+  for(i=0;i<steps.length;i++)if(steps[i]/span*(W-LW)>=60){st=steps[i];break}
+  g.fillStyle="#8a94a0";g.font="11px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";g.strokeStyle="#ffffff26";
+  for(var tt=Math.ceil(TLU.v0/st)*st;tt<=TLU.v1+1e-9;tt+=st){var tx=tlT2X(tt);if(tx<LW)continue;g.beginPath();g.moveTo(tx+.5,RH-8);g.lineTo(tx+.5,H);g.stroke();g.fillText((Math.round(tt*100)/100)+"s",tx+4,RH/2-1)}
+  /* playhead */
+  var px=tlT2X(TL.t);if(px>=LW){g.strokeStyle="#ff6a3d";g.fillStyle="#ff6a3d";g.lineWidth=1.5;g.beginPath();g.moveTo(px,RH-2);g.lineTo(px,H);g.stroke();g.beginPath();g.moveTo(px-6,RH-12);g.lineTo(px+6,RH-12);g.lineTo(px,RH-2);g.fill()}
+  var ro=$("tlTime2");if(ro)ro.textContent=TL.t.toFixed(2)+" / "+(S.dur||6).toFixed(2)+" s  ·  frame "+Math.round(TL.t*TL.fps);
+}
+function tlDockOpen(on){
+  TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
+  if(TLU.open){tlFit();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
+}
+function tlAddOpts(){
+  var sel=$("tlAdd");if(!sel)return;var cur=sel.value,groups={},h='<option value="">Add a track…</option>';
+  tlAllProps().forEach(function(d){if(TL.tracks[d.id])return;(groups[d.group]=groups[d.group]||[]).push(d)});
+  Object.keys(groups).forEach(function(g){h+='<optgroup label="'+esc(g)+'">'+groups[g].map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.label)+'</option>'}).join("")+'</optgroup>'});
+  sel.innerHTML=h;sel.value=cur&&sel.querySelector('option[value="'+cur+'"]')?cur:"";
+}
+function tlHit(x,y){
+  var rows=tlRows(),r=Math.floor((y-TLU.RH+TLU.sy)/TLU.RW);if(y<TLU.RH||x<TLU.LW||r<0||r>=rows.length)return null;
+  var k=rows[r].tr.k,best=null,bd=9,j;for(j=0;j<k.length;j++){var d=Math.abs(tlT2X(k[j].t)-x);if(d<bd){bd=d;best={id:rows[r].id,k:k[j],row:r}}}
+  return best;
+}
+function tlSelIds(){var o={};TLU.sel.forEach(function(s){o[s.id]=1});return Object.keys(o)}
+function tlDeleteSel(){
+  if(!TLU.sel.length)return;var ids=tlSelIds(),before=ids.map(tlTrackCopy);
+  TLU.sel.forEach(function(s){var tr=TL.tracks[s.id];if(tr)tr.k=tr.k.filter(function(x){return x!==s.k});if(tr&&!tr.k.length)delete TL.tracks[s.id]});
+  TLU.sel=[];undoPush(tlUndoCmd("delete keyframes",ids,before));tlChanged();tlSetTime(TL.t);
+}
+function tlEaseSel(e){
+  if(!TLU.sel.length){setStatus("Click a key first.","warn");return}
+  var ids=tlSelIds(),before=ids.map(tlTrackCopy);TLU.sel.forEach(function(s){s.k.e=e});
+  undoPush(tlUndoCmd("key easing",ids,before));tlChanged();tlSetTime(TL.t);
+}
+(function(){
+  var c=$("tlc"),mk=null;
+  function pos(e){var r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+  c.addEventListener("pointerdown",function(e){
+    if(e.button!==0)return;c.focus();var p=pos(e);c.setPointerCapture(e.pointerId);
+    if(p.y<TLU.RH){TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))));tlDockDraw();return}
+    if(p.x<TLU.LW){var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(rows[r]&&rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}tlDockDraw();return}
+    var h=tlHit(p.x,p.y);
+    if(h){
+      if(e.shiftKey){if(tlSelHas(h.k))TLU.sel=TLU.sel.filter(function(s){return s.k!==h.k});else TLU.sel.push({id:h.id,k:h.k})}
+      else if(!tlSelHas(h.k))TLU.sel=[{id:h.id,k:h.k}];
+      var ids=tlSelIds();TLU.drag={kind:"move",x0:p.x,ids:ids,before:ids.map(tlTrackCopy),orig:TLU.sel.map(function(s){return s.k.t}),moved:false};
+    }else{if(!e.shiftKey)TLU.sel=[];TLU.drag={kind:"scrub"};tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))))}
+    tlDockDraw();
+  });
+  c.addEventListener("pointermove",function(e){
+    var d=TLU.drag;if(!d)return;var p=pos(e);
+    if(d.kind==="scrub"){tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))));tlDockDraw();return}
+    var dt=tlSnap(tlX2T(p.x))-tlSnap(tlX2T(d.x0));if(!d.moved&&Math.abs(p.x-d.x0)<3)return;d.moved=true;
+    var mn=Math.min.apply(null,d.orig);if(mn+dt<0)dt=-mn;
+    TLU.sel.forEach(function(s,i){s.k.t=tlSnap(d.orig[i]+dt)});
+    d.ids.forEach(function(id){TL.tracks[id].k.sort(function(a,b){return a.t-b.t})});
+    tlSetTime(TL.t);tlDockDraw();
+  });
+  function up(e){
+    var d=TLU.drag;TLU.drag=null;if(!d||d.kind!=="move"||!d.moved){tlDockDraw();return}
+    /* two keys on the same frame: the one you moved wins */
+    d.ids.forEach(function(id){var tr=TL.tracks[id];if(!tr)return;tr.k=tr.k.filter(function(x){if(tlSelHas(x))return true;return !TLU.sel.some(function(s){return s.id===id&&Math.abs(s.k.t-x.t)<1e-6})})});
+    undoPush(tlUndoCmd("move keyframes",d.ids,d.before));tlChanged();tlSetTime(TL.t);
+  }
+  c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
+  c.addEventListener("dblclick",function(e){
+    var p=pos(e);if(p.y<TLU.RH||p.x<TLU.LW)return;var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(!rows[r]||tlHit(p.x,p.y))return;
+    var t=tlSnap(Math.max(0,tlX2T(p.x))),v=tlEval(rows[r].tr,t,rows[r].d);tlKey(rows[r].id,t,v);tlDockDraw();
+  });
+  c.addEventListener("wheel",function(e){
+    e.preventDefault();var p=pos(e);
+    if(e.ctrlKey||e.metaKey){var tc=tlX2T(p.x),f=Math.exp(e.deltaY*0.0015);var a=tc-(tc-TLU.v0)*f,b=tc+(TLU.v1-tc)*f;if(b-a<0.2||b-a>600)return;TLU.v0=Math.max(0,a);TLU.v1=TLU.v0+(b-a)}
+    else if(e.shiftKey){var sh=(e.deltaY||e.deltaX)/Math.max(1,TLU.W-TLU.LW)*(TLU.v1-TLU.v0);var n0=Math.max(0,TLU.v0+sh);TLU.v1+=n0-TLU.v0;TLU.v0=n0}
+    else TLU.sy+=e.deltaY;
+    tlDockDraw();
+  },{passive:false});
+  c.addEventListener("keydown",function(e){
+    if(e.code==="Delete"||e.code==="Backspace"){e.preventDefault();e.stopPropagation();tlDeleteSel()}
+    else if(e.code==="ArrowLeft"||e.code==="ArrowRight"){e.preventDefault();tlSetTime(tlSnap(Math.max(0,TL.t+(e.code==="ArrowLeft"?-1:1)/TL.fps)));tlDockDraw()}
+    else if(e.code==="Space"){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false)}
+  });
+  if(window.ResizeObserver)new ResizeObserver(function(){if(TLU.open){tlDockSize();tlDockDraw()}}).observe($("tlw"));
+  $("tlBtn").addEventListener("click",function(){tlDockOpen()});
+  $("tld").addEventListener("click",function(e){
+    var el=e.target.closest("[data-tla]");if(!el)return;var a=el.dataset.tla;
+    if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
+    else if(a==="close")tlDockOpen(false);
+    else if(a==="fit")tlFit();
+    else if(a==="del")tlDeleteSel();
+    else if(a==="ease")tlEaseSel(el.dataset.e);
+    else if(a==="add"){var id=$("tlAdd").value;if(id){tlKey(id,TL.t);$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Pick a track first.","warn")}
+  });
+  $("tlAdd").addEventListener("mousedown",tlAddOpts);$("tlAdd").addEventListener("focus",tlAddOpts);
+  $("tlDur").addEventListener("change",function(){var v=clamp(+this.value||6,0.5,600);S.dur=v;this.value=v;saveSoon();tlFit();if(curTool==="camera")openTool("camera",true)});
+  document.addEventListener("keydown",function(e){
+    if(!TLU.open||e.target===c)return;var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
+    if((e.code==="Delete"||e.code==="Backspace")&&TLU.sel.length&&!$("editor").hidden){e.preventDefault();tlDeleteSel()}
+  });
+})();
 
 /* ---------- projects (saved on this device) ---------- */
 var dbP=null;
@@ -2732,7 +2908,7 @@ function openSpace(p){
   if((p.settings||{}).ctrlV!==16){if(S.ctrl==="orbit")S.ctrl="fly";S.ctrlV=16}
   photoName=(p.name||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project";
   $("pname").textContent=p.name;
-  newScene();resetView();anim=null;PF.lutKey="";
+  newScene();resetView();anim=null;PF.lutKey="";TLU.sel=[];if($("tlDur"))$("tlDur").value=S.dur||6;if(TLU.open)tlFit();
   if(p.view&&p.view.R&&p.view.TG){Rm=p.view.R.slice();TG=p.view.TG.slice();zoom=p.view.zoom||1}
   showEditor();closeTool();applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");

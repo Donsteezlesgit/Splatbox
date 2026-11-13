@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 026
+- New: timeline dock. Tap the timeline button (top bar, desktop only) for a dope sheet along the bottom of the view. Closed by default.
+- One row per animated property, a diamond per key. Click the ruler or drag to scrub, drag diamonds to retime them, Shift-click to pick several, Delete removes keys.
+- Double-click a row to add a key. "Add a track" lists everything that can be keyed. Smooth, Linear and Step set how a key blends into the next.
+- Ctrl+wheel zooms time, Shift+wheel pans, Fit shows the whole length. Length of the animation can be set in the dock. Left/Right arrows step one frame, Space plays.
+- Everything is undoable. Phones stay view and play only.
+
 ## Version 025
 - New: timeline engine. Camera position, rotation, lens and focus distance, object transforms and visibility, light intensity, crop boxes and the colour/lens/depth settings can all hold keyframes.
 - Keys are saved in the project (format 5; older projects upgrade by themselves) and can be undone with Ctrl+Z.
