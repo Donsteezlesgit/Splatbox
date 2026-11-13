@@ -1,6 +1,14 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 021
+- Project folders (PC/Mac Chrome or Edge): on the home screen choose a project folder, e.g. inside Dropbox. Each project becomes a sub-folder with project.json, its splat/model files and a thumbnail. Saving overwrites it; opening reads from it.
+- The browser keeps a mirror copy, but the folder always wins when it is available. If the folder can't be reached, work keeps saving to the browser and the home screen offers Reconnect.
+- "Move N browser projects into folder" copies existing projects over; nothing is deleted from the browser.
+- A small lock note warns if another computer had the project open in the last 10 minutes.
+- Unreadable or half-synced projects show their own card instead of breaking the list.
+- Phone/Safari/Firefox behave as before (browser storage only).
+
 ## Version 020 (BETA)
 - Presets: File menu > Presets. Save all settings, looks and your imported LUT under a name, apply them in any project. Kept on this device (not in backup files yet).
 

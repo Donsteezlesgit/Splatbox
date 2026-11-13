@@ -68,6 +68,8 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 .hfoot{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:30px;font:12px/1.4 var(--font-mono);color:var(--mute)}
 .beta .hbar .word::after{content:"BETA";margin-left:10px;padding:2px 8px;border-radius:6px;background:#ffb020;color:#1a1200;font:700 11px var(--font-mono);letter-spacing:.08em}
 .hbtns{display:flex;gap:8px}
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-6px 0 14px;font:12px/1.4 var(--font-mono);color:var(--mute)}
+.fbar button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:36px;cursor:pointer}
 .hfoot button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:40px;cursor:pointer}
 
 /* ---------- editor ---------- */
@@ -181,6 +183,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
   <div class="hscroll" id="hscroll">
     <h2>Projects</h2>
+    <div class="fbar" id="fbar" hidden></div>
     <p class="empty" id="emptyMsg" hidden>No projects yet. Start a new project to get an empty 3D space, then add splats, models, photo scans or a photo from the menus.</p>
     <div class="grid" id="grid"></div>
     <div class="hfoot"><span><span id="ver"></span> · <span id="bk"></span></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
@@ -230,9 +233,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 020";
+var VERSION="Version 021";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
-var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=2;
+var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=3;
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -2051,8 +2054,8 @@ function db(){
   if(dbP)return dbP;
   dbP=new Promise(function(res,rej){
     if(!window.indexedDB)return rej(new Error("Saving isn't available in this browser."));
-    var r=indexedDB.open(BETA?"splatbox-beta":"splatbox",1);
-    r.onupgradeneeded=function(){r.result.createObjectStore("projects",{keyPath:"id"})};
+    var r=indexedDB.open(BETA?"splatbox-beta":"splatbox",2);
+    r.onupgradeneeded=function(){var d=r.result;if(!d.objectStoreNames.contains("projects"))d.createObjectStore("projects",{keyPath:"id"});if(!d.objectStoreNames.contains("meta"))d.createObjectStore("meta")};
     r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error||new Error("Couldn't open storage."))};
   });
   dbP.catch(function(){dbP=null});
@@ -2064,9 +2067,189 @@ function dbTx(mode,fn){
     t.oncomplete=function(){res(r&&r.result)};t.onerror=t.onabort=function(){rej(t.error||new Error("Storage error."))};
   })});
 }
-var dbAll=function(){return dbTx("readonly",function(st){return st.getAll()})};
-var dbPut=function(p){return dbTx("readwrite",function(st){return st.put(p)})};
-var dbDel=function(id){return dbTx("readwrite",function(st){return st["delete"](id)})};
+var idbAll=function(){return dbTx("readonly",function(st){return st.getAll()})};
+var idbPut=function(p){return dbTx("readwrite",function(st){return st.put(p)})};
+var idbDel=function(id){return dbTx("readwrite",function(st){return st["delete"](id)})};
+var idbKeys=function(){return dbTx("readonly",function(st){return st.getAllKeys()})};
+/* ---------- project folder (V021) ----------
+   On PC/Mac Chromium a project can live in a real folder: <your folder>/<project>/project.json, assets/*, thumb.jpg.
+   The browser's own storage stays as a mirror. When the folder is connected and readable, the folder always wins:
+   the mirror is written but never read. Writes go through createWritable(), which the browser swaps in atomically. */
+var FOLD={h:null,ok:false,lapsed:false,name:"",dirs:{},written:new Map(),lockT:0};
+var CAN_FS=typeof window.showDirectoryPicker==="function";
+function metaTx(mode,fn){return db().then(function(d){return new Promise(function(res,rej){
+  var t=d.transaction("meta",mode),r=fn(t.objectStore("meta"));
+  t.oncomplete=function(){res(r&&r.result)};t.onerror=t.onabort=function(){rej(t.error||new Error("Storage error."))};
+})})}
+function fsList(h){
+  var it=h.values(),out=[];
+  return new Promise(function(res,rej){(function next(){it.next().then(function(r){if(r.done)return res(out);out.push(r.value);next()},rej)})()});
+}
+function fsDirHandle(root,path,create){
+  var parts=path.split("/").filter(Boolean);
+  return parts.reduce(function(pr,n){return pr.then(function(h){return h.getDirectoryHandle(n,{create:!!create})})},Promise.resolve(root));
+}
+function fsGetFile(dh,name){
+  var parts=name.split("/"),fn=parts.pop();
+  return fsDirHandle(dh,parts.join("/"),false).then(function(d){return d.getFileHandle(fn)}).then(function(fh){return fh.getFile()});
+}
+function fsWriteFile(dh,name,blob){
+  var parts=name.split("/"),fn=parts.pop();
+  return fsDirHandle(dh,parts.join("/"),true).then(function(d){return d.getFileHandle(fn,{create:true})}).then(function(fh){return fh.createWritable()}).then(function(w){
+    return w.write(blob).then(function(){return w.close()},function(e){return w.abort().then(function(){throw e},function(){throw e})});
+  });
+}
+function fsExt(b,hint){
+  if(hint)return "."+String(hint).replace(/[^\w]/g,"");
+  var t=b.type||"";return /jpeg/.test(t)?".jpg":/png/.test(t)?".png":/webp/.test(t)?".webp":".bin";
+}
+/* record -> plain JSON plus a list of files to write; every Blob / typed array becomes a {__file} reference */
+function fsEnc(v,path,files,hint){
+  if(v instanceof Blob||ArrayBuffer.isView(v)){
+    var isB=v instanceof Blob,b=isB?v:new Blob([v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength)]);
+    var base=(path.replace(/[^\w.-]+/g,"_")||"file"),fn=path==="thumb"?"thumb.jpg":"assets/"+base+fsExt(b,/\.blob$/.test(path)?hint:""),n=2;
+    while(files.some(function(f){return f.n===fn}))fn="assets/"+base+"-"+(n++)+fsExt(b,/\.blob$/.test(path)?hint:"");
+    files.push({n:fn,b:b,key:v});
+    var ref={__file:fn,type:b.type||""};if(!isB)ref.ta=v.constructor.name;return ref;
+  }
+  if(Array.isArray(v))return v.map(function(x,i){return fsEnc(x,path+"."+(x&&typeof x==="object"&&x.id?x.id:i),files,hint)});
+  if(v&&typeof v==="object"){var o={};Object.keys(v).forEach(function(k){o[k]=fsEnc(v[k],path?path+"."+k:k,files,v.fmt||hint)});return o}
+  return v;
+}
+function fsDec(v,dh,key,miss){
+  if(v&&typeof v==="object"&&v.__file){
+    return fsGetFile(dh,v.__file).then(function(f){
+      if(!v.ta){FOLD.written.set(key+"/"+v.__file,f);return f}
+      return f.arrayBuffer().then(function(ab){var t=new (window[v.ta])(ab);FOLD.written.set(key+"/"+v.__file,t);return t});
+    }).catch(function(){miss.push(v.__file);return null});
+  }
+  if(Array.isArray(v))return Promise.all(v.map(function(x){return fsDec(x,dh,key,miss)}));
+  if(v&&typeof v==="object"){var ks=Object.keys(v);return Promise.all(ks.map(function(k){return fsDec(v[k],dh,key,miss)})).then(function(vs){var o={};ks.forEach(function(k,i){o[k]=vs[i]});return o})}
+  return Promise.resolve(v);
+}
+function fsReadProject(dh,dname){
+  var key=dname.toLowerCase();
+  return fsGetFile(dh,"project.json").then(function(f){return f.text()}).then(function(t){
+    var rec=JSON.parse(t),miss=[];
+    return fsDec(rec,dh,key,miss).then(function(r){
+      r.dir=dname;if(miss.length)r.broken=miss;return upgradeRec(r);
+    });
+  }).catch(function(){return {id:"bad:"+dname,dir:dname,name:dname,kind:"bad",bad:true,updated:Date.now(),objs:[]}});
+}
+function folderAll(){
+  return fsList(FOLD.h).then(function(es){
+    var dirs=es.filter(function(e){return e.kind==="directory"&&e.name.charAt(0)!=="."});
+    return Promise.all(dirs.map(function(d){return fsReadProject(d,d.name)}));
+  }).then(function(list){
+    FOLD.dirs={};list.forEach(function(r){if(!r.bad)FOLD.dirs[r.dir.toLowerCase()]=r.id});
+    return list.filter(function(r){return r.bad||r.id});
+  });
+}
+function fsPickDir(p){
+  if(p.dir&&FOLD.dirs[p.dir.toLowerCase()]===p.id)return p.dir;
+  if(p.dir&&FOLD.dirs[p.dir.toLowerCase()]===undefined)return p.dir;
+  var base=safeName(p.name),n=base,i=2;
+  while(FOLD.dirs[n.toLowerCase()]!==undefined)n=base+"-"+(i++);
+  return n;
+}
+function folderPut(p){
+  var dname=fsPickDir(p);p.dir=dname;FOLD.dirs[dname.toLowerCase()]=p.id;
+  var files=[],json=fsEnc(p,"",files),key=dname.toLowerCase();
+  return FOLD.h.getDirectoryHandle(dname,{create:true}).then(function(dh){
+    var todo=files.filter(function(f){return FOLD.written.get(key+"/"+f.n)!==f.key});
+    return todo.reduce(function(pr,f){return pr.then(function(){return fsWriteFile(dh,f.n,f.b).then(function(){FOLD.written.set(key+"/"+f.n,f.key)})})},Promise.resolve())
+      .then(function(){return fsWriteFile(dh,"project.json",new Blob([JSON.stringify(json)],{type:"application/json"}))})
+      .then(function(){return fsPrune(dh,files)})
+      .then(function(){if(cur&&cur.id===p.id&&Date.now()-FOLD.lockT>240000)return fsLockWrite(dh)});
+  });
+}
+/* assets nothing refers to any more (a deleted object's splats) are removed once project.json no longer mentions them */
+function fsPrune(dh,files){
+  var keep={};files.forEach(function(f){keep[f.n]=1});
+  return dh.getDirectoryHandle("assets").then(function(ad){
+    return fsList(ad).then(function(es){return Promise.all(es.filter(function(e){return e.kind==="file"&&!keep["assets/"+e.name]}).map(function(e){return ad.removeEntry(e.name).catch(function(){})}))});
+  },function(){});
+}
+function folderDel(id){
+  var name=null;Object.keys(FOLD.dirs).forEach(function(k){if(FOLD.dirs[k]===id)name=k});
+  if(!name)return Promise.resolve();
+  return fsList(FOLD.h).then(function(es){
+    var e=es.filter(function(x){return x.name.toLowerCase()===name})[0];if(!e)return;
+    delete FOLD.dirs[name];return FOLD.h.removeEntry(e.name,{recursive:true});
+  });
+}
+/* a small note in each project folder says which device has it open, so two computers don't silently overwrite each other */
+function devId(){try{var d=localStorage.getItem("splatbox.dev");if(!d){d=Math.random().toString(36).slice(2,8);localStorage.setItem("splatbox.dev",d)}return d}catch(_){return "dev"}}
+function fsLockWrite(dh){FOLD.lockT=Date.now();return fsWriteFile(dh,".lock",new Blob([JSON.stringify({dev:devId(),label:(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||"another device",t:Date.now()})]))}
+function fsLockOpen(p){
+  if(!FOLD.ok||!p.dir)return Promise.resolve(true);
+  return FOLD.h.getDirectoryHandle(p.dir).then(function(dh){
+    return fsGetFile(dh,".lock").then(function(f){return f.text()}).then(function(t){return JSON.parse(t)},function(){return null}).then(function(lk){
+      if(lk&&lk.dev!==devId()&&Date.now()-lk.t<600000){
+        var m=Math.max(1,Math.round((Date.now()-lk.t)/60000));
+        if(!window.confirm("This project was open on "+lk.label+" "+m+" min ago. Open it here anyway? Changes from both places can overwrite each other."))return false;
+      }
+      return fsLockWrite(dh).then(function(){return true});
+    });
+  }).catch(function(){return true});
+}
+function fsUnlock(){
+  if(!FOLD.ok||!cur||!cur.dir)return Promise.resolve();
+  return FOLD.h.getDirectoryHandle(cur.dir).then(function(dh){return dh.removeEntry(".lock")}).catch(function(){}).then(function(){FOLD.lockT=0});
+}
+/* connect / restore / lapse */
+function fsUse(h,remember){
+  FOLD.h=h;FOLD.name=h.name;
+  return folderAll().then(function(){FOLD.ok=true;FOLD.lapsed=false;return remember?metaTx("readwrite",function(st){return st.put(h,"folder")}):0});
+}
+function fsConnect(){return window.showDirectoryPicker({id:"splatbox",mode:"readwrite"}).then(function(h){return fsUse(h,true)})}
+function fsRestore(){
+  if(!CAN_FS||FOLD.ok||FOLD.h)return Promise.resolve();
+  return metaTx("readonly",function(st){return st.get("folder")}).then(function(h){
+    if(!h)return;FOLD.h=h;FOLD.name=h.name;
+    return h.queryPermission({mode:"readwrite"}).then(function(pm){if(pm==="granted")return fsUse(h,false);FOLD.lapsed=true});
+  }).catch(function(){});
+}
+function fsReconnect(){return FOLD.h.requestPermission({mode:"readwrite"}).then(function(pm){if(pm!=="granted")throw new Error("no permission");return fsUse(FOLD.h,false)})}
+function fsLapse(){
+  if(!FOLD.ok)return;FOLD.ok=false;FOLD.lapsed=true;
+  setStatus("Couldn't reach your project folder. Changes are kept in this browser until you reconnect it on the home screen.","warn");
+}
+/* projects that only exist in the browser's storage can be copied into the folder; nothing is removed from the browser */
+function fsMigrate(){
+  return idbKeys().then(function(ks){
+    var have={};Object.keys(FOLD.dirs).forEach(function(k){have[FOLD.dirs[k]]=1});
+    var todo=ks.filter(function(k){return !have[k]});
+    return todo.reduce(function(pr,k){return pr.then(function(){return dbTx("readonly",function(st){return st.get(k)}).then(function(r){return r&&folderPut(upgradeRec(r))})})},Promise.resolve()).then(function(){
+      setStatus("Moved "+todo.length+" project"+(todo.length===1?"":"s")+" into your folder. The copies in this browser stay as a backup.","ok");
+    });
+  }).catch(function(e){setStatus("Couldn't move projects into the folder: "+(e&&e.message||e),"bad")});
+}
+function renderFolderBar(){
+  var bar=$("fbar");if(!bar)return;
+  if(!CAN_FS){bar.hidden=true;return}
+  bar.hidden=false;
+  var btn=function(a,t){return '<button type="button" data-a="'+a+'">'+t+'</button>'};
+  if(FOLD.ok){
+    bar.innerHTML='<span>Folder: '+esc(FOLD.name)+'</span>'+btn("change","Change");
+    idbKeys().then(function(ks){
+      var have={};Object.keys(FOLD.dirs).forEach(function(k){have[FOLD.dirs[k]]=1});
+      var n=ks.filter(function(k){return !have[k]}).length;
+      if(n&&FOLD.ok)bar.insertAdjacentHTML("beforeend",btn("move","Move "+n+" browser project"+(n===1?"":"s")+" into folder"));
+    }).catch(function(){});
+  }else if(FOLD.lapsed)bar.innerHTML='<span>Folder “'+esc(FOLD.name)+'” is locked. Projects below are the copies in this browser.</span>'+btn("reconnect","Reconnect folder");
+  else bar.innerHTML='<span>Projects are saved in this browser only.</span>'+btn("pick","Choose a project folder");
+}
+var dbAll=function(){return FOLD.ok?folderAll().catch(function(){fsLapse();return idbAll()}):idbAll()};
+var dbPut=function(p){
+  var m=idbPut(p);if(!FOLD.ok)return m;
+  return m.catch(function(){}).then(function(){return folderPut(p)}).catch(function(){fsLapse()});
+};
+var dbDel=function(id){
+  var m=idbDel(id);if(!FOLD.ok)return m;
+  return m.catch(function(){}).then(function(){return folderDel(id)}).catch(function(){fsLapse()});
+};
+
 var saveT=0;
 function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 function saveNow(){
@@ -2153,7 +2336,7 @@ function saveProject(){
   if(THRU&&ACAM)camFromView(ACAM);
   clearTimeout(objSaveT);persistObjs();
   captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){
-    setStatus("Saved \u201c"+(cur&&cur.name||"project")+"\u201d: objects, cameras, effects and view.","ok");
+    setStatus("Saved \u201c"+(cur&&cur.name||"project")+"\u201d"+(FOLD.ok?" to your folder":"")+": objects, cameras, effects and view.","ok");
   }).catch(function(){setStatus("Couldn't save this project.","bad")});
 }
 $("saveBtn").addEventListener("click",saveProject);
@@ -2161,7 +2344,7 @@ document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.cod
 function goHome(){
   if(anim&&anim.rec)return;
   anim=null;closeTool();leaveThru();
-  captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).catch(function(){}).then(showHome);
+  captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).catch(function(){}).then(fsUnlock).then(showHome);
 }
 function showHome(){
   setGui(false);disposeObjs();scene=null;$("editor").hidden=true;$("home").hidden=false;cur=null;renderHome();
@@ -2184,7 +2367,8 @@ function renderHome(){
   var add=document.createElement("button");add.type="button";add.className="card new";
   add.innerHTML='<span class="plus"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New project</span>';
   add.addEventListener("click",function(){createSpace()});grid.appendChild(add);
-  return dbAll().catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
+  return fsRestore().then(dbAll).catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
+    renderFolderBar();
     list=(list||[]).sort(function(a,b){return b.updated-a.updated});
     $("emptyMsg").hidden=list.length>0;
     if(!list.length){
@@ -2204,7 +2388,7 @@ function renderHome(){
       more.addEventListener("click",function(e){e.stopPropagation();openMenu(c,p)});
       c.appendChild(more);
       var cnt=p.kind==="space"?(p.objs||[]).filter(function(o){return o.kind==="splat"||o.kind==="mesh"}).length:(p.kind==="photos"?(p.srcs?p.srcs.length:0):1);
-      var kd=document.createElement("span");kd.className="kind";kd.textContent=p.kind==="space"?(cnt?cnt+(cnt>1?" objects":" object"):"empty"):(p.kind==="photos"?cnt+" photos"+(p.ply?"":" · not trained"):"photo");c.appendChild(kd);
+      var kd=document.createElement("span");kd.className="kind";kd.textContent=p.kind==="space"?(cnt?cnt+(cnt>1?" objects":" object"):"empty"):(p.kind==="photos"?cnt+" photos"+(p.ply?"":" · not trained"):"photo");c.appendChild(kd);if(p.bad)kd.textContent="Couldn't read this";else if(p.broken)kd.textContent="Files still syncing";
       c.addEventListener("click",function(){openAny(p)});
       c.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openAny(p)}});
       grid.appendChild(c);
@@ -2275,7 +2459,7 @@ function importFiles(files){
   return fl.reduce(function(pr,f){
     return pr.then(function(){return unpackProjects(f)}).then(function(recs){
       return recs.reduce(function(p2,r){return p2.then(function(){
-        r=upgradeRec(r);r.id=uid();r.updated=Date.now();total++;return dbPut(r);
+        r=upgradeRec(r);r.id=uid();r.dir=null;r.updated=Date.now();total++;return dbPut(r);
       })},Promise.resolve());
     });
   },Promise.resolve()).then(function(){
@@ -2286,6 +2470,7 @@ function importFiles(files){
 function upgradeRec(p){
   var v=p.v||1;
   if(v<2){var st=p.settings||(p.settings={});if(st.ctrlV!==16&&st.ctrl==="orbit")st.ctrl="fly";st.ctrlV=16}
+  if(v<3){/* V021: projects may now live in a folder; nothing in the record itself changes */}
   p.v=FORMAT;return p;
 }
 function tooNew(p){return (p.v||1)>FORMAT}
@@ -2375,14 +2560,15 @@ var QUAL={fast:{n:"Fast",iters:15000,init:150000,max:400000},balanced:{n:"Balanc
 var PHONEQ={n:"Phone",iters:10000,init:60000,max:150000};
 /* projects made before the empty-space change (photo + depth, or photo scans) become spaces the first time they are opened */
 function openAny(p){
+  if(p.bad||p.broken){setStatus(p.bad?"Splatbox couldn't read this project's file.":"Some of this project's files haven't finished syncing yet. Try again in a minute.","bad");return Promise.resolve()}
   if(tooNew(p)){setStatus("This project was saved by a newer Splatbox. Open it in the newer version so nothing gets damaged.","bad");return Promise.resolve()}
   busy(true,"Opening…");
-  return migrateProject(p).then(function(q){
+  return fsLockOpen(p).then(function(go){if(!go){busy(false);return}return migrateProject(p).then(function(q){
     upgradeRec(q);busy(false);
     return openSpace(q).then(function(){
       if(q.trainSrcs){var src=q.trainSrcs;q.trainSrcs=null;saveSoon();startTraining({name:q.name||"Photo scan",srcs:src})}
     });
-  }).catch(function(err){busy(false);setStatus(err.message||"Couldn't open that project.","bad")});
+  })}).catch(function(err){busy(false);setStatus(err.message||"Couldn't open that project.","bad")});
 }
 function migrateProject(p){
   if(p.kind==="space")return Promise.resolve(p);
@@ -2698,6 +2884,10 @@ $("ver").textContent="Splatbox "+VERSION+(BETA?" BETA":"");
 if(BETA){document.title="BETA "+document.title;document.documentElement.classList.add("beta")}
 var bkEl=$("bk");if(bkEl)bkEl.textContent=backupText();
 $("homeBackup").addEventListener("click",backupAll);
+$("fbar").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var a=b.dataset.a;
+  if(a==="pick"||a==="change")fsConnect().then(renderHome).catch(function(err){if(err&&err.name!=="AbortError")setStatus("Couldn't use that folder: "+(err.message||err),"bad")});
+  else if(a==="reconnect")fsReconnect().then(renderHome).catch(function(){setStatus("The folder wasn't unlocked, so projects are still saved in this browser only.","warn")});
+  else if(a==="move")fsMigrate().then(renderHome)});
 $("homeImport").addEventListener("click",function(){$("projIn").click()});
 $("projIn").addEventListener("change",function(e){var f=e.target.files;importFiles(f).then(function(){});e.target.value=""});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
