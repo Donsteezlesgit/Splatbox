@@ -66,6 +66,8 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 .menu button.danger{color:var(--bad)}
 .empty{color:var(--mute);margin:0 0 16px;max-width:46ch}
 .hfoot{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:30px;font:12px/1.4 var(--font-mono);color:var(--mute)}
+.beta .hbar .word::after{content:"BETA";margin-left:10px;padding:2px 8px;border-radius:6px;background:#ffb020;color:#1a1200;font:700 11px var(--font-mono);letter-spacing:.08em}
+.hbtns{display:flex;gap:8px}
 .hfoot button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:40px;cursor:pointer}
 
 /* ---------- editor ---------- */
@@ -173,13 +175,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 <div id="home">
   <div class="hbar">
     <div class="word"><i></i>Splatbox</div>
-    <button class="ico" id="homeNew" type="button" aria-label="New project"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <span class="hbtns"><button class="ico" id="homeBackup" type="button" aria-label="Back up all projects"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+    <button class="ico" id="homeImport" type="button" aria-label="Import a backup file"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
+    <button class="ico" id="homeNew" type="button" aria-label="New project"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></span>
   </div>
   <div class="hscroll" id="hscroll">
     <h2>Projects</h2>
     <p class="empty" id="emptyMsg" hidden>No projects yet. Start a new project to get an empty 3D space, then add splats, models, photo scans or a photo from the menus.</p>
     <div class="grid" id="grid"></div>
-    <div class="hfoot"><span id="ver"></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
+    <div class="hfoot"><span><span id="ver"></span> · <span id="bk"></span></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
   </div>
 </div>
 
@@ -218,6 +222,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 <input id="multiIn" type="file" accept="image/*" multiple hidden>
 <input id="cubeIn" type="file" accept=".cube,text/plain" hidden>
 <input id="objPly" type="file" accept=".ply" hidden>
+<input id="projIn" type="file" accept=".splatbox" multiple hidden>
 <input id="objMesh" type="file" accept=".glb,.gltf,.obj" hidden>
 <script>
 (function(){
@@ -225,7 +230,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 018";
+var VERSION="Version 019";
+/* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
+var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=2;
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -247,7 +254,7 @@ function setStatus(msg,kind){
 }
 function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
 function busy(on,msg){$("busy").classList.toggle("on",!!on);if(msg)$("busyT").textContent=msg}
-function aiCached(){return window.caches?caches.match("model/dav2s.1.wasm").then(function(r){return !!r},function(){return false}):Promise.resolve(false)}
+function aiCached(){return window.caches?caches.match(ROOT+"model/dav2s.1.wasm").then(function(r){return !!r},function(){return false}):Promise.resolve(false)}
 function hex2rgb(h){var m=/^#?([0-9a-f]{6})$/i.exec(h||"");var v=m?parseInt(m[1],16):0x0a0c0d;return [(v>>16&255)/255,(v>>8&255)/255,(v&255)/255]}
 function toBlob(c,type,q){return new Promise(function(res){c.toBlob(res,type,q)})}
 function loadImg(blob){
@@ -669,7 +676,8 @@ function initGS(){
 var OBJS=[],SEL=null,GM="move",ZC=-1.95;
 function ident3(){return [1,0,0,0,1,0,0,0,1]}
 function newCrop(){return {on:false,inv:false,x0:0,x1:1,y0:0,y1:1,z0:0,z1:1}}
-function mkObj(kind,name){return {id:uid(),kind:kind,name:name||kind,pos:[0,0,0],R:ident3(),scl:1,vis:true,crop:newCrop()}}
+var OBJ_KINDS=["splat","mesh","sun","point","camera"];
+function mkObj(kind,name){if(OBJ_KINDS.indexOf(kind)<0){try{console.error("Unknown object kind: "+kind+". Add it to OBJ_KINDS, persistObjs and the tests.")}catch(_){}}return {id:uid(),kind:kind,name:name||kind,pos:[0,0,0],R:ident3(),scl:1,vis:true,crop:newCrop()}}
 function applyRec(o,r){
   if(!r)return o;
   if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;
@@ -1514,10 +1522,10 @@ function fetchBytes(u){return fetch(u).then(function(r){if(!r.ok)throw new Error
 function getSession(){
   if(sessionP)return sessionP;
   setStatus("Loading the depth runtime…");
-  sessionP=loadScript("lib/ort.wasm.min.js").then(function(){
-    ort.env.wasm.wasmPaths=new URL("lib/",document.baseURI).href;ort.env.wasm.numThreads=1;
+  sessionP=loadScript(ROOT+"lib/ort.wasm.min.js").then(function(){
+    ort.env.wasm.wasmPaths=new URL(ROOT+"lib/",document.baseURI).href;ort.env.wasm.numThreads=1;
     setStatus("Downloading the depth model (about 27 MB, first time only)…");
-    return Promise.all([fetchBytes("model/dav2s.1.wasm"),fetchBytes("model/dav2s.2.wasm")]);
+    return Promise.all([fetchBytes(ROOT+"model/dav2s.1.wasm"),fetchBytes(ROOT+"model/dav2s.2.wasm")]);
   }).then(function(p){
     var a=new Uint8Array(p[0].byteLength+p[1].byteLength);a.set(new Uint8Array(p[0]),0);a.set(new Uint8Array(p[1]),p[0].byteLength);
     setStatus("Starting the model…");
@@ -1685,7 +1693,7 @@ var PANES={
       '<p class="note">Auto-level finds the ground and makes it flat. If it ends up upside down, use Flip. For fine tuning, use the rotation boxes in Objects.</p>';
     return h;
   },
-  file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
+  file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><button class="btn" type="button" data-act="fExport">Export backup file (.splatbox)</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<p class="note">Changes save by themselves.</p>'+
     '<div class="row2"><button class="btn small" type="button" data-act="fNew">New project</button><button class="btn small" type="button" data-act="fCopy">Save as a copy</button></div>'+
     '<button class="btn small" type="button" data-act="fHome">Open another project</button>'+
@@ -2025,6 +2033,7 @@ $("popB").addEventListener("click",function(e){
   else if(a==="addPhotos")$("multiIn").click();
   else if(a==="addPhoto")$("newIn").click();
   else if(a==="fSave")saveProject();
+  else if(a==="fExport")exportProject(cur);
   else if(a==="fHome")goHome();
   else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
   else if(a==="fCopy"){saveNow().then(function(){var c=Object.assign({},cur,{id:uid(),name:(cur.name||"Project")+" copy",created:Date.now(),updated:Date.now()});return dbPut(c).then(function(){cur=c;$("pname").textContent=c.name;syncControls();setStatus("Saved a copy. You're now working in the copy.","ok")})}).catch(function(){setStatus("Couldn't save a copy.","bad")})}
@@ -2037,7 +2046,7 @@ function db(){
   if(dbP)return dbP;
   dbP=new Promise(function(res,rej){
     if(!window.indexedDB)return rej(new Error("Saving isn't available in this browser."));
-    var r=indexedDB.open("splatbox",1);
+    var r=indexedDB.open(BETA?"splatbox-beta":"splatbox",1);
     r.onupgradeneeded=function(){r.result.createObjectStore("projects",{keyPath:"id"})};
     r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error||new Error("Couldn't open storage."))};
   });
@@ -2058,7 +2067,7 @@ function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
 function saveNow(){
   clearTimeout(saveT);
   if(!cur)return Promise.resolve();
-  cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;
+  cur.v=FORMAT;cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;
   var vw=THRU&&VPS?{R:VPS.R,TG:VPS.TG,zoom:VPS.zoom}:{R:Rm,TG:TG,zoom:zoom};cur.view={R:vw.R.slice(),TG:vw.TG.slice(),zoom:vw.zoom,mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null};cur.updated=Date.now();
   return dbPut(cur).catch(function(){setStatus("Couldn't save this project on the device.","bad")});
 }
@@ -2072,7 +2081,7 @@ function prepPhoto(src){
   var pc=fitCanvas(src,1600),tc=fitCanvas(pc,360);
   return Promise.all([toBlob(pc,"image/jpeg",0.9),toBlob(tc,"image/jpeg",0.8)]).then(function(b){return {canvas:pc,photo:b[0],thumb:b[1]}});
 }
-function newSpaceRec(name){return {id:uid(),name:name||"Untitled space",kind:"space",created:Date.now(),updated:Date.now(),thumb:null,settings:Object.assign({},DEF),objs:[]}}
+function newSpaceRec(name){return {v:FORMAT,id:uid(),name:name||"Untitled space",kind:"space",created:Date.now(),updated:Date.now(),thumb:null,settings:Object.assign({},DEF),objs:[]}}
 function createSpace(name){
   var p=newSpaceRec(name);
   return dbPut(p).catch(function(){setStatus("Couldn't save to the device, so this project won't be kept.","warn")}).then(function(){return openSpace(p)}).then(function(){return p});
@@ -2198,6 +2207,93 @@ function renderHome(){
   });
 }
 function closeMenus(){Array.prototype.forEach.call(document.querySelectorAll(".menu"),function(m){m.remove()})}
+/* ---------- backup: one .splatbox file holds whole projects (objects, cameras, effects, view, LUT) ---------- */
+var MAGIC="SPLATBX1";
+function encRec(v,blobs){
+  if(v instanceof Blob){blobs.push(v);return {__blob:blobs.length-1}}
+  if(ArrayBuffer.isView(v)){blobs.push(new Blob([v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength)]));return {__blob:blobs.length-1,ta:v.constructor.name}}
+  if(Array.isArray(v))return v.map(function(x){return encRec(x,blobs)});
+  if(v&&typeof v==="object"){var o={};Object.keys(v).forEach(function(k){o[k]=encRec(v[k],blobs)});return o}
+  return v;
+}
+function packProjects(list){
+  var blobs=[],recs=list.map(function(p){return encRec(p,blobs)});
+  var head=new TextEncoder().encode(JSON.stringify({format:FORMAT,app:VERSION,exported:Date.now(),recs:recs,sizes:blobs.map(function(b){return b.size}),types:blobs.map(function(b){return b.type})}));
+  var len=new Uint8Array(4);new DataView(len.buffer).setUint32(0,head.length,true);
+  return new Blob([MAGIC,len,head].concat(blobs),{type:"application/octet-stream"});
+}
+function decRec(v,bl){
+  if(v&&typeof v==="object"&&v.__blob!=null){var b=bl[v.__blob];if(!v.ta)return Promise.resolve(b);return b.arrayBuffer().then(function(ab){return new (window[v.ta])(ab)})}
+  if(Array.isArray(v))return Promise.all(v.map(function(x){return decRec(x,bl)}));
+  if(v&&typeof v==="object"){var ks=Object.keys(v);return Promise.all(ks.map(function(k){return decRec(v[k],bl)})).then(function(vs){var o={};ks.forEach(function(k,i){o[k]=vs[i]});return o})}
+  return Promise.resolve(v);
+}
+function unpackProjects(file){
+  return file.slice(0,12).arrayBuffer().then(function(b){
+    var u=new Uint8Array(b);
+    if(b.byteLength<12||String.fromCharCode.apply(null,u.slice(0,8))!==MAGIC)throw new Error("That isn't a Splatbox backup file.");
+    var hl=new DataView(b).getUint32(8,true);
+    return file.slice(12,12+hl).text().then(function(t){
+      var h=JSON.parse(t);
+      if((h.format||1)>FORMAT)throw new Error("This backup was made by a newer Splatbox ("+h.app+"). Update the app first, then import it.");
+      var off=12+hl,bl=h.sizes.map(function(sz,i){var x=file.slice(off,off+sz,h.types[i]||"");off+=sz;return x});
+      return Promise.all(h.recs.map(function(r){return decRec(r,bl)}));
+    });
+  });
+}
+function noteBackup(){try{localStorage.setItem("splatbox.lastBackup",String(Date.now()))}catch(_){}}
+function backupText(){
+  var t=0;try{t=+localStorage.getItem("splatbox.lastBackup")||0}catch(_){}
+  return t?"Last backup: "+fmtDate(t):"Never backed up";
+}
+function safeName(n){return String(n||"project").replace(/[^\w-]+/g,"_").slice(0,40)||"project"}
+function exportProject(p){
+  if(!p)return Promise.resolve();
+  return Promise.resolve(cur&&cur.id===p.id?saveNow():0).then(function(){
+    saveBlob(packProjects([p]),"splatbox-"+safeName(p.name)+".splatbox");noteBackup();
+    setStatus("Saved a backup file of “"+p.name+"”. Keep it somewhere safe.","ok");
+    var b=$("bk");if(b)b.textContent=backupText();
+  }).catch(function(){setStatus("Couldn't make the backup.","bad")});
+}
+function backupAll(){
+  return dbAll().then(function(list){
+    if(!list.length){setStatus("No projects to back up yet.","warn");return}
+    var d=new Date().toISOString().slice(0,10);
+    saveBlob(packProjects(list),"splatbox-backup-"+d+".splatbox");noteBackup();
+    setStatus("Backed up "+list.length+" project"+(list.length>1?"s":"")+". Keep the file somewhere safe.","ok");
+    var b=$("bk");if(b)b.textContent=backupText();
+  }).catch(function(){setStatus("Couldn't make the backup.","bad")});
+}
+function importFiles(files){
+  var fl=Array.prototype.slice.call(files||[]);if(!fl.length)return Promise.resolve(0);
+  var total=0;
+  return fl.reduce(function(pr,f){
+    return pr.then(function(){return unpackProjects(f)}).then(function(recs){
+      return recs.reduce(function(p2,r){return p2.then(function(){
+        r=upgradeRec(r);r.id=uid();r.updated=Date.now();total++;return dbPut(r);
+      })},Promise.resolve());
+    });
+  },Promise.resolve()).then(function(){
+    setStatus("Imported "+total+" project"+(total===1?"":"s")+". They are copies, so nothing was overwritten.","ok");return renderHome();
+  }).catch(function(err){setStatus(err&&err.message||"Couldn't import that file.","bad")});
+}
+/* Old projects are brought up to date here, one step per format number. Never delete a step: an old file may need it. */
+function upgradeRec(p){
+  var v=p.v||1;
+  if(v<2){var st=p.settings||(p.settings={});if(st.ctrlV!==16&&st.ctrl==="orbit")st.ctrl="fly";st.ctrlV=16}
+  p.v=FORMAT;return p;
+}
+function tooNew(p){return (p.v||1)>FORMAT}
+/* everything a saved project is meant to remember, in one plain string (the tests compare this before and after saving) */
+function r5(x){return typeof x==="number"?+x.toFixed(5):x}
+function snapshotState(){
+  var vw=THRU&&VPS?VPS:{R:Rm,TG:TG,zoom:zoom},st=Object.assign({},S);if(THRU&&VPS)st.fov=VPS.fov;
+  return JSON.stringify({name:cur&&cur.name,settings:st,lut:!!(cur&&cur.lut),lutName:(cur&&cur.lutName)||null,
+    view:{R:vw.R.map(r5),TG:vw.TG.map(r5),zoom:r5(vw.zoom)},mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null,
+    objs:OBJS.map(function(o){var r={};Object.keys(o).forEach(function(k){
+      if(k==="gs"||k==="mesh"||k==="main")return;var v=o[k];
+      r[k]=v instanceof Blob?"blob:"+v.size:Array.isArray(v)?v.map(r5):typeof v==="number"?r5(v):(v&&typeof v==="object")?JSON.parse(JSON.stringify(v,function(_,x){return typeof x==="number"?r5(x):x})):v});return r})});
+}
 function openMenu(card,p){
   closeMenus();
   var m=document.createElement("div");m.className="menu";
@@ -2209,7 +2305,9 @@ function openMenu(card,p){
   del.addEventListener("click",function(e){e.stopPropagation();
     if(del.dataset.sure!=="1"){del.dataset.sure="1";del.textContent="Tap again to delete";return}
     closeMenus();dbDel(p.id).then(renderHome).catch(function(){setStatus("Couldn't delete.","bad")})});
-  m.appendChild(dup);m.appendChild(del);card.appendChild(m);
+  var exp=document.createElement("button");exp.type="button";exp.textContent="Export backup";
+  exp.addEventListener("click",function(e){e.stopPropagation();closeMenus();exportProject(p)});
+  m.appendChild(exp);m.appendChild(dup);m.appendChild(del);card.appendChild(m);
 }
 document.addEventListener("click",function(e){if(!e.target.closest(".menu"))closeMenus()});
 
@@ -2221,9 +2319,10 @@ var QUAL={fast:{n:"Fast",iters:15000,init:150000,max:400000},balanced:{n:"Balanc
 var PHONEQ={n:"Phone",iters:10000,init:60000,max:150000};
 /* projects made before the empty-space change (photo + depth, or photo scans) become spaces the first time they are opened */
 function openAny(p){
+  if(tooNew(p)){setStatus("This project was saved by a newer Splatbox. Open it in the newer version so nothing gets damaged.","bad");return Promise.resolve()}
   busy(true,"Opening…");
   return migrateProject(p).then(function(q){
-    busy(false);
+    upgradeRec(q);busy(false);
     return openSpace(q).then(function(){
       if(q.trainSrcs){var src=q.trainSrcs;q.trainSrcs=null;saveSoon();startTraining({name:q.name||"Photo scan",srcs:src})}
     });
@@ -2388,7 +2487,7 @@ function startTraining(p){
 function runTraining(me){
   me.started=true;$("tQ").hidden=true;$("tPause").disabled=true;$("tPause").textContent="Pause";me.max=me.q.iters;wakeOn();
   tSet("tStage","Loading the trainer…");
-  return import("./lib/splatjs/index.js").then(function(mod){
+  return import((BETA?"../":"./")+"lib/splatjs/index.js").then(function(mod){
     if(TR!==me)return;
     var s=mod.createSession(Object.assign({maxIters:me.max,initTarget:me.q.init,holdout:-1,
       maxViewW:Math.ceil(screen.width||800),maxViewH:Math.ceil(screen.height||800),
@@ -2539,7 +2638,12 @@ window.addEventListener("appinstalled",function(){instEv=null;$("inst").hidden=t
 $("inst").addEventListener("click",function(){if(!instEv)return;instEv.prompt();instEv.userChoice.then(function(){instEv=null;$("inst").hidden=true})});
 
 /* ---------- app: version + update ---------- */
-$("ver").textContent="Splatbox "+VERSION;
+$("ver").textContent="Splatbox "+VERSION+(BETA?" BETA":"");
+if(BETA){document.title="BETA "+document.title;document.documentElement.classList.add("beta")}
+var bkEl=$("bk");if(bkEl)bkEl.textContent=backupText();
+$("homeBackup").addEventListener("click",backupAll);
+$("homeImport").addEventListener("click",function(){$("projIn").click()});
+$("projIn").addEventListener("change",function(e){var f=e.target.files;importFiles(f).then(function(){});e.target.value=""});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
 $("upd").addEventListener("click",function(){
   var done=function(){location.reload()};
