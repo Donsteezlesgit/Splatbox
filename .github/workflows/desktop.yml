@@ -36,11 +36,18 @@ jobs:
         if: steps.ex.outputs.exists == 'false'
         working-directory: desktop
         run: npm ci
-      - name: Build and publish
+      - name: Build installer
         if: steps.ex.outputs.exists == 'false'
         working-directory: desktop
+        run: |
+          node prepare.js
+          npx electron-builder --win --publish never "-c.extraMetadata.version=${{ steps.v.outputs.semver }}"
+      - name: Publish release
+        if: steps.ex.outputs.exists == 'false'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          node prepare.js
-          npx electron-builder --win --publish always "-c.extraMetadata.version=${{ steps.v.outputs.semver }}"
+          V=${{ steps.v.outputs.semver }}
+          gh release create "v$V" "desktop/dist/Splatbox-Setup-$V.exe" "desktop/dist/Splatbox-Setup-$V.exe.blockmap" "desktop/dist/latest.yml" \
+            --target "$GITHUB_SHA" --title "Splatbox desktop $V" --notes "Windows installer. Installed copies update themselves."

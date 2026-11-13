@@ -33,6 +33,6 @@
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false
     },
-    "publish": [{ "provider": "github", "owner": "Donsteezlesgit", "repo": "splatbox", "releaseType": "release" }]
+    "publish": [{ "provider": "github", "owner": "Donsteezlesgit", "repo": "Splatbox", "releaseType": "release" }]
   }
 }
