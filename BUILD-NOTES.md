@@ -3,7 +3,7 @@ Rule: stages are committed to app/ only (no release.sh), so nothing ships until 
 Targeted tests per stage; ONE full run at the end.
 
 - [x] 1 TouchDesigner export (depth pass, camera path, clean PLY)
-- [ ] 2 SPZ export and import
+- [x] 2 SPZ export and import
 - [ ] 3 Splat effects (dissolve, scatter, pulse), keyframable
 - [ ] 4 Presets in backups + preset export/import; "Solved X of Y photos" report
 - [ ] 5 Single-photo splats (depth-based; SHARP later, local helper)
