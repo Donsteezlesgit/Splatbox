@@ -8,7 +8,7 @@ PERTURB={"range":1.2,"smooth":2,"cut":0.3,"invert":True,"fill":0.5,"size":1.5,"d
  "exp":10,"con":11,"sat":12,"hue":13,"warm":14,"fog":0.4,"defocus":0.3,"focus":0.7,"sliceA":0.1,"sliceB":0.9,
  "cam":"sway","dur":9,"loop":True,"turn":1,"render":"solid","ctrl":"orbit","ctrlV":16,"fov":65,"sens":1.7,"tiltX":3,"tiltZ":4,"spin":5,"flip":True,
  "vig":0.3,"vigSoft":0.5,"vigBlur":0.2,"dist":9,"ca":0.1,"grain":0.2,"grainSize":2,"look":"cube","lookMix":0.6,"focusRange":0.2,
- "gridY":True,"gridX":True,"gridZ":True,"axes":True,"lit":0.4,"amb":0.3,"bakeGrade":True}
+ "gridY":True,"gridX":True,"gridZ":True,"axes":True,"lit":0.4,"amb":0.3,"bakeGrade":True,"rsize":"1080","rfps":60,"ralpha":True}
 LUT="LUT_3D_SIZE 2\n"+"\n".join(f"{r} {g} {b}" for b in (0,1) for g in (0,1) for r in (0,1))+"\n"
 RUNTIME={"gs","mesh","main"}
 def diff(a,b,p=None):

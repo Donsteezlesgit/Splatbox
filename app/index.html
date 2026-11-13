@@ -100,6 +100,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .kd.on::before{background:var(--accent);border-color:var(--accent2)}
 .orow .kd{margin:0}
 @media(max-width:759px){.kd{display:none}}
+.rjob{position:absolute;inset:0;z-index:9;display:grid;place-items:center;background:#0009;backdrop-filter:blur(3px)}
+.rjob[hidden]{display:none}
+.rjc{display:flex;flex-direction:column;gap:12px;align-items:center;min-width:260px;padding:20px 24px;background:#12151a;border:1px solid #ffffff22;border-radius:16px;font:600 14px var(--font-ui)}
+.rbar{width:100%;height:8px;border-radius:4px;background:#ffffff1c;overflow:hidden}.rbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent))}
 .tld{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(268px,46%);display:flex;flex-direction:column;background:#10131af5;border-top:1px solid #ffffff22;box-shadow:0 -10px 30px #0008}
 .tld[hidden]{display:none}
 .tlh{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow-x:auto;flex:none;border-bottom:1px solid var(--line);font:12px var(--font-mono);color:var(--mute);white-space:nowrap}
@@ -229,6 +233,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div id="dropHint" hidden>Drop a .ply or 3D model to add it</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+    <div class="rjob" id="rjob" hidden><div class="rjc"><b id="rjT">Rendering…</b><div class="rbar"><i id="rjF"></i></div><button class="btn small" type="button" id="rjX">Cancel (Esc)</button></div></div>
     <div class="hud" id="hud"></div>
     <div class="tld" id="tld" hidden aria-label="Timeline">
       <div class="tlh">
@@ -269,16 +274,17 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 028";
+var VERSION="Version 029";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
+var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparent target, always re-sort */
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
   fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false};
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
@@ -876,7 +882,7 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
     var g=it.o.gs,VM=it.VM,lv=g.lastV;
     var ch=!lv||Math.abs(lv[0]-VM[2])+Math.abs(lv[1]-VM[6])+Math.abs(lv[2]-VM[10])>2e-4||Math.abs(lv[3]-VM[14])>2e-3;
     if(ch){
-      if(!lv||now-g.lastT>45||!g.ibReady){sortGS(g,VM);g.ibReady=true}
+      if(FORCESORT||!lv||now-g.lastT>45||!g.ibReady){sortGS(g,VM);g.ibReady=true}
       else{clearTimeout(gsTrail);gsTrail=setTimeout(function(){dirty=true},70)}
     }
   });
@@ -1200,13 +1206,15 @@ var OFF0={y:0,p:0,z:1,x:0};
 function draw(ao){drawScene(ao);drawOverlay()}
 function drawScene(ao){
   var dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(2,Math.round(cv.clientWidth*dpr/2)*2),h=Math.max(2,Math.round(cv.clientHeight*dpr/2)*2);
+  if(RO){w=RO.w;h=RO.h}
   if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}
   var bg=hex2rgb(S.bg);
   gl.viewport(0,0,w,h);gl.clearColor(bg[0],bg[1],bg[2],1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
   if(!scene)return;
   /* the view never shifts when a panel opens (the old recentre also broke the lens shader's screen coords) */
   var vx=0,vy=0,vw=w,vh=h;
-  beginPost(vx,vy,vw,vh,bg);
+  if(TRANSP&&initPost()){PF.on=false;ensureFBO(vw,vh);gl.bindFramebuffer(gl.FRAMEBUFFER,PF.fbo);gl.viewport(0,0,vw,vh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}
+  else beginPost(vx,vy,vw,vh,bg);
   var o=ao||OFF0;
   var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
   var zm=1+scene.R/2,vA=w/h,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,15,110)*Math.PI/360),tyv=tyBase*tyf/TY;
@@ -1247,7 +1255,7 @@ function stopAnim(){if(anim&&!anim.rec){anim=null;dirty=true;syncPlay()}}
 function syncPlay(){var b=document.querySelector("[data-act=play]"),w=anim&&!anim.rec?"Stop":"Play";if(b)b.textContent=w;var q=$("tlPlay");if(q)q.textContent=w}
 function loop(t){
   requestAnimationFrame(loop);
-  if($("editor").hidden)return;
+  if($("editor").hidden||RJ)return;
   stepKeys(t);
   if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
@@ -1614,10 +1622,11 @@ function saveBlob(blob,name){
   document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},60000);
 }
 function exportPNG(){
-  if(!scene)return;
+  if(!scene||RJ)return;
   if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
-  closeTool();draw(null);
-  cv.toBlob(function(b){if(b){saveBlob(b,"splatbox-"+photoName+".png");setStatus("Saved an image of this view.","ok")}else setStatus("Couldn't make the image.","bad")},"image/png");
+  closeTool();var sz=rSize(),w=sz[0]&~1,h=sz[1]&~1,tp=!!S.ralpha;
+  if(tp&&!GL2){setStatus("Transparent images need WebGL 2, which this browser doesn't have.","bad");return}
+  rFrame(w,h,tp).then(function(b){if(b){saveBlob(b,"splatbox-"+photoName+(tp?"-alpha":"")+".png");setStatus("Saved a "+w+"×"+h+" image"+(tp?" with a transparent background":"")+".","ok")}else setStatus("Couldn't make the image.","bad")},function(){setStatus("Couldn't make the image.","bad")});
 }
 var recorder=null,recChunks=[],recMime="";
 function startRecord(){
@@ -1807,8 +1816,13 @@ var PANES={
   capture:function(){return '<p class="lbl">Camera move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
     sl("dur","Length",2,12,1)+chk("loop","Loop")+
     '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
+    '<p class="lbl">Render size</p>'+seg("rsize",[["view","This view"],["720","720p"],["1080","1080p"],["1440","1440p"],["2160","4K"],["sq","Square"],["vert","Vertical"]],true)+
+    chk("ralpha","Transparent background")+
     '<button class="btn" type="button" data-act="png">Save image (PNG)</button>'+
-    '<p class="note">Recording plays the move once and saves a video of the viewer, with your lens, look and depth effects.</p>'}
+    '<p class="lbl">Frame-exact render</p><p class="note">Steps your animation one frame at a time, so it comes out the same on any computer. You get numbered PNGs in a zip.</p>'+
+    seg("rfps",[["24","24 fps"],["25","25 fps"],["30","30 fps"],["60","60 fps"]])+
+    '<button class="btn primary" type="button" data-act="rFrames">Render PNG sequence (.zip)</button>'+
+    '<p class="note">Recording plays the move once and saves a video of the viewer, with your lens, look and depth effects. A transparent background skips the lens and look effects (vignette, grain, distortion, LUT).</p>'}
 };
 function syncObjFields(){
   var o=SEL,pb=$("popB");if(!OBJTOOL[curTool]||!pb)return;
@@ -2091,6 +2105,7 @@ $("popB").addEventListener("click",function(e){
   else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
+  else if(a==="rFrames")renderSeq();
   else if(a==="cube")$("cubeIn").click();
   else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="level"){levelHorizon()}
@@ -2805,6 +2820,85 @@ function tlOpenMenu(row){
     if((e.code==="Delete"||e.code==="Backspace")&&TLU.sel.length&&!$("editor").hidden){e.preventDefault();tlDeleteSel()}
   });
 })();
+
+/* ---------- V029 frame-exact render: step the clock one frame at a time, at a fixed size, optionally with a transparent background ---------- */
+var RJ=null,rCanvas=null,CRC_T=null;
+function rSize(){var m={"720":[1280,720],"1080":[1920,1080],"1440":[2560,1440],"2160":[3840,2160],"sq":[1080,1080],"vert":[1080,1920]};return m[String(S.rsize||"view")]||[cv.width,cv.height]}
+function rBegin(w,h,transp){RO={w:w,h:h};TRANSP=!!transp&&GL2;FORCESORT=true}
+function rEnd(){RO=null;TRANSP=false;FORCESORT=false;try{gl.bindFramebuffer(gl.FRAMEBUFFER,null)}catch(_){}dirty=true}
+/* the transparent frame is drawn into an offscreen buffer that keeps alpha; read it back and un-premultiply for the PNG */
+function rReadAlpha(w,h){
+  var px=new Uint8Array(w*h*4);gl.bindFramebuffer(gl.FRAMEBUFFER,PF.fbo);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,px);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  var c=rCanvas||(rCanvas=document.createElement("canvas"));c.width=w;c.height=h;
+  var x=c.getContext("2d"),id=x.createImageData(w,h),d=id.data,row,i,s,o,a,f;
+  for(row=0;row<h;row++){s=(h-1-row)*w*4;o=row*w*4;for(i=0;i<w;i++,s+=4,o+=4){a=px[s+3];if(a){f=255/a;d[o]=px[s]*f;d[o+1]=px[s+1]*f;d[o+2]=px[s+2]*f;d[o+3]=a}}}
+  x.putImageData(id,0,0);return toBlob(c,"image/png");
+}
+/* draw the current state (or a camera-move offset) and hand back the PNG. Needs rBegin first. */
+function rGrab(w,h,ao){
+  drawScene(ao||null);
+  return TRANSP?rReadAlpha(w,h):toBlob(cv,"image/png");
+}
+function rFrame(w,h,transp,ao){
+  rBegin(w,h,transp);var p;
+  try{p=rGrab(w,h,ao)}catch(e){rEnd();return Promise.reject(e)}
+  return p.then(function(b){rEnd();return b},function(e){rEnd();throw e});
+}
+function crc32(u8){
+  if(!CRC_T){CRC_T=new Int32Array(256);for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);CRC_T[n]=c}}
+  var c2=-1;for(var i=0;i<u8.length;i++)c2=CRC_T[(c2^u8[i])&255]^(c2>>>8);return (c2^-1)>>>0;
+}
+/* a plain "stored" zip, built piece by piece so big sequences don't need one giant buffer */
+function zipNew(){return {parts:[],cen:[],off:0,n:0}}
+function zipAdd(z,name,u8){
+  var nb=new TextEncoder().encode(name),crc=crc32(u8),h=new Uint8Array(30+nb.length),v=new DataView(h.buffer),d=new Date();
+  var dt=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate(),tm=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1);
+  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(8,0,true);v.setUint16(10,tm,true);v.setUint16(12,dt,true);
+  v.setUint32(14,crc,true);v.setUint32(18,u8.length,true);v.setUint32(22,u8.length,true);v.setUint16(26,nb.length,true);v.setUint16(28,0,true);h.set(nb,30);
+  z.cen.push({nb:nb,crc:crc,size:u8.length,off:z.off,tm:tm,dt:dt});z.parts.push(h,u8);z.off+=h.length+u8.length;z.n++;
+}
+function zipEnd(z){
+  var cs=0,parts=z.parts.slice();
+  z.cen.forEach(function(e){var h=new Uint8Array(46+e.nb.length),v=new DataView(h.buffer);
+    v.setUint32(0,0x02014b50,true);v.setUint16(4,20,true);v.setUint16(6,20,true);v.setUint16(8,0x0800,true);v.setUint16(10,0,true);v.setUint16(12,e.tm,true);v.setUint16(14,e.dt,true);
+    v.setUint32(16,e.crc,true);v.setUint32(20,e.size,true);v.setUint32(24,e.size,true);v.setUint16(28,e.nb.length,true);v.setUint32(42,e.off,true);h.set(e.nb,46);parts.push(h);cs+=h.length});
+  var end=new Uint8Array(22),ev=new DataView(end.buffer);ev.setUint32(0,0x06054b50,true);ev.setUint16(8,z.n,true);ev.setUint16(10,z.n,true);ev.setUint32(12,cs,true);ev.setUint32(16,z.off,true);parts.push(end);
+  return new Blob(parts,{type:"application/zip"});
+}
+function rjUI(on,txt,f){$("rjob").hidden=!on;if(txt)$("rjT").textContent=txt;if(f!=null)$("rjF").style.width=Math.round(f*100)+"%"}
+/* the whole animation as numbered PNGs in one zip. Resolves with the zip (or null if cancelled). */
+function renderSeq(o){
+  o=o||{};if(RJ||!scene)return Promise.resolve(null);
+  if(MODE!=="render")setMode("render");
+  if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
+  stopAnim();closeTool();
+  var sz=o.w?[o.w,o.h]:rSize(),w=sz[0]&~1,h=sz[1]&~1,fps=o.fps||(+S.rfps)||30,dur=Math.max(0.5,S.dur||6),n=o.frames||Math.max(1,Math.round(dur*fps)),transp=o.transp!=null?o.transp:!!S.ralpha;
+  if(transp&&!GL2){setStatus("Transparent frames need WebGL 2, which this browser doesn't have.","bad");return Promise.resolve(null)}
+  if(n*w*h*1.2>2.2e9){setStatus("That's too much for one zip ("+n+" frames at "+w+"×"+h+"). Pick a smaller size or a shorter length.","bad");return Promise.resolve(null)}
+  var useTl=tlHasKeys(),saveT=TL.t,z=zipNew(),base=(photoName||"splatbox").replace(/[^\w-]+/g,"_");
+  RJ={cancel:false,i:0,n:n};rjUI(true,"Rendering frame 1 of "+n+"…",0);rBegin(w,h,transp);
+  return new Promise(function(res){
+    function done(blob){
+      rEnd();RJ=null;rjUI(false);tlSetTime(saveT);dirty=true;res(blob);
+    }
+    function step(i){
+      if(RJ.cancel){setStatus("Render cancelled.","warn");return done(null)}
+      if(i>=n){var blob=zipEnd(z);saveBlob(blob,"splatbox-"+base+"-frames-"+w+"x"+h+(transp?"-alpha":"")+".zip");setStatus("Rendered "+n+" frames ("+(blob.size/1e6).toFixed(1)+" MB).","ok");return done(blob)}
+      var t=i/fps,ao=null;
+      if(useTl)tlSetTime(t);else ao=camOff(S.cam,t/dur);
+      var p;try{p=rGrab(w,h,ao)}catch(e){setStatus("The render stopped: "+(e.message||e),"bad");return done(null)}
+      p.then(function(b){return b?b.arrayBuffer():null}).then(function(buf){
+        if(!buf){setStatus("A frame came out empty.","bad");return done(null)}
+        zipAdd(z,base+"_"+String(i+1).padStart(4,"0")+".png",new Uint8Array(buf));
+        RJ.i=i+1;rjUI(true,"Rendered "+(i+1)+" of "+n,(i+1)/n);setTimeout(function(){step(i+1)},0);
+      }).catch(function(e){setStatus("The render stopped: "+(e.message||e),"bad");done(null)});
+    }
+    step(0);
+  });
+}
+function rjCancel(){if(RJ)RJ.cancel=true}
+$("rjX").addEventListener("click",rjCancel);
+document.addEventListener("keydown",function(e){if(RJ&&e.code==="Escape"){e.preventDefault();rjCancel()}});
 
 /* ---------- projects (saved on this device) ---------- */
 var dbP=null;

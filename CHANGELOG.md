@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 029
+- New: frame-exact render. Capture tool > Render PNG sequence steps the animation one frame at a time (timeline keys, or the move preset) and gives you numbered PNGs in a zip, the same on any computer. Pick the frame rate (24, 25, 30, 60). A progress card with Cancel (or Esc) shows while it runs.
+- New: render size. This view, 720p, 1080p, 1440p, 4K, Square or Vertical, for sequences and for Save image.
+- New: transparent background. Tick it for PNGs with a real alpha channel (stills and sequences). It skips lens and look effects (vignette, grain, distortion, LUT).
+- Every render re-sorts the splats for each frame, so frames never show stale ordering.
+
 ## Version 028
 - New: Curves tab in the timeline dock. It plots the selected row's values over time. Select a key to get Bezier handles for the segments on either side, and drag them to shape the easing. Ease in, Ease out and In-out presets; Smooth, Linear and Step still work. Dragging a key up or down in Curves changes its value (single-value rows).
 - Drag in empty space in the timeline to box-select keys (Shift adds). Clicking empty space no longer moves the playhead; only the ruler along the top does.
