@@ -266,6 +266,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 <input id="multiIn" type="file" accept="image/*" multiple hidden>
 <input id="cubeIn" type="file" accept=".cube,text/plain" hidden>
 <input id="objPly" type="file" accept=".ply,.spz" hidden>
+<input id="objPhoto" type="file" accept="image/*" multiple hidden>
 <input id="projIn" type="file" accept=".splatbox" multiple hidden>
 <input id="objMesh" type="file" accept=".glb,.gltf,.obj" hidden>
 <script>
@@ -1719,6 +1720,7 @@ function objList(filter,empty){
 var PANES={
   add:function(){return '<p class="lbl">Bring in</p>'+
     '<button class="btn" type="button" data-act="oAddSplat">Splat file (.ply, .spz)</button>'+
+    '<button class="btn" type="button" data-act="oPhoto">One photo to 3D (add a depth map too if you have one)</button>'+
     '<button class="btn" type="button" data-act="oAddMesh">3D model (.glb, .obj)</button>'+
     '<p class="lbl">Make a splat</p>'+
     '<button class="btn" type="button" data-act="addPhotos">Photos to splat (scan)</button>'+
@@ -1931,6 +1933,54 @@ function afterAdd(o,msg){
   if(OBJS.filter(isGeo).length===1)frameAll();
   SEL=o;persistObjs();regrade();if(curTool!=="objects")openTool("objects");else refreshObjs();setStatus(msg,"ok");
 }
+/* ---------- V032: one photo -> a 3D splat card. One splat per pixel, pulled forward by a depth map (white = near); scene space is Y up with the camera on +Z. No depth map: a gentle relief from brightness. ---------- */
+function photoToPly(photo,depth){
+  function grab(f,maxSide){return createImageBitmap(f).then(function(bm){
+    var k=Math.min(1,maxSide/Math.max(bm.width,bm.height)),w=Math.max(2,Math.round(bm.width*k)),h=Math.max(2,Math.round(bm.height*k));
+    var c=document.createElement("canvas");c.width=w;c.height=h;var g=c.getContext("2d",{willReadFrequently:true});g.drawImage(bm,0,0,w,h);
+    return {w:w,h:h,d:g.getImageData(0,0,w,h).data,asp:bm.width/bm.height}})}
+  return grab(photo,520).then(function(P){
+    var p2=depth?grab(depth,520):Promise.resolve(null);
+    return p2.then(function(D){
+      var w=P.w,h=P.h,n=w*h,W=2,H=W*h/w,sx=W/w,out=new Float32Array(n*14),i,x,y,dd=new Float32Array(n);
+      for(i=0;i<n;i++){
+        x=i%w;y=(i/w)|0;
+        if(D){var dx=Math.min(D.w-1,Math.round(x*D.w/w)),dy=Math.min(D.h-1,Math.round(y*D.h/h)),q=(dy*D.w+dx)*4;dd[i]=(D.d[q]+D.d[q+1]+D.d[q+2])/765}
+        else{var r=P.d[i*4],gg=P.d[i*4+1],b=P.d[i*4+2];dd[i]=(0.299*r+0.587*gg+0.114*b)/255}
+      }
+      /* a light blur so single noisy pixels don't become spikes */
+      var bl=new Float32Array(n);
+      for(y=0;y<h;y++)for(x=0;x<w;x++){var s=0,c=0,u,v;for(v=-1;v<=1;v++)for(u=-1;u<=1;u++){var xx=x+u,yy=y+v;if(xx>=0&&yy>=0&&xx<w&&yy<h){s+=dd[yy*w+xx];c++}}bl[y*w+x]=s/c}
+      var relief=D?0.7:0.25;
+      for(i=0;i<n;i++){
+        x=i%w;y=(i/w)|0;var k=i*14;
+        out[k]=(x+0.5-w/2)*sx;out[k+1]=-(y+0.5-h/2)*sx;out[k+2]=bl[i]*relief;
+        for(var j=0;j<3;j++)out[k+3+j]=(P.d[i*4+j]/255-0.5)/0.28209;
+        out[k+6]=4.6;
+        out[k+7]=Math.log(sx*0.62);out[k+8]=Math.log(sx*0.62);out[k+9]=Math.log(sx*0.25);
+        out[k+10]=1;out[k+11]=0;out[k+12]=0;out[k+13]=0;
+      }
+      var head=new TextEncoder().encode("ply\nformat binary_little_endian 1.0\nelement vertex "+n+"\n"+["x","y","z","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2","rot_0","rot_1","rot_2","rot_3"].map(function(p){return "property float "+p}).join("\n")+"\nend_header\n");
+      var ply=new Uint8Array(head.length+out.byteLength);ply.set(head,0);ply.set(new Uint8Array(out.buffer),head.length);
+      return {ab:ply.buffer,depth:!!D,n:n};
+    });
+  });
+}
+function addPhotoFiles(files){
+  var fl=Array.prototype.slice.call(files||[]).filter(function(f){return /^image\//.test(f.type)||/\.(png|jpe?g|webp|bmp)$/i.test(f.name)});
+  if(!fl.length||!cur||!GL2)return Promise.resolve();
+  var dm=fl.filter(function(f){return /depth|disp|_d\.|\bz\b/i.test(f.name)})[0],ph=fl.filter(function(f){return f!==dm})[0]||fl[0];
+  if(!dm&&fl.length>1)dm=fl[1];
+  if(dm===ph)dm=null;
+  if(MODE!=="edit")setMode("edit");
+  busy(true,"Building a 3D card from the photo…");
+  return photoToPly(ph,dm).then(function(r){
+    var f=new File([r.ab],ph.name.replace(/\.\w+$/,"").slice(0,36)+" (photo).ply",{type:"application/octet-stream"});
+    busy(false);
+    return addPlyFile(f).then(function(){setStatus(r.depth?"Made a 3D card from your photo and depth map.":"Made a 3D card from your photo. There was no depth map, so the depth is just a soft relief from brightness. Pick the photo and a depth map together for real depth (white = near).","ok")});
+  }).catch(function(err){busy(false);setStatus("Couldn't use that picture: "+(err&&err.message||"unknown"),"bad")});
+}
+
 function addPlyFile(f){
   if(!f||!cur||!GL2)return;
   if(MODE!=="edit")setMode("edit");
@@ -1954,6 +2004,7 @@ function addMeshFile(f){
     var o=addMeshObj(m,f.name.replace(/\.[^.]+$/,"").slice(0,40)||"Model",f,fmt);busy(false);afterAdd(o,"Added "+o.name+". Models use flat colours (textures aren't shown yet).");
   }).catch(function(err){busy(false);setStatus(err.message||"Couldn't read that model.","bad")});
 }
+$("objPhoto").addEventListener("change",function(e){var fl=e.target.files;addPhotoFiles(fl).then(function(){});e.target.value=""});
 $("objPly").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addPlyFile(f)});
 $("objMesh").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addMeshFile(f)});
 function objField(el){
@@ -1986,6 +2037,7 @@ $("popB").addEventListener("click",function(e){
   if(oa==="del"&&o){removeObj(o);return}
   var a=el.dataset.act;
   if(a==="oAddSplat")$("objPly").click();
+  else if(a==="oPhoto")$("objPhoto").click();
   else if(a==="oAddMesh")$("objMesh").click();
   else if(a==="oAddSun")addLight("sun");
   else if(a==="oAddPoint")addLight("point");

@@ -6,6 +6,6 @@ Targeted tests per stage; ONE full run at the end.
 - [x] 2 SPZ export and import
 - [x] 3 Splat effects (dissolve, scatter, pulse), keyframable
 - [x] 4 Presets in backups + preset export/import; "Solved X of Y photos" report
-- [ ] 5 Single-photo splats (depth-based; SHARP later, local helper)
+- [x] 5 Single-photo splats (depth-based; SHARP later, local helper)
 - [ ] 6 Sort in a Worker (big scenes)
 - [ ] F full suite, bump to Version 032, changelog, release.sh stable, push, confirm Windows build, update Plan Doc + Whiteboard
