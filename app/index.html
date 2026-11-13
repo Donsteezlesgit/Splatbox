@@ -1764,7 +1764,7 @@ var PANES={
   },
   file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><button class="btn" type="button" data-act="fExport">Export backup file (.splatbox)</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<p class="note">Changes save by themselves.</p>'+
-    '<p class="lbl">Presets</p><p class="note">Save all settings, looks and your imported LUT, then apply them in any project.</p><input class="txt" id="presetName" type="text" maxlength="40" placeholder="Preset name"><button class="btn" type="button" data-act="pSave">Save preset from this project</button><div id="presetList"></div>'+
+    '<p class="lbl">Presets</p><p class="note">Save all settings, looks and your imported LUT, then apply them in any project. Presets are also included in Back up everything.</p><input class="txt" id="presetName" type="text" maxlength="40" placeholder="Preset name"><button class="btn" type="button" data-act="pSave">Save preset from this project</button><div id="presetList"></div><div class="row2"><button class="btn small" type="button" data-act="pExport">Export presets</button><button class="btn small" type="button" data-act="pImport">Import presets</button></div>'+
     '<div class="row2"><button class="btn small" type="button" data-act="fNew">New project</button><button class="btn small" type="button" data-act="fCopy">Save as a copy</button></div>'+
     '<button class="btn small" type="button" data-act="fHome">Open another project</button>'+
     '<p class="lbl">Export</p><div class="stats" id="stats"></div>'+
@@ -2220,6 +2220,8 @@ $("popB").addEventListener("click",function(e){
   else if(a==="pSave")savePreset();
   else if(a==="pApply")applyPreset(b.dataset.pid);
   else if(a==="pDel")deletePreset(b.dataset.pid);
+  else if(a==="pExport")exportPresets();
+  else if(a==="pImport")$("projIn").click();
   else if(a==="fExport")exportProject(cur);
   else if(a==="fHome")goHome();
   else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
@@ -3552,6 +3554,7 @@ function encRec(v,blobs){
   if(v&&typeof v==="object"){var o={};Object.keys(v).forEach(function(k){o[k]=encRec(v[k],blobs)});return o}
   return v;
 }
+function presetRecs(){return presetList().then(function(l){return l.map(function(p){return Object.assign({},p,{kind:"preset"})})}).catch(function(){return []})}
 function packProjects(list){
   var blobs=[],recs=list.map(function(p){return encRec(p,blobs)});
   var head=new TextEncoder().encode(JSON.stringify({format:FORMAT,app:VERSION,exported:Date.now(),recs:recs,sizes:blobs.map(function(b){return b.size}),types:blobs.map(function(b){return b.type})}));
@@ -3592,25 +3595,27 @@ function exportProject(p){
   }).catch(function(){setStatus("Couldn't make the backup.","bad")});
 }
 function backupAll(){
-  return dbAll().then(function(list){
-    if(!list.length){setStatus("No projects to back up yet.","warn");return}
+  return Promise.all([dbAll(),presetRecs()]).then(function(r){
+    var list=r[0],pr=r[1];
+    if(!list.length&&!pr.length){setStatus("No projects to back up yet.","warn");return}
     var d=new Date().toISOString().slice(0,10);
-    saveBlob(packProjects(list),"splatbox-backup-"+d+".splatbox");noteBackup();
-    setStatus("Backed up "+list.length+" project"+(list.length>1?"s":"")+". Keep the file somewhere safe.","ok");
+    saveBlob(packProjects(list.concat(pr)),"splatbox-backup-"+d+".splatbox");noteBackup();
+    setStatus("Backed up "+list.length+" project"+(list.length===1?"":"s")+(pr.length?" and "+pr.length+" preset"+(pr.length===1?"":"s"):"")+". Keep the file somewhere safe.","ok");
     var b=$("bk");if(b)b.textContent=backupText();
   }).catch(function(){setStatus("Couldn't make the backup.","bad")});
 }
 function importFiles(files){
   var fl=Array.prototype.slice.call(files||[]);if(!fl.length)return Promise.resolve(0);
-  var total=0;
+  var total=0,np=0;
   return fl.reduce(function(pr,f){
     return pr.then(function(){return unpackProjects(f)}).then(function(recs){
       return recs.reduce(function(p2,r){return p2.then(function(){
+        if(r&&r.kind==="preset")return importPreset(r).then(function(n){np+=n});
         r=upgradeRec(r);r.id=uid();r.dir=null;r.updated=Date.now();total++;return dbPut(r);
       })},Promise.resolve());
     });
   },Promise.resolve()).then(function(){
-    setStatus("Imported "+total+" project"+(total===1?"":"s")+". They are copies, so nothing was overwritten.","ok");return renderHome();
+    setStatus("Imported "+(total?total+" project"+(total===1?"":"s"):"")+(total&&np?" and ":"")+(np?np+" preset"+(np===1?"":"s"):"")+(total||np?". Projects come in as copies, so nothing was overwritten.":"nothing."),"ok");if($("presetList"))renderPresets();return renderHome();
   }).catch(function(err){setStatus(err&&err.message||"Couldn't import that file.","bad")});
 }
 /* Old projects are brought up to date here, one step per format number. Never delete a step: an old file may need it. */
@@ -3676,6 +3681,22 @@ function applyPreset(id){
 }
 function deletePreset(id){
   return presetTx("readwrite",function(st){return st.delete(id)}).then(renderPresets).catch(function(){setStatus("Couldn't delete the preset.","bad")});
+}
+/* a preset with the same name is only replaced by a newer one */
+function importPreset(r){
+  return presetList().then(function(l){
+    var old=l.filter(function(p){return p.name.toLowerCase()===String(r.name).toLowerCase()})[0];
+    if(old&&old.updated>=(r.updated||0))return 0;
+    var rec={id:old?old.id:uid(),name:String(r.name||"Preset").slice(0,40),updated:r.updated||Date.now(),settings:r.settings||{},lut:r.lut||null,lutName:r.lutName||null};
+    return presetTx("readwrite",function(s){return s.put(rec)}).then(function(){return 1});
+  });
+}
+function exportPresets(){
+  return presetRecs().then(function(l){
+    if(!l.length){setStatus("No presets to export yet.","warn");return}
+    saveBlob(packProjects(l),"splatbox-presets.splatbox");
+    setStatus("Saved "+l.length+" preset"+(l.length===1?"":"s")+" to a file. Import it on any device from Presets or the Home import button.","ok");
+  }).catch(function(){setStatus("Couldn't export the presets.","bad")});
 }
 function renderPresets(){
   var box=$("presetList");if(!box)return Promise.resolve();
@@ -3902,7 +3923,10 @@ function runTraining(me){
       if(e.kind==="train-complete")finishTraining();
       else if(e.kind==="device-lost"){me.lost=true;tSet("tStage","The phone took back the graphics chip");tSet("tNote","This usually happens when the screen locks or you switch apps. Your cameras are kept, so you can restart training without redoing that part.");$("tPause").textContent="Restart training";$("tPause").disabled=false;$("tFinish").disabled=true}
     });
-    return s.load(me.p.srcs).then(function(){return s.solve()}).then(function(){return s.seed()}).then(function(){
+    return s.load(me.p.srcs).then(function(){return s.solve()}).then(function(){
+      try{var sv=s.recon.cams.length,all=me.p.srcs.length;me.solved=sv;me.total=all;
+        tSet("tNote","Solved "+sv+" of "+all+" photos"+(sv<all?". The "+(all-sv)+" it couldn't place are left out. Overlapping, sharp photos solve best.":"."))}catch(_){}
+      return s.seed()}).then(function(){
       if(TR!==me)return;
       attachView(me);
       s.start();$("tPause").disabled=false;$("tFinish").disabled=false;
