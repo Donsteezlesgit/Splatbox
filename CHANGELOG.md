@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 033
+- SHARP (desktop app only): turn one photo into a real 3D scene with Apple's SHARP model. Add it from the Add panel. The 1.3 GB model downloads once, the first time you use it, and then everything runs on your PC. No photo ever leaves it.
+- It uses your graphics card when it can (DirectML), otherwise the CPU, which is slower and wants about 8 GB of free memory.
+- Personal, non-commercial use only, because that is what Apple's licence for the model allows.
+- The web version doesn't have this; its one-photo option still works from a photo and an optional depth map.
+
 ## Version 032
 - TouchDesigner export (Capture panel): camera path (json, csv, chan), 16-bit depth PNG per frame, optional colour frames and a point cloud .ply, all in one zip with a README.
 - SPZ: import .spz files (versions 2 and 3, also by drag and drop) and export the whole scene as .spz, about 10 times smaller than .ply.

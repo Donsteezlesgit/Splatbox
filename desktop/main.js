@@ -55,6 +55,7 @@ function encWrite(e, buf) {
     else e.p.stdin.once("drain", () => { const f = e.pend; e.pend = null; if (f) f(); });
   });
 }
+require("./sharp").register(ipcMain, app, () => win, dialog, TESTING);
 ipcMain.handle("enc:start", async (ev, o) => {
   const f = FORMATS[o && o.fmt];
   if (!f) throw new Error("Unknown format");

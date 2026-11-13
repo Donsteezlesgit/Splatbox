@@ -44,12 +44,27 @@ jobs:
           FF=$(node -e "console.log(require('@ffmpeg-installer/ffmpeg').path)")
           "$FF" -hide_banner -encoders > enc.txt
           for e in prores_ks dnxhd libx264; do grep -q " $e " enc.txt || { echo "missing encoder $e"; exit 1; }; done
+      - name: Check SHARP's runtime loads on Windows
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: desktop
+        shell: bash
+        run: |
+          node -e "const o=require('onnxruntime-node');console.log('onnxruntime-node loaded',Object.keys(o).length)"
+          node -e "const {buildPly}=require('./sharp');console.log(typeof buildPly)"
       - name: Build installer
         if: steps.ex.outputs.exists == 'false'
         working-directory: desktop
         run: |
           node prepare.js
           npx electron-builder --win --publish never "-c.extraMetadata.version=${{ steps.v.outputs.semver }}"
+      - name: Check the installer carries SHARP's Windows runtime
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: desktop
+        shell: bash
+        run: |
+          U=dist/win-unpacked/resources/app.asar.unpacked/node_modules/onnxruntime-node/bin/napi-v6
+          for f in win32/x64/onnxruntime_binding.node win32/x64/onnxruntime.dll win32/x64/DirectML.dll; do test -f "$U/$f" || { echo "missing $f"; exit 1; }; done
+          test ! -d "$U/linux" && test ! -d "$U/darwin" || { echo "other platforms were bundled"; exit 1; }
       - name: Publish release
         if: steps.ex.outputs.exists == 'false'
         shell: bash
