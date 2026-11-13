@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 030
+- Windows desktop app (Electron). Same app, installed per-user, runs offline.
+- Updates itself in place from GitHub Releases: checks on launch and every 4 hours, then offers "Restart now". One install, no pile of exes.
+- GitHub builds the installer automatically when a new version is pushed.
+- Web version unchanged.
+
 ## Version 029
 - New: frame-exact render. Capture tool > Render PNG sequence steps the animation one frame at a time (timeline keys, or the move preset) and gives you numbered PNGs in a zip, the same on any computer. Pick the frame rate (24, 25, 30, 60). A progress card with Cancel (or Esc) shows while it runs.
 - New: render size. This view, 720p, 1080p, 1440p, 4K, Square or Vertical, for sequences and for Save image.

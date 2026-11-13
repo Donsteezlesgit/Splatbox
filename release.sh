@@ -28,7 +28,8 @@ case "${1:-}" in
  stable)
   tests; cp app/index.html app/sw.js .
   echo "STABLE is now Version $(ver index.html)."
-  echo "Next: git add -A && git commit && git tag v$(ver index.html) && git push --tags";;
+  echo "Next: git add -A && git commit && git tag v$(ver index.html) && git push --tags"
+  echo "Windows app: GitHub builds the installer by itself after the push (about 5 min); installed copies then update on their own.";;
  promote)
   [ -f beta/index.html ] || { echo "no beta to promote"; exit 1; }
   cmp -s beta/index.html app/index.html || { echo "beta differs from app/ - run ./release.sh beta again first"; exit 1; }

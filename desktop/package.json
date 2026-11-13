@@ -1,0 +1,38 @@
+{
+  "name": "splatbox",
+  "productName": "Splatbox",
+  "version": "0.0.0",
+  "description": "Splatbox desktop app",
+  "main": "main.js",
+  "author": "Max Thompson",
+  "private": true,
+  "scripts": {
+    "prep": "node prepare.js",
+    "start": "node prepare.js && electron .",
+    "dist": "node prepare.js && electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.maxthompson.splatbox",
+    "productName": "Splatbox",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "preload.js", "www/**"],
+    "artifactName": "Splatbox-Setup-${version}.exe",
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "icon.png" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [{ "provider": "github", "owner": "Donsteezlesgit", "repo": "splatbox", "releaseType": "release" }]
+  }
+}

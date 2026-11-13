@@ -1,0 +1,46 @@
+name: Windows app
+# Builds the Windows installer and publishes it to GitHub Releases whenever the released app (root index.html)
+# or the desktop wrapper changes. The installed app finds it and updates itself in place.
+on:
+  push:
+    branches: [main]
+    paths: [index.html, desktop/**, .github/workflows/desktop.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Work out version
+        id: v
+        shell: bash
+        run: |
+          N=$(grep -o 'var VERSION="Version [0-9]*"' index.html | grep -o '[0-9][0-9]*')
+          R=$(tr -d '[:space:]' < desktop/REV)
+          echo "semver=0.$((10#$N)).$((10#$R))" >> "$GITHUB_OUTPUT"
+      - name: Already released?
+        id: ex
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.semver }}" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Install
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: desktop
+        run: npm ci
+      - name: Build and publish
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node prepare.js
+          npx electron-builder --win --publish always "-c.extraMetadata.version=${{ steps.v.outputs.semver }}"

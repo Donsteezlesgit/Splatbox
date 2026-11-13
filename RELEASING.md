@@ -27,3 +27,11 @@
 
 ## Honest limits
 Tests run headless on a software GPU (SwiftShader). They cannot judge how it feels on a real GPU, touch controls, or big-scene speed. That is what `TESTING.md` is for.
+
+## Windows app (desktop/)
+- Electron wrapper around the released root `index.html` (served from `app://splatbox`, no service worker). Installed per-user, no admin.
+- Pushing a new `index.html` to `main` triggers `.github/workflows/desktop.yml`: it builds the installer on GitHub and publishes release `v0.<Version>.<REV>` (Version 030 = 0.30.0). The installed app checks on launch and every 4 h, downloads quietly, and offers "Restart now".
+- Changed only the wrapper (`desktop/*`)? Bump the number in `desktop/REV` so a new release is made.
+- Needs the repo public (it is) so installed apps can read releases. Unsigned, so Windows shows a SmartScreen warning on first install only.
+- Local check: `cd desktop && npm i && node prepare.js`, then `python3 tests/desktop_smoke.py`.
+- Browser storage is per-origin: projects made on the github.io page are not inside the desktop app. Use the project folders / backup import to move them.
