@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 035
+- Photo scans: two new quality levels, Draft (quick check, a few minutes) and Ultra (slowest, best detail).
+- Blurry photos are spotted before solving and left out, as long as enough sharp ones remain. The training screen says which ones.
+- Stray floating splats are masked automatically after a scan (switch on the training screen). Undo brings them back.
+- "Solved X of Y photos" now names the photos that couldn't be placed.
+- Uses up to 12 CPU cores for the photo-matching step.
+
 ## Version 034
 - The app now says which one you're in: "Splatbox Desktop" in the Windows app, "Splatbox Web" in the browser, next to the version number and in the window title.
 
