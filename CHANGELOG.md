@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 036
+- SHARP is removed. Apple's licence only allows personal, non-commercial use, so it doesn't belong in an app used for client work. The "One photo to 3D" card (photo plus optional depth map) stays.
+- The Windows app no longer carries the AI runtime, so the installer is smaller. If you already downloaded the 1.3 GB SHARP model, it's in the app's data folder (%APPDATA%\Splatbox\sharp) and you can delete it.
+
 ## Version 035
 - Photo scans: two new quality levels, Draft (quick check, a few minutes) and Ultra (slowest, best detail).
 - Blurry photos are spotted before solving and left out, as long as enough sharp ones remain. The training screen says which ones.

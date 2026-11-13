@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
-    "electron-updater": "^6.8.11",
-    "onnxruntime-node": "^1.31.1"
+    "electron-updater": "^6.8.11"
   },
   "devDependencies": {
     "electron": "45.3.2",
@@ -29,10 +28,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "sharp.js",
-      "www/**",
-      "!node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**",
-      "!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**"
+      "www/**"
     ],
     "artifactName": "Splatbox-Setup-${version}.exe",
     "win": {
@@ -63,8 +59,7 @@
       }
     ],
     "asarUnpack": [
-      "node_modules/@ffmpeg-installer/**",
-      "node_modules/onnxruntime-node/**"
+      "node_modules/@ffmpeg-installer/**"
     ]
   }
 }
