@@ -284,7 +284,7 @@ var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparen
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
-  fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
+  fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,fxDis:0,fxScat:0,fxPulse:0,fxPhase:0,
   cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
 var S=Object.assign({},DEF);
 
@@ -672,18 +672,24 @@ function applyLook(){
 var TW=2048,GSP=null,GS={};
 var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "layout(location=0) in vec2 aQ;layout(location=1) in int aIdx;\n"+
-"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;uniform float uFar;\n"+
+"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform vec4 uFx;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;uniform float uFar;\n"+
 "uniform vec3 uCmin;uniform vec3 uCmax;uniform int uCOn;uniform float uLit;uniform vec3 uAmb;uniform int uLN;uniform vec4 uLP[4];uniform vec3 uLC[4];uniform vec3 uCam;\n"+
 "out vec4 vCol;out vec2 vPos;\n"+
+"float H(int n){uint x=uint(n)*747796405u+2891336453u;x=((x>>((x>>28u)+4u))^x)*277803737u;x=(x>>22u)^x;return float(x&0xffffu)/65535.;}\n"+
 "vec4 G(int k){int t=aIdx*3+k;return texelFetch(uG,ivec2(t%"+TW+",t/"+TW+"),0);}\n"+
 "void main(){\n"+
 " vec4 t0=G(0),t1=G(1),t2=G(2);\n"+
 " if(uCOn!=0){bool ins=all(greaterThanEqual(t0.xyz,uCmin))&&all(lessThanEqual(t0.xyz,uCmax));if(uCOn==1?!ins:ins){gl_Position=vec4(0.,0.,2.,1.);return;}}\n"+
-" mat4 VM=uView*uModel;vec4 pv=VM*vec4(t0.xyz,1.0);float d=-pv.z;\n"+
+" vec3 P=t0.xyz;float fs=1.,fa=1.;\n"+
+" if(uFx.z>0.){float pw=max(sin(6.28318*(length(t0.xyz)*1.2-uFx.w)),0.);fs*=1.+uFx.z*1.2*pw;}\n"+
+" if(uFx.x>0.){float v=clamp((uFx.x*1.25-H(aIdx))*6.,0.,1.);fs*=1.-v;fa*=1.-v;}\n"+
+" if(uFx.y>0.){vec3 r=vec3(H(aIdx*3+7),H(aIdx*3+8),H(aIdx*3+9))*2.-1.;vec3 dr=normalize(r+0.8*normalize(P+vec3(1e-4)));P+=dr*uFx.y*uFx.y*(0.4+1.6*H(aIdx+5))*1.5;fa*=1.-0.7*uFx.y*H(aIdx+11);}\n"+
+" if(fs*fa<0.003){gl_Position=vec4(0.,0.,2.,1.);return;}\n"+
+" mat4 VM=uView*uModel;vec4 pv=VM*vec4(P,1.0);float d=-pv.z;\n"+
 " if(d<0.05){gl_Position=vec4(0.,0.,2.,1.);return;}\n"+
 " float rel=clamp((d-uD0)/(uD1-uD0),0.,1.);\n"+
 " if(rel<uSlice.x||rel>uSlice.y){gl_Position=vec4(0.,0.,2.,1.);return;}\n"+
-" float m2=uMul*uMul;\n"+
+" float m2=uMul*uMul*fs*fs;\n"+
 " mat3 S=mat3(t0.w,t1.x,t1.y,t1.x,t1.z,t1.w,t1.y,t1.w,t2.x)*m2;\n"+
 " mat3 W=mat3(VM);float fx=uPx;float id=1.0/d;\n"+
 " mat3 J=mat3(fx*id,0.,0.,0.,fx*id,0.,fx*pv.x*id*id,fx*pv.y*id*id,0.);\n"+
@@ -703,7 +709,7 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "  for(int i=0;i<4;i++){if(i>=uLN)break;vec3 ld;float at=1.0;if(uLP[i].w<0.5)ld=uLP[i].xyz;else{vec3 dv=uLP[i].xyz-wp;float dd=length(dv);ld=dv/max(dd,1e-4);at=1.0/(1.0+dd*dd*1.5);}L+=uLC[i]*max(dot(n,ld),0.0)*at;}\n"+
 "  rgb*=mix(vec3(1.0),L,uLit);}\n"+
 " if(uMode==2)rgb=mix(vec3(1.0,0.62,0.18),vec3(0.12,0.42,1.0),rel)*(0.55+0.45*col.a);\n"+
-" rgb=mix(rgb,uBg,uFog*rel);if(uMode==4)rgb=vec3(d/uFar);vCol=vec4(rgb,col.a);\n"+
+" rgb=mix(rgb,uBg,uFog*rel);if(uMode==4)rgb=vec3(d/uFar);vCol=vec4(rgb,col.a*fa);\n"+
 "}";
 var GFS="#version 300 es\nprecision mediump float;precision highp int;in vec4 vCol;in vec2 vPos;uniform int uMode;out vec4 o;\n"+
 "void main(){float r2=dot(vPos,vPos);if(r2>9.0)discard;float a;\n"+
@@ -715,7 +721,7 @@ function initGS(){
   var pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);
   gl.bindAttribLocation(pr,0,"aQ");gl.bindAttribLocation(pr,1,"aIdx");gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){GSP=-1;try{console.error("splat shader: "+gl.getShaderInfoLog(vs)+" | "+gl.getShaderInfoLog(fs)+" | "+gl.getProgramInfoLog(pr))}catch(_){}return false}
-  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uSlice","uD0","uD1","uMode","uFar","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
+  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uSlice","uFx","uD0","uD1","uMode","uFar","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
   GS.q=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GS.q);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   dotsStale=true;return true;
 }
@@ -835,7 +841,7 @@ function lightsData(force){
 }
 function meshObjs(){return OBJS.filter(function(o){return o.kind==="mesh"&&o.vis&&o.mesh})}
 /* Edit shows the scene as it will export; Render adds the view-only effects */
-function RV(){return MODE==="render"?S:Object.assign({},S,{fog:0,defocus:0,sliceA:0,sliceB:1,lit:0,render:"splat",focusRange:0})}
+function RV(){return MODE==="render"?S:Object.assign({},S,{fog:0,defocus:0,sliceA:0,sliceB:1,lit:0,render:"splat",focusRange:0,fxDis:0,fxScat:0,fxPulse:0})}
 var gsTrail=0;
 /* do any two visible splat objects overlap in space? (then whole-object sorting can pick the wrong front/back) */
 function splatsOverlap(list){
@@ -873,7 +879,7 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   gl.uniformMatrix4fv(u.uView,false,V);gl.uniformMatrix4fv(u.uProj,false,Pm);
   gl.uniform2f(u.uVp,w,h);gl.uniform1f(u.uPx,h/(2*tyv));gl.uniform1f(u.uMul,S.size/1.1);
   gl.uniform1f(u.uFog,DEPTHP?0:Z.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,Z.focus);gl.uniform1f(u.uDef,DEPTHP?0:Z.defocus);gl.uniform1f(u.uFR,Z.focusRange);
-  gl.uniform2f(u.uSlice,Math.min(Z.sliceA,Z.sliceB),Math.max(Z.sliceA,Z.sliceB));
+  gl.uniform2f(u.uSlice,Math.min(Z.sliceA,Z.sliceB),Math.max(Z.sliceA,Z.sliceB));gl.uniform4f(u.uFx,Z.fxDis,Z.fxScat,Z.fxPulse,Z.fxPhase);
   /* dist here is the depth of the camera's focus point, so the depth effects stay put when the view moves */
   gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1f(u.uFar,DEPTHP?DEPTHP.far:1);gl.uniform1i(u.uMode,DEPTHP?4:Z.render==="solid"?1:Z.render==="depth"?2:Z.render==="points"?3:0);
   gl.uniform1f(u.uLit,!DEPTHP&&Z.lit>0.001?Z.lit:0);gl.uniform3f(u.uAmb,Z.amb,Z.amb,Z.amb);gl.uniform1i(u.uLN,Lt.n);gl.uniform4fv(u.uLP,Lt.lp);gl.uniform3fv(u.uLC,Lt.lc);gl.uniform3f(u.uCam,eye[0],eye[1],eye[2]);
@@ -1796,7 +1802,8 @@ var PANES={
     '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
     '<p class="note">Lens effects show in the viewer, PNG and video. They are never saved into the .ply.</p>'},
   fx:function(){return sl("defocus","Depth of field (blur amount)",0,1,0.05)+sl("focus","Focus distance",0,1,0.02)+sl("focusRange","Sharp zone (in focus depth)",0,0.6,0.02)+sl("fog","Depth fog",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
-    '<button class="btn small" type="button" data-act="resetFx">Reset depth</button><p class="note">Depth effects are for viewing, video and images. They aren\'t saved into the .ply.</p>'},
+    '<p class="lbl">Splat effects</p>'+sl("fxDis","Dissolve",0,1,0.01)+sl("fxScat","Scatter",0,1,0.01)+sl("fxPulse","Pulse strength",0,1,0.02)+sl("fxPhase","Pulse position (keyframe 0 to 1)",0,1,0.01)+
+    '<button class="btn small" type="button" data-act="resetFx">Reset depth and effects</button><p class="note">Depth and splat effects show in Render mode and in video and images. They aren\'t saved into the .ply.</p>'},
   look:function(){return '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+esc((cur.lutName||"Imported LUT").slice(0,18))+'</button>':'')+'</div>'+
     sl("lookMix","Look strength",0,1,0.05)+'<button class="btn small" type="button" data-act="cube">Import .cube LUT</button>'+
     '<p class="note">Looks are hand-built approximations of film stocks and camera styles, not manufacturer LUTs. For an exact match, import your own .cube file. Render only, never exported.</p>'},
@@ -2123,7 +2130,7 @@ var FMT=(function(){
   var pm=function(v){v=+v;return v>0?"+"+v:""+v},pc=function(v){return Math.round(v*100)+"%"};
   return {range:function(v){return (+v).toFixed(2)},smooth:function(v){return +v?v+" px":"off"},cut:pc,fill:function(v){return +v?pc(v):"off"},
     size:function(v){return (+v).toFixed(1)+"×"},detail:function(v){return v+" px"},exp:pm,con:pm,sat:pm,hue:function(v){return pm(v)+"°"},warm:pm,
-    fog:pc,defocus:pc,focus:pc,focusRange:pc,lit:pc,amb:pc,sliceA:pc,sliceB:pc,vig:pc,vigSoft:pc,vigBlur:pc,dist:function(v){return pm(v)},ca:pc,grain:pc,grainSize:function(v){return (+v).toFixed(2)+" px"},lookMix:pc,dur:function(v){return v+" s"},fov:function(v){return v+"°"},tiltX:function(v){return v+"°"},tiltZ:function(v){return v+"°"},spin:function(v){return v+"°"},sens:function(v){return (+v).toFixed(1)+"×"}};
+    fog:pc,defocus:pc,focus:pc,focusRange:pc,lit:pc,amb:pc,sliceA:pc,sliceB:pc,fxDis:pc,fxScat:pc,fxPulse:pc,fxPhase:function(v){return (+v).toFixed(2)},vig:pc,vigSoft:pc,vigBlur:pc,dist:function(v){return pm(v)},ca:pc,grain:pc,grainSize:function(v){return (+v).toFixed(2)+" px"},lookMix:pc,dur:function(v){return v+" s"},fov:function(v){return v+"°"},tiltX:function(v){return v+"°"},tiltZ:function(v){return v+"°"},spin:function(v){return v+"°"},sens:function(v){return (+v).toFixed(1)+"×"}};
 })();
 var curTool=null;
 function syncControls(){
@@ -2196,7 +2203,7 @@ $("popB").addEventListener("click",function(e){
   var a=b.dataset.act;
   if(a&&a.indexOf("sx-")===0){sxAct(a,b);return}
   if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
-  else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="rFrames")renderSeq();
@@ -2457,7 +2464,7 @@ document.addEventListener("keydown",function(e){
 
 /* ---------- V025 timeline engine: every animatable value is a named property, keys live in cur.timeline, one clock drives them all ---------- */
 var TL={tracks:{},fps:30,t:0};
-var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
+var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
 var TL_CROP=["x0","x1","y0","y1","z0","z1"];
 function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false}
 function tlHasKeys(){for(var k in TL.tracks)if(TL.tracks[k].k&&TL.tracks[k].k.length&&tlProp(k))return true;return false}

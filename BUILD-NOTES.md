@@ -4,7 +4,7 @@ Targeted tests per stage; ONE full run at the end.
 
 - [x] 1 TouchDesigner export (depth pass, camera path, clean PLY)
 - [x] 2 SPZ export and import
-- [ ] 3 Splat effects (dissolve, scatter, pulse), keyframable
+- [x] 3 Splat effects (dissolve, scatter, pulse), keyframable
 - [ ] 4 Presets in backups + preset export/import; "Solved X of Y photos" report
 - [ ] 5 Single-photo splats (depth-based; SHARP later, local helper)
 - [ ] 6 Sort in a Worker (big scenes)
