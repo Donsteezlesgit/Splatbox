@@ -9,6 +9,7 @@ Open the beta link. You should see an amber BETA badge.
 6. Turn on fog or defocus. Fly the camera. The depth effect should not jump.
 7. Two overlapping splats: no popping front/back.
 8. Change a few effects, press Save (Ctrl+S), reload the page, reopen. Everything as left.
-9. Anything slow, glitchy or odd? Tell me what you did just before.
+9. Presets: in File, type a name and save a preset. Open another project, apply it. Looks and LUT should match.
+10. Anything slow, glitchy or odd? Tell me what you did just before.
 
 All good? Say "promote".

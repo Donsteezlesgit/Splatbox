@@ -230,7 +230,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 019";
+var VERSION="Version 020";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=2;
 
@@ -1695,6 +1695,7 @@ var PANES={
   },
   file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><button class="btn" type="button" data-act="fExport">Export backup file (.splatbox)</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<p class="note">Changes save by themselves.</p>'+
+    '<p class="lbl">Presets</p><p class="note">Save all settings, looks and your imported LUT, then apply them in any project.</p><input class="txt" id="presetName" type="text" maxlength="40" placeholder="Preset name"><button class="btn" type="button" data-act="pSave">Save preset from this project</button><div id="presetList"></div>'+
     '<div class="row2"><button class="btn small" type="button" data-act="fNew">New project</button><button class="btn small" type="button" data-act="fCopy">Save as a copy</button></div>'+
     '<button class="btn small" type="button" data-act="fHome">Open another project</button>'+
     '<p class="lbl">Export</p><div class="stats" id="stats"></div>'+
@@ -1966,6 +1967,7 @@ function syncControls(){
   });
   var nm=$("c-name");if(nm&&cur)nm.value=cur.name;
   var st=$("stats");if(st)st.textContent=spaceStats();
+  if($("presetList"))renderPresets();
   syncPlay();
 }
 function applyRail(){
@@ -2033,6 +2035,9 @@ $("popB").addEventListener("click",function(e){
   else if(a==="addPhotos")$("multiIn").click();
   else if(a==="addPhoto")$("newIn").click();
   else if(a==="fSave")saveProject();
+  else if(a==="pSave")savePreset();
+  else if(a==="pApply")applyPreset(b.dataset.pid);
+  else if(a==="pDel")deletePreset(b.dataset.pid);
   else if(a==="fExport")exportProject(cur);
   else if(a==="fHome")goHome();
   else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
@@ -2293,6 +2298,57 @@ function snapshotState(){
     objs:OBJS.map(function(o){var r={};Object.keys(o).forEach(function(k){
       if(k==="gs"||k==="mesh"||k==="main")return;var v=o[k];
       r[k]=v instanceof Blob?"blob:"+v.size:Array.isArray(v)?v.map(r5):typeof v==="number"?r5(v):(v&&typeof v==="object")?JSON.parse(JSON.stringify(v,function(_,x){return typeof x==="number"?r5(x):x})):v});return r})});
+}
+/* ---------- presets: every setting + look + LUT, kept on this device (separate storage) and usable in any project ---------- */
+var presetDbP=null;
+function presetDb(){
+  if(presetDbP)return presetDbP;
+  presetDbP=new Promise(function(res,rej){
+    if(!window.indexedDB)return rej(new Error("no storage"));
+    var r=indexedDB.open(BETA?"splatbox-beta-presets":"splatbox-presets",1);
+    r.onupgradeneeded=function(){r.result.createObjectStore("presets",{keyPath:"id"})};
+    r.onsuccess=function(){res(r.result)};r.onerror=function(){rej(r.error)};
+  });
+  presetDbP.catch(function(){presetDbP=null});return presetDbP;
+}
+function presetTx(mode,fn){return presetDb().then(function(d){return new Promise(function(res,rej){
+  var t=d.transaction("presets",mode),r=fn(t.objectStore("presets"));
+  t.oncomplete=function(){res(r&&r.result)};t.onerror=t.onabort=function(){rej(t.error)};
+})})}
+function presetList(){return presetTx("readonly",function(st){return st.getAll()}).then(function(l){return l.sort(function(a,b){return b.updated-a.updated})})}
+function savePreset(){
+  var inp=$("presetName"),name=(inp&&inp.value||"").trim().slice(0,40);
+  if(!name){setStatus("Type a name for the preset first.","warn");return Promise.resolve()}
+  var st=Object.assign({},S);if(THRU&&VPS)st.fov=VPS.fov;delete st.ctrlV;
+  return presetList().then(function(l){
+    var old=l.filter(function(p){return p.name.toLowerCase()===name.toLowerCase()})[0];
+    var rec={id:old?old.id:uid(),name:name,updated:Date.now(),settings:st,lut:(cur&&cur.lut)||null,lutName:(cur&&cur.lutName)||null};
+    return presetTx("readwrite",function(s){return s.put(rec)}).then(function(){
+      if(inp)inp.value="";setStatus((old?"Updated":"Saved")+" preset “"+name+"”.","ok");return renderPresets();
+    });
+  }).catch(function(){setStatus("Couldn't save the preset.","bad")});
+}
+function applyPreset(id){
+  return presetTx("readonly",function(st){return st.get(id)}).then(function(p){
+    if(!p||!cur)return;
+    var keep={ctrlV:S.ctrlV};
+    Object.assign(S,JSON.parse(JSON.stringify(DEF)),p.settings,keep);
+    if(p.lut){cur.lut=p.lut;cur.lutName=p.lutName}
+    else if(S.look==="cube"&&!cur.lut)S.look="none";
+    PF.lutKey="";applyLook();regrade();
+    if(typeof syncControls==="function")syncControls();
+    dirty=true;saveNow();setStatus("Applied preset “"+p.name+"”.","ok");
+  }).catch(function(){setStatus("Couldn't apply the preset.","bad")});
+}
+function deletePreset(id){
+  return presetTx("readwrite",function(st){return st.delete(id)}).then(renderPresets).catch(function(){setStatus("Couldn't delete the preset.","bad")});
+}
+function renderPresets(){
+  var box=$("presetList");if(!box)return Promise.resolve();
+  return presetList().then(function(l){
+    var b=$("presetList");if(!b)return;
+    b.innerHTML=l.length?l.map(function(p){return '<div class="row2"><button class="btn small" type="button" data-act="pApply" data-pid="'+p.id+'">Apply: '+esc(p.name)+'</button><button class="btn small" type="button" data-act="pDel" data-pid="'+p.id+'" aria-label="Delete preset">Delete</button></div>'}).join(""):'<p class="note">No presets yet.</p>';
+  }).catch(function(){});
 }
 function openMenu(card,p){
   closeMenus();

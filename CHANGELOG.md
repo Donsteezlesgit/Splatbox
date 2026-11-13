@@ -1,7 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
-## Version 019 (BETA first)
+## Version 020 (BETA)
+- Presets: File menu > Presets. Save all settings, looks and your imported LUT under a name, apply them in any project. Kept on this device (not in backup files yet).
+
+## Version 019
 - Backup: export one project or all projects to a `.splatbox` file; import adds copies (never overwrites).
 - Every project now carries a format number. Old projects are upgraded when opened; projects from a newer app are refused, not damaged.
 - Beta link with its own separate storage, so testing can't touch real projects.
