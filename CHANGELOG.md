@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 023
+- New Select tool (left rail, between Crop and Orient). Select splats with Brush, Box, Lasso or Sphere. Shift adds, Alt removes, right-drag still moves the view.
+- Delete selected, Keep only selected, Invert, Select all, Clear, and Bring deleted back. Deleting never changes your splat file: it is a mask that is saved with the project and left out of exports.
+- Undo and redo (Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y, and buttons in the Select panel) for every selection and delete.
+- Clean floaters: "Find floaters" selects stray splats floating away from the main body; check them, then Delete.
+- Project format 4 (older projects open as before).
+
 ## Version 022
 - Renaming a project now renames its folder too (the new folder is written, then the old one removed). It waits until you stop typing in the name box.
 

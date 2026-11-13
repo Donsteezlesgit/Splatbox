@@ -233,9 +233,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 022";
+var VERSION="Version 023";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
-var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=3;
+var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=4;
 
 /* ---------- settings ---------- */
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
@@ -396,7 +396,7 @@ function regrade(){
   upload();dirty=true;
 }
 function gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain){
-  var n=g.n,B=g.base,A=g.alpha,out=g.col,i,b,o;
+  var n=g.n,B=g.base,A=g.alpha,out=g.col,i,b,o,mk=g.mask,sl=MODE==="edit"?g.sel:null;
   for(i=0;i<n;i++){
     b=i*3;o=i*4;var r=B[b],gg=B[b+1],bl=B[b+2];
     if(!plain){
@@ -404,7 +404,8 @@ function gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain){
       var r2=m0*r+m1*gg+m2*bl,g2=m3*r+m4*gg+m5*bl,b2=m6*r+m7*gg+m8*bl,l=0.299*r2+0.587*g2+0.114*b2;
       r=l+(r2-l)*sa+wm;gg=l+(g2-l)*sa+wm*0.15;bl=l+(b2-l)*sa-wm;
     }
-    out[o]=r<0?0:r>1?255:r*255;out[o+1]=gg<0?0:gg>1?255:gg*255;out[o+2]=bl<0?0:bl>1?255:bl*255;out[o+3]=A[i]*255;
+    if(sl&&sl[i]){r=r*0.3+0.7;gg=gg*0.3+0.28;bl=bl*0.3+0.06}
+    out[o]=r<0?0:r>1?255:r*255;out[o+1]=gg<0?0:gg>1?255:gg*255;out[o+2]=bl<0?0:bl>1?255:bl*255;out[o+3]=(mk&&mk[i])?0:A[i]*255;
   }
 }
 
@@ -685,7 +686,7 @@ function applyRec(o,r){
   if(!r)return o;
   if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;
   if(r.crop)o.crop=Object.assign(newCrop(),r.crop);if(r.name)o.name=r.name;if(r.color)o.color=r.color;if(r.inten!=null)o.inten=r.inten;
-  if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;if(r.fov)o.fov=r.fov;if(r.fdist)o.fdist=r.fdist;
+  if(r.mask)o.maskRle=r.mask;if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;if(r.fov)o.fov=r.fov;if(r.fdist)o.fdist=r.fdist;
   return o;
 }
 function mat4mul(a,b){var o=new Float32Array(16),i,j,k,s;for(i=0;i<4;i++)for(j=0;j<4;j++){s=0;for(k=0;k<4;k++)s+=a[k*4+i]*b[j*4+k];o[j*4+i]=s}return o}
@@ -1263,8 +1264,9 @@ function pickAt(cx,cy){
   OBJS.forEach(function(o){
     if(o.kind!=="splat"||!o.vis||!o.gs)return;
     var g=o.gs,M=objModel(o),VM=mat4mul(V,M),pos=g.pos,al=g.alpha,n=g.n;
+    var mk=g.mask;
     for(var i=0;i<n;i++){
-      if(al[i]<0.4)continue;
+      if(al[i]<0.4||(mk&&mk[i]))continue;
       var x=pos[i*3],y=pos[i*3+1],z=pos[i*3+2],vz=VM[2]*x+VM[6]*y+VM[10]*z+VM[14];
       if(vz>-0.05||-vz>=bz)continue;
       var vx_=VM[0]*x+VM[4]*y+VM[8]*z+VM[12],vy_=VM[1]*x+VM[5]*y+VM[9]*z+VM[13],w=-vz;
@@ -1330,6 +1332,7 @@ function drawOverlay(){
   var W=Math.round(cw*dpr),H=Math.round(ch*dpr);
   if(ov.width!==W||ov.height!==H){ov.width=W;ov.height=H}
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,cw,ch);
+  if(!GUIHID&&MODE==="edit"&&curTool==="select")drawSelOverlay(c);
   if(GUIHID||!LASTM)return;
   if(MODE==="render"){drawCamMarks(c);if(!(SEL&&isCam(SEL)&&!THRU))return}
   else if(MODE!=="edit")return;
@@ -1345,7 +1348,7 @@ function drawOverlay(){
       p=projW(worldOf(o));if(p){c.fillStyle="#ffffff90";c.beginPath();c.arc(p[0],p[1],3,0,6.2832);c.fill()}
     }
   });
-  var g=gzGeo();if(!g)return;
+  var g=curTool==="select"?null:gzGeo();if(!g)return;
   c.lineCap="round";
   var act=GD?GD.h:GH,i;
   if(GM==="ring"||GM==="rotate"){
@@ -1370,7 +1373,7 @@ function drawOverlay(){
 }
 function syncObjFieldsSoon(){if(typeof syncObjFields==="function")syncObjFields()}
 cv.addEventListener("pointerdown",function(e){
-  if(e.button!==0||!SEL||GUIHID)return;
+  if(e.button!==0||!SEL||GUIHID||curTool==="select")return;
   var h=gizmoHit(e.clientX,e.clientY);if(!h)return;
   e.stopImmediatePropagation();e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(_){}
   var g=gzGeo(),r=cv.getBoundingClientRect();
@@ -1397,7 +1400,7 @@ cv.addEventListener("pointermove",function(e){
     }
     dirty=true;syncObjFieldsSoon();return;
   }
-  if(!SEL||GUIHID||e.buttons)return;
+  if(!SEL||GUIHID||e.buttons||curTool==="select")return;
   var hh=gizmoHit(e.clientX,e.clientY),key=hh?hh.t+(hh.i==null?"":hh.i):"",old=GH?GH.t+(GH.i==null?"":GH.i):"";
   GH=hh;if(key!==old){dirty=true;cv.style.cursor=hh?"grab":""}
 },true);
@@ -1609,14 +1612,15 @@ var ICON={
   camera:'<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>',
   export:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
 };
-var EDIT_T={add:1,objects:1,crop:1,orient:1,file:1},OBJTOOL={objects:1,crop:1,orient:1,light:1,camera:1};
-var TOOLS=[["add","Add"],["objects","Objects"],["crop","Crop"],["orient","Orient"],["file","File"],
+var EDIT_T={add:1,objects:1,crop:1,select:1,orient:1,file:1},OBJTOOL={objects:1,crop:1,select:1,orient:1,light:1,camera:1};
+var TOOLS=[["add","Add"],["objects","Objects"],["crop","Crop"],["select","Select"],["orient","Orient"],["file","File"],
   ["camera","Camera"],["lens","Lens"],["fx","Depth"],["look","Look"],["colour","Colour"],["light","Light"],["display","Display"],["capture","Capture"]];
 ICON.fx=ICON.depth;
 ICON.colour='<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/>';
 ICON.lens='<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 4v4M4 12h4M20 12h-4M12 20v-4"/>';
 ICON.objects='<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="1.6"/>';
 ICON.add='<path d="M12 5v14M5 12h14"/>';
+ICON.select='<path d="M6 3l11 8-5 1.5L9.5 18z"/><path d="M13 14l4 5"/>';
 ICON.crop='<path d="M6 2v14a2 2 0 002 2h14"/><path d="M2 6h14a2 2 0 012 2v14"/>';
 ICON.orient='<path d="M12 3v18M3 12h18"/><path d="M9 6l3-3 3 3M18 9l3 3-3 3"/>';
 ICON.file='<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>';
@@ -1675,6 +1679,7 @@ var PANES={
     h+='<p class="keys"><b>G</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
     return h;
   },
+  select:function(){return sxPanel()},
   crop:function(){
     var sp=OBJS.filter(function(o){return o.kind==="splat"});
     if(!sp.length)return '<p class="note">Add a splat first. Then you can cut away the parts you don\'t want with a box. The cut is kept when you export.</p>';
@@ -1791,7 +1796,7 @@ function persistObjs(){
   refreshSpace();
   cur.objs=OBJS.map(function(o){
     var r={id:o.id,kind:o.kind,name:o.name,pos:o.pos.slice(),R:o.R.slice(),scl:o.scl,vis:o.vis,crop:Object.assign({},o.crop)};
-    if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist}return r;
+    if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.gs&&o.gs.mask){var ml=maskRle(o.gs.mask);if(ml)r.mask=ml}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist}return r;
   });
   saveSoon();
 }
@@ -1803,7 +1808,7 @@ function removeObj(o){
   if(o===ACAM){if(THRU)leaveThru();ACAM=null}
   OBJS=OBJS.filter(function(x){return x!==o});if(SEL===o)SEL=null;persistObjs();refreshObjs();camUI();
 }
-function disposeObjs(){OBJS.forEach(function(o){if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh)});OBJS=[];SEL=null;ACAM=null;THRU=false;VPS=null;clearTimeout(camT)}
+function disposeObjs(){undoClear();OBJS.forEach(function(o){if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh)});OBJS=[];SEL=null;ACAM=null;THRU=false;VPS=null;clearTimeout(camT)}
 function spawnPos(){var k=OBJS.filter(isGeo).length;return k?[1.4*k,0,0]:[0,0,0]}
 /* level a splat using the ground found in the splat itself */
 function autoLevelObj(o){
@@ -1817,7 +1822,7 @@ function autoLevelObj(o){
 }
 function addSplatObj(raw,name,blob,rec){
   var o=applyRec(mkObj("splat",name),rec||{name:name});if(!rec)o.pos=spawnPos();
-  o.gs=bakeSplats(raw,ident3(),ZC);uploadGSGeo(o.gs);o.blob=blob;o.fmt="ply";OBJS.push(o);return o;
+  o.gs=bakeSplats(raw,ident3(),ZC);if(o.maskRle){o.gs.mask=maskFromRle(o.maskRle,o.gs.n);delete o.maskRle}uploadGSGeo(o.gs);o.blob=blob;o.fmt="ply";OBJS.push(o);return o;
 }
 function addMeshObj(m,name,blob,fmt,rec){
   var o=applyRec(mkObj("mesh",name),rec||{name:name});if(!rec)o.pos=spawnPos();
@@ -1932,7 +1937,9 @@ function exportScenePLY(){
       if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.gs.ext,c=o.crop,keep=[],i;
       var cx0=e.x0+(e.x1-e.x0)*c.x0,cx1=e.x0+(e.x1-e.x0)*c.x1,cy0=e.y0+(e.y1-e.y0)*c.y0,cy1=e.y0+(e.y1-e.y0)*c.y1,cz0=e.z0+(e.z1-e.z0)*c.z0,cz1=e.z0+(e.z1-e.z0)*c.z1;
       var rows=new Float32Array(n*17),k=0,RM=mm(Ro,M);
+      var gm=o.gs&&o.gs.mask;
       for(i=0;i<n;i++){
+        if(gm&&gm[i])continue;
         var px=R.pos[i*3],py=R.pos[i*3+1],pz=R.pos[i*3+2],X=M[0]*px+M[1]*py+M[2]*pz,Y=M[3]*px+M[4]*py+M[5]*pz,Z=ZC+M[6]*px+M[7]*py+M[8]*pz;
         if(c.on){var ins=X>=cx0&&X<=cx1&&Y>=cy0&&Y<=cy1&&Z>=cz0&&Z<=cz1;if(c.inv?ins:!ins)continue}
         var dx=X,dy=Y,dz=Z-ZC,fx=s*(Ro[0]*dx+Ro[1]*dy+Ro[2]*dz)+o.pos[0],fy=s*(Ro[3]*dx+Ro[4]*dy+Ro[5]*dz)+o.pos[1],fz=s*(Ro[6]*dx+Ro[7]*dy+Ro[8]*dz)+o.pos[2];
@@ -1988,7 +1995,7 @@ function setMode(m){
 $("modeSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode)});
 /* when a tool about objects opens, pick the object it is about if there is only one */
 function autoSel(id){
-  var want=id==="light"?isLight:id==="camera"?isCam:(id==="crop"||id==="orient")?function(o){return o.kind==="splat"}:isGeo;
+  var want=id==="light"?isLight:id==="camera"?isCam:(id==="crop"||id==="orient"||id==="select")?function(o){return o.kind==="splat"}:isGeo;
   if(SEL&&want(SEL)){if(isCam(SEL))ACAM=SEL;return}
   var l=OBJS.filter(want);SEL=l.length===1?l[0]:null;if(SEL&&isCam(SEL))ACAM=SEL;
 }
@@ -1996,7 +2003,7 @@ function openTool(id,keep){
   curTool=id;if(OBJTOOL[id]&&!keep)autoSel(id);
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed",String(b.dataset.tool===id))});
   var t=TOOLS.filter(function(x){return x[0]===id})[0];
-  $("popT").textContent=t[1];$("popB").innerHTML=PANES[id]();$("pop").hidden=false;syncControls();if(OBJTOOL[id])syncObjFields();
+  $("popT").textContent=t[1];$("popB").innerHTML=PANES[id]();$("pop").hidden=false;syncControls();if(OBJTOOL[id])syncObjFields();if(id==="select")syncSel();
 }
 function closeTool(){
   if(!curTool)return;curTool=null;$("pop").hidden=true;
@@ -2017,6 +2024,7 @@ function setK(k,v){
 $("popB").addEventListener("input",function(e){
   var el=e.target,k=el.dataset.k;
   if(el.id==="c-name"){if(cur){cur.name=el.value.slice(0,60)||"Untitled";$("pname").textContent=cur.name;saveSoon()}return}
+  if(el.dataset.sx){SX[el.dataset.sx]=+el.value;syncSel();dirty=true;return}
   if(!k)return;
   if(el.type==="range"){setK(k,+el.value);var o=$("o-"+k);if(o)o.textContent=FMT[k]?FMT[k](+el.value):el.value}
   else if(el.type==="checkbox")setK(k,el.checked);
@@ -2026,6 +2034,7 @@ $("popB").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.k){var v=b.dataset.v;setK(b.dataset.k,b.dataset.k==="shape"?+v:v);syncControls();return}
   var a=b.dataset.act;
+  if(a&&a.indexOf("sx-")===0){sxAct(a,b);return}
   if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
   else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
@@ -2046,6 +2055,241 @@ $("popB").addEventListener("click",function(e){
   else if(a==="fNew"){captureThumb().then(function(b){if(b&&cur)cur.thumb=b}).catch(function(){}).then(saveNow).then(function(){return createSpace()})}
   else if(a==="fCopy"){saveNow().then(function(){var c=Object.assign({},cur,{id:uid(),name:(cur.name||"Project")+" copy",created:Date.now(),updated:Date.now()});return dbPut(c).then(function(){cur=c;$("pname").textContent=c.name;syncControls();setStatus("Saved a copy. You're now working in the copy.","ok")})}).catch(function(){setStatus("Couldn't save a copy.","bad")})}
   else if(a==="png")exportPNG();
+});
+
+/* ---------- undo + selection (V023) ----------
+   Deleting splats never edits the file: each splat object keeps a "deleted" mask (g.mask, 1 = deleted) and a "selected" mask (g.sel).
+   The mask is saved with the project as run lengths, skipped when drawing, picking and exporting, and every change can be undone. */
+var UNDO={done:[],undone:[],bytes:0};
+function undoPush(c){
+  UNDO.done.push(c);UNDO.undone=[];UNDO.bytes+=c.bytes||0;
+  while(UNDO.done.length>60||UNDO.bytes>240e6){var x=UNDO.done.shift();UNDO.bytes-=x.bytes||0}
+  undoUI();
+}
+function undoDo(){var c=UNDO.done.pop();if(!c)return;UNDO.bytes-=c.bytes||0;c.undo();UNDO.undone.push(c);undoUI();setStatus("Undid: "+c.label,"ok")}
+function redoDo(){var c=UNDO.undone.pop();if(!c)return;c.redo();UNDO.done.push(c);UNDO.bytes+=c.bytes||0;undoUI();setStatus("Redid: "+c.label,"ok")}
+function undoClear(){UNDO.done=[];UNDO.undone=[];UNDO.bytes=0;undoUI()}
+function undoUI(){var u=$("sxUndo"),r=$("sxRedo");if(u)u.disabled=!UNDO.done.length;if(r)r.disabled=!UNDO.undone.length}
+function maskRle(m){
+  var out=[],cur=0,run=0,i,any=false;
+  for(i=0;i<m.length;i++){var v=m[i]?1:0;if(v)any=true;if(v===cur)run++;else{out.push(run);cur=v;run=1}}
+  if(!any)return null;out.push(run);return out;
+}
+function maskFromRle(rle,n){
+  var m=new Uint8Array(n),p=0,v=0,tot=0,i;
+  for(i=0;i<rle.length;i++){var r=rle[i];if(v&&p+r<=n)m.fill(1,p,p+r);p+=r;tot+=r;v^=1}
+  return tot===n?m:null;
+}
+var SX={tool:"brush",mode:"set",brush:40,rad:0.25,flo:40,sph:null,drag:null,cur:null,proj:null};
+function selObj(){return SEL&&SEL.kind==="splat"&&SEL.gs?SEL:null}
+function sxSnap(g){return {m:g.mask?g.mask.slice():null,s:g.sel?g.sel.slice():null}}
+function sxEq(a,b){if(a===b)return true;if(!a||!b){var x=a||b;for(var i=0;i<x.length;i++)if(x[i])return false;return true}for(var j=0;j<a.length;j++)if(a[j]!==b[j])return false;return true}
+function sxApply(id,snap){
+  var o=findObj(id);if(!o||!o.gs)return;
+  o.gs.mask=snap.m?snap.m.slice():null;o.gs.sel=snap.s?snap.s.slice():null;sxChanged(o,true);
+}
+function sxChanged(o,persist){regradeSoon();dirty=true;if(persist)persistObjs();syncSel()}
+/* run a change and make it undoable; fn(g) edits g.mask / g.sel in place */
+function sxEdit(o,label,fn){
+  var g=o.gs,b0=sxSnap(g);fn(g);sxCommit(o,label,b0);
+}
+function sxCommit(o,label,b0){
+  var g=o.gs,b1=sxSnap(g),id=o.id;
+  if(sxEq(b0.m,b1.m))b1.m=b0.m;if(sxEq(b0.s,b1.s))b1.s=b0.s;
+  if(b1.m===b0.m&&b1.s===b0.s&&sxEq(g.mask,b0.m)){sxChanged(o,false);return false}
+  var bytes=(b0.m&&b1.m!==b0.m?b0.m.length:0)+(b1.m&&b1.m!==b0.m?b1.m.length:0)+(b0.s&&b1.s!==b0.s?b0.s.length:0)+(b1.s&&b1.s!==b0.s?b1.s.length:0)+(b0.m?b0.m.length:0)+(b0.s?b0.s.length:0);
+  undoPush({label:label,bytes:bytes,undo:function(){sxApply(id,b0)},redo:function(){sxApply(id,b1)}});
+  sxChanged(o,b1.m!==b0.m);return true;
+}
+function sxCounts(g){var s=0,m=0,i;if(g.sel)for(i=0;i<g.n;i++)s+=g.sel[i];if(g.mask)for(i=0;i<g.n;i++)m+=g.mask[i];return {sel:s,del:m}}
+function sxEnsure(g){if(!g.mask)g.mask=new Uint8Array(g.n);if(!g.sel)g.sel=new Uint8Array(g.n)}
+/* where each splat lands on screen (CSS px inside the view), and whether it can be selected at all */
+function sxProj(o){
+  var L=LASTM,g=o.gs,n=g.n,P=L.P,VM=mat4mul(L.V,objModel(o)),pos=g.pos,sx=new Float32Array(n),sy=new Float32Array(n),ok=new Uint8Array(n),mk=g.mask,i,x,y,z,vz,w,c=o.crop,e=g.ext;
+  var cx0=e.x0+(e.x1-e.x0)*c.x0,cx1=e.x0+(e.x1-e.x0)*c.x1,cy0=e.y0+(e.y1-e.y0)*c.y0,cy1=e.y0+(e.y1-e.y0)*c.y1,cz0=e.z0+(e.z1-e.z0)*c.z0,cz1=e.z0+(e.z1-e.z0)*c.z1;
+  for(i=0;i<n;i++){
+    if(mk&&mk[i])continue;
+    x=pos[i*3];y=pos[i*3+1];z=pos[i*3+2];
+    if(c.on){var ins=x>=cx0&&x<=cx1&&y>=cy0&&y<=cy1&&z>=cz0&&z<=cz1;if(c.inv?ins:!ins)continue}
+    vz=VM[2]*x+VM[6]*y+VM[10]*z+VM[14];if(vz>-0.05)continue;w=-vz;
+    var vx=VM[0]*x+VM[4]*y+VM[8]*z+VM[12],vy=VM[1]*x+VM[5]*y+VM[9]*z+VM[13];
+    sx[i]=(L.vx+(P[0]*vx/w*0.5+0.5)*L.vw)/L.k;sy[i]=(cv.height-(L.vy+(P[5]*vy/w*0.5+0.5)*L.vh))/L.k;ok[i]=1;
+  }
+  return {sx:sx,sy:sy,ok:ok};
+}
+function sxInPoly(pts,x,y){
+  var ins=false,n=pts.length/2,i,j;
+  for(i=0,j=n-1;i<n;j=i++){
+    var xi=pts[i*2],yi=pts[i*2+1],xj=pts[j*2],yj=pts[j*2+1];
+    if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))ins=!ins;
+  }
+  return ins;
+}
+function sxShapeHits(pr,sh,hit){
+  var n=pr.ok.length,i,sx=pr.sx,sy=pr.sy,ok=pr.ok;
+  if(sh.t==="circle"){var r2=sh.r*sh.r;for(i=0;i<n;i++){if(!ok[i])continue;var dx=sx[i]-sh.x,dy=sy[i]-sh.y;if(dx*dx+dy*dy<=r2)hit[i]=1}}
+  else if(sh.t==="rect"){for(i=0;i<n;i++)if(ok[i]&&sx[i]>=sh.x0&&sx[i]<=sh.x1&&sy[i]>=sh.y0&&sy[i]<=sh.y1)hit[i]=1}
+  else if(sh.t==="poly"){
+    var x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;for(i=0;i<sh.pts.length;i+=2){x0=Math.min(x0,sh.pts[i]);x1=Math.max(x1,sh.pts[i]);y0=Math.min(y0,sh.pts[i+1]);y1=Math.max(y1,sh.pts[i+1])}
+    for(i=0;i<n;i++)if(ok[i]&&sx[i]>=x0&&sx[i]<=x1&&sy[i]>=y0&&sy[i]<=y1&&sxInPoly(sh.pts,sx[i],sy[i]))hit[i]=1;
+  }
+}
+function sxSphereHits(o,c,r,hit){
+  var g=o.gs,M=objModel(o),pos=g.pos,mk=g.mask,n=g.n,r2=r*r,i,x,y,z;
+  for(i=0;i<n;i++){
+    if(mk&&mk[i])continue;x=pos[i*3];y=pos[i*3+1];z=pos[i*3+2];
+    var X=M[0]*x+M[4]*y+M[8]*z+M[12]-c[0],Y=M[1]*x+M[5]*y+M[9]*z+M[13]-c[1],Z=M[2]*x+M[6]*y+M[10]*z+M[14]-c[2];
+    if(X*X+Y*Y+Z*Z<=r2)hit[i]=1;
+  }
+}
+function sxCompose(g,base,hit,mode){
+  var n=g.n,s=g.sel,i;
+  for(i=0;i<n;i++){
+    var b=base?base[i]:0,h=hit[i];
+    s[i]=mode==="set"?h:mode==="add"?(b|h):(h?0:b);
+  }
+}
+/* stray splats far from everything else: a density check on a coarse grid, plus nearly invisible ones */
+function findFloaters(g,strength){
+  var n=g.n,pos=g.pos,mk=g.mask,al=g.alpha,out=new Uint8Array(n),i;
+  var x0=1e30,x1=-1e30,y0=1e30,y1=-1e30,z0=1e30,z1=-1e30;
+  for(i=0;i<n;i++){if(mk&&mk[i])continue;var x=pos[i*3],y=pos[i*3+1],z=pos[i*3+2];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;if(z<z0)z0=z;if(z>z1)z1=z}
+  if(x1<x0)return out;
+  var ex=Math.max(x1-x0,y1-y0,z1-z0,1e-6),cs=ex/64,nx=Math.floor((x1-x0)/cs)+1,ny=Math.floor((y1-y0)/cs)+1,nz=Math.floor((z1-z0)/cs)+1;
+  var cnt=new Int32Array(nx*ny*nz),cell=new Int32Array(n),cx,cy,cz;
+  for(i=0;i<n;i++){
+    if(mk&&mk[i]){cell[i]=-1;continue}
+    cx=Math.min(nx-1,((pos[i*3]-x0)/cs)|0);cy=Math.min(ny-1,((pos[i*3+1]-y0)/cs)|0);cz=Math.min(nz-1,((pos[i*3+2]-z0)/cs)|0);
+    var id=(cz*ny+cy)*nx+cx;cell[i]=id;cnt[id]++;
+  }
+  var n27=function(id){
+    var cx=id%nx,cy=((id/nx)|0)%ny,cz=(id/(nx*ny))|0,s=0,a,b,c;
+    for(c=Math.max(0,cz-1);c<=Math.min(nz-1,cz+1);c++)for(b=Math.max(0,cy-1);b<=Math.min(ny-1,cy+1);b++)for(a=Math.max(0,cx-1);a<=Math.min(nx-1,cx+1);a++)s+=cnt[(c*ny+b)*nx+a];
+    return s;
+  };
+  var samp=[],step=Math.max(1,(n/20000)|0);
+  for(i=0;i<n;i+=step)if(cell[i]>=0)samp.push(n27(cell[i]));
+  samp.sort(function(a,b){return a-b});
+  var med=samp.length?samp[samp.length>>1]:0,thr=Math.max(2,med*(strength/100)*0.3);
+  for(i=0;i<n;i++){
+    if(cell[i]<0)continue;
+    if(n27(cell[i])<thr||(strength>0&&al[i]<0.02))out[i]=1;
+  }
+  return out;
+}
+/* ---- panel ---- */
+function sxPanel(){
+  var sp=OBJS.filter(function(o){return o.kind==="splat"});
+  if(!sp.length)return '<p class="note">Add a splat first. Then you can select parts of it and delete them. Nothing is lost: deleted splats can always be brought back.</p>';
+  var o=selObj(),h=sp.length>1?objList(function(o){return o.kind==="splat"},""):"";
+  if(!o)return h+'<p class="note">Pick a splat in the list, or tap it in the view.</p>';
+  var b=function(act,t){return '<button class="btn small" type="button" data-act="sx-'+act+'">'+t+'</button>'};
+  var sg=function(id,act,items){return '<div class="seg" id="'+id+'">'+items.map(function(t){return '<button type="button" data-act="'+act+'" data-v="'+t[0]+'" aria-pressed="false">'+t[1]+'</button>'}).join("")+'</div>'};
+  var sl=function(id,key,label,min,max,step){return '<div class="sl"><label for="'+id+'">'+label+'</label><output id="'+id+'O"></output><input id="'+id+'" data-sx="'+key+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'};
+  return h+'<p class="lbl">Select in: '+esc(o.name)+'</p>'+
+    sg("sxTool","sx-tool",[["brush","Brush"],["rect","Box"],["lasso","Lasso"],["sphere","Sphere"]])+
+    sg("sxMode","sx-mode",[["set","New"],["add","Add"],["remove","Remove"]])+
+    sl("sxBrush","brush","Brush size",6,160,1)+sl("sxRad","rad","Sphere size",0.02,1.5,0.01)+
+    '<p class="note" id="sxInfo"></p>'+
+    b("del","Delete selected")+b("keep","Keep only selected")+b("inv","Invert")+b("all","Select all")+b("none","Clear")+b("restore","Bring deleted back")+
+    '<p class="lbl">Clean floaters</p>'+sl("sxFlo","flo","Strength",0,100,1)+b("floFind","Find floaters")+
+    '<p class="lbl">Undo</p><button class="btn small" type="button" id="sxUndo" data-act="sx-undo">Undo</button><button class="btn small" type="button" id="sxRedo" data-act="sx-redo">Redo</button>'+
+    '<p class="note">Shift adds, Alt removes. Right-drag moves the view. A selection goes through the whole splat, front to back. Ctrl+Z undoes.</p>';
+}
+function syncSel(){
+  if(curTool!=="select")return;
+  Array.prototype.forEach.call(document.querySelectorAll("#sxTool button"),function(b){b.setAttribute("aria-pressed",String(b.dataset.v===SX.tool))});
+  Array.prototype.forEach.call(document.querySelectorAll("#sxMode button"),function(b){b.setAttribute("aria-pressed",String(b.dataset.v===SX.mode))});
+  [["sxBrush","brush",function(v){return v+" px"}],["sxRad","rad",function(v){return (+v).toFixed(2)}],["sxFlo","flo",function(v){return v+"%"}]].forEach(function(s){
+    var el=$(s[0]);if(el){el.value=SX[s[1]];$(s[0]+"O").textContent=s[2](SX[s[1]])}
+  });
+  var o=selObj(),inf=$("sxInfo");
+  if(o&&inf){var c=sxCounts(o.gs);inf.textContent=c.sel.toLocaleString("en-GB")+" selected  ·  "+c.del.toLocaleString("en-GB")+" deleted  ·  "+o.gs.n.toLocaleString("en-GB")+" splats"}
+  undoUI();
+}
+function sxAct(a,b){
+  var o=selObj();
+  if(a==="sx-tool"){SX.tool=b.dataset.v;syncSel();dirty=true;return}
+  if(a==="sx-mode"){SX.mode=b.dataset.v;syncSel();return}
+  if(a==="sx-undo"){undoDo();return}
+  if(a==="sx-redo"){redoDo();return}
+  if(!o)return;
+  if(a==="sx-del")sxEdit(o,"delete splats",function(g){sxEnsure(g);for(var i=0;i<g.n;i++)if(g.sel[i]){g.mask[i]=1;g.sel[i]=0}});
+  else if(a==="sx-keep")sxEdit(o,"keep only selected",function(g){sxEnsure(g);for(var i=0;i<g.n;i++){if(!g.sel[i])g.mask[i]=1;g.sel[i]=0}});
+  else if(a==="sx-inv")sxEdit(o,"invert selection",function(g){sxEnsure(g);for(var i=0;i<g.n;i++)g.sel[i]=g.mask[i]?0:(g.sel[i]?0:1)});
+  else if(a==="sx-all")sxEdit(o,"select all",function(g){sxEnsure(g);for(var i=0;i<g.n;i++)g.sel[i]=g.mask[i]?0:1});
+  else if(a==="sx-none")sxEdit(o,"clear selection",function(g){if(g.sel)g.sel.fill(0)});
+  else if(a==="sx-restore")sxEdit(o,"bring deleted splats back",function(g){if(g.mask)g.mask.fill(0)});
+  else if(a==="sx-floFind"){
+    var fl=findFloaters(o.gs,SX.flo),k=0;for(var i=0;i<fl.length;i++)k+=fl[i];
+    sxEdit(o,"find floaters",function(g){sxEnsure(g);g.sel.set(fl)});
+    setStatus(k?k.toLocaleString("en-GB")+" floaters selected. Press Delete selected to remove them, or raise/lower Strength.":"No floaters found at this strength.",k?"ok":"warn");
+  }
+}
+/* ---- mouse / pen / touch (one finger) ---- */
+function sxDown(e){
+  if(curTool!=="select"||MODE!=="edit"||GUIHID||e.button!==0||!LASTM)return;
+  var o=selObj();if(!o)return;
+  e.stopImmediatePropagation();e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,mode=e.shiftKey?"add":e.altKey?"remove":SX.mode;
+  stopAnim();sxEnsure(o.gs);
+  var d={id:e.pointerId,o:o,mode:mode,b0:sxSnap(o.gs),base:o.gs.sel.slice(),x0:x,y0:y,x:x,y:y,pts:[x,y]};
+  SX.drag=d;
+  if(SX.tool==="sphere"){
+    var pt=pickAt(e.clientX,e.clientY);
+    if(pt){SX.sph={c:pt,r:SX.rad};var hit=new Uint8Array(o.gs.n);sxSphereHits(o,pt,SX.rad,hit);sxCompose(o.gs,d.base,hit,mode);d.sphere=true;sxChanged(o,false)}
+    else setStatus("Click on a part of the splat to put the sphere there.","warn");
+  }else if(SX.tool==="brush"){
+    d.pr=sxProj(o);d.hit=new Uint8Array(o.gs.n);sxStamp(d,x,y,x,y);
+  }
+  dirty=true;
+}
+function sxStamp(d,xa,ya,xb,yb){
+  var g=d.o.gs,r=SX.brush,len=Math.hypot(xb-xa,yb-ya),steps=Math.max(1,Math.ceil(len/(r*0.5))),i;
+  for(i=1;i<=steps;i++){var t=i/steps;sxShapeHits(d.pr,{t:"circle",x:xa+(xb-xa)*t,y:ya+(yb-ya)*t,r:r},d.hit)}
+  sxCompose(g,d.base,d.hit,d.mode);sxChanged(d.o,false);
+}
+function sxMove(e){
+  var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,d=SX.drag;
+  if(curTool==="select"){SX.cur={x:x,y:y};dirty=true}
+  if(!d||e.pointerId!==d.id)return;
+  e.stopImmediatePropagation();
+  if(SX.tool==="brush"){sxStamp(d,d.x,d.y,x,y)}
+  else if(SX.tool==="lasso"){var n=d.pts.length;if(Math.hypot(x-d.pts[n-2],y-d.pts[n-1])>3)d.pts.push(x,y)}
+  d.x=x;d.y=y;dirty=true;
+}
+function sxUp(e){
+  var d=SX.drag;if(!d||e.pointerId!==d.id)return;
+  e.stopImmediatePropagation();SX.drag=null;var o=d.o,g=o.gs;
+  if(SX.tool==="rect"||SX.tool==="lasso"){
+    var pr=sxProj(o),hit=new Uint8Array(g.n);
+    if(SX.tool==="rect"){var x0=Math.min(d.x0,d.x),x1=Math.max(d.x0,d.x),y0=Math.min(d.y0,d.y),y1=Math.max(d.y0,d.y);if(x1-x0>2||y1-y0>2)sxShapeHits(pr,{t:"rect",x0:x0,x1:x1,y0:y0,y1:y1},hit)}
+    else if(d.pts.length>=6)sxShapeHits(pr,{t:"poly",pts:d.pts},hit);
+    sxCompose(g,d.base,hit,d.mode);
+  }
+  sxCommit(o,"select splats",d.b0);dirty=true;
+}
+function drawSelOverlay(c){
+  var d=SX.drag,ACC="#ff7849";
+  c.save();c.lineWidth=1.6;c.strokeStyle=ACC;c.fillStyle="rgba(255,120,73,0.12)";
+  if(SX.tool==="brush"&&SX.cur){c.beginPath();c.arc(SX.cur.x,SX.cur.y,SX.brush,0,6.2832);c.stroke()}
+  if(d&&SX.tool==="rect"){c.beginPath();c.rect(Math.min(d.x0,d.x),Math.min(d.y0,d.y),Math.abs(d.x-d.x0),Math.abs(d.y-d.y0));c.fill();c.setLineDash([6,4]);c.stroke()}
+  if(d&&SX.tool==="lasso"&&d.pts.length>=4){c.beginPath();c.moveTo(d.pts[0],d.pts[1]);for(var i=2;i<d.pts.length;i+=2)c.lineTo(d.pts[i],d.pts[i+1]);c.closePath();c.fill();c.setLineDash([6,4]);c.stroke()}
+  if(SX.tool==="sphere"&&SX.sph&&LASTM){
+    var p=projW(SX.sph.c);if(p){var L=LASTM,rp=SX.sph.r/p[2]*L.P[5]*0.5*L.vh/L.k;c.beginPath();c.arc(p[0],p[1],rp,0,6.2832);c.stroke()}
+  }
+  c.restore();
+}
+cv.addEventListener("pointerdown",sxDown,true);cv.addEventListener("pointermove",sxMove,true);
+cv.addEventListener("pointerup",sxUp,true);cv.addEventListener("pointercancel",sxUp,true);
+document.addEventListener("keydown",function(e){
+  var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT"||$("editor").hidden)return;
+  if((e.ctrlKey||e.metaKey)&&!e.altKey){
+    if(e.code==="KeyZ"){e.preventDefault();if(e.shiftKey)redoDo();else undoDo()}
+    else if(e.code==="KeyY"){e.preventDefault();redoDo()}
+    return;
+  }
+  if(curTool==="select"&&(e.code==="Delete"||e.code==="Backspace")){e.preventDefault();sxAct("sx-del",null)}
 });
 
 /* ---------- projects (saved on this device) ---------- */
@@ -2500,6 +2744,7 @@ function upgradeRec(p){
   var v=p.v||1;
   if(v<2){var st=p.settings||(p.settings={});if(st.ctrlV!==16&&st.ctrl==="orbit")st.ctrl="fly";st.ctrlV=16}
   if(v<3){/* V021: projects may now live in a folder; nothing in the record itself changes */}
+  if(v<4){/* V023: splat objects may carry a deleted-splats mask; older projects simply have none */}
   p.v=FORMAT;return p;
 }
 function tooNew(p){return (p.v||1)>FORMAT}
@@ -2511,7 +2756,7 @@ function snapshotState(){
     view:{R:vw.R.map(r5),TG:vw.TG.map(r5),zoom:r5(vw.zoom)},mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null,
     objs:OBJS.map(function(o){var r={};Object.keys(o).forEach(function(k){
       if(k==="gs"||k==="mesh"||k==="main")return;var v=o[k];
-      r[k]=v instanceof Blob?"blob:"+v.size:Array.isArray(v)?v.map(r5):typeof v==="number"?r5(v):(v&&typeof v==="object")?JSON.parse(JSON.stringify(v,function(_,x){return typeof x==="number"?r5(x):x})):v});return r})});
+      r[k]=v instanceof Blob?"blob:"+v.size:Array.isArray(v)?v.map(r5):typeof v==="number"?r5(v):(v&&typeof v==="object")?JSON.parse(JSON.stringify(v,function(_,x){return typeof x==="number"?r5(x):x})):v});if(o.gs){var mc=0;if(o.gs.mask)for(var q=0;q<o.gs.n;q++)mc+=o.gs.mask[q];r.masked=mc}return r})});
 }
 /* ---------- presets: every setting + look + LUT, kept on this device (separate storage) and usable in any project ---------- */
 var presetDbP=null;
