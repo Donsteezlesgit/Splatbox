@@ -277,6 +277,7 @@ var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
 var VERSION="Version 031";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
+var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
 var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparent target, always re-sort */
 
 /* ---------- settings ---------- */
@@ -284,7 +285,7 @@ var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
   fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip"};
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
@@ -671,7 +672,7 @@ function applyLook(){
 var TW=2048,GSP=null,GS={};
 var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "layout(location=0) in vec2 aQ;layout(location=1) in int aIdx;\n"+
-"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;\n"+
+"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;uniform float uFar;\n"+
 "uniform vec3 uCmin;uniform vec3 uCmax;uniform int uCOn;uniform float uLit;uniform vec3 uAmb;uniform int uLN;uniform vec4 uLP[4];uniform vec3 uLC[4];uniform vec3 uCam;\n"+
 "out vec4 vCol;out vec2 vPos;\n"+
 "vec4 G(int k){int t=aIdx*3+k;return texelFetch(uG,ivec2(t%"+TW+",t/"+TW+"),0);}\n"+
@@ -702,7 +703,7 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "  for(int i=0;i<4;i++){if(i>=uLN)break;vec3 ld;float at=1.0;if(uLP[i].w<0.5)ld=uLP[i].xyz;else{vec3 dv=uLP[i].xyz-wp;float dd=length(dv);ld=dv/max(dd,1e-4);at=1.0/(1.0+dd*dd*1.5);}L+=uLC[i]*max(dot(n,ld),0.0)*at;}\n"+
 "  rgb*=mix(vec3(1.0),L,uLit);}\n"+
 " if(uMode==2)rgb=mix(vec3(1.0,0.62,0.18),vec3(0.12,0.42,1.0),rel)*(0.55+0.45*col.a);\n"+
-" rgb=mix(rgb,uBg,uFog*rel);vCol=vec4(rgb,col.a);\n"+
+" rgb=mix(rgb,uBg,uFog*rel);if(uMode==4)rgb=vec3(d/uFar);vCol=vec4(rgb,col.a);\n"+
 "}";
 var GFS="#version 300 es\nprecision mediump float;precision highp int;in vec4 vCol;in vec2 vPos;uniform int uMode;out vec4 o;\n"+
 "void main(){float r2=dot(vPos,vPos);if(r2>9.0)discard;float a;\n"+
@@ -714,7 +715,7 @@ function initGS(){
   var pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);
   gl.bindAttribLocation(pr,0,"aQ");gl.bindAttribLocation(pr,1,"aIdx");gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){GSP=-1;try{console.error("splat shader: "+gl.getShaderInfoLog(vs)+" | "+gl.getShaderInfoLog(fs)+" | "+gl.getProgramInfoLog(pr))}catch(_){}return false}
-  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uSlice","uD0","uD1","uMode","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
+  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uSlice","uD0","uD1","uMode","uFar","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
   GS.q=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GS.q);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   dotsStale=true;return true;
 }
@@ -871,11 +872,11 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   gl.bindBuffer(gl.ARRAY_BUFFER,GS.q);gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);gl.vertexAttribDivisor(0,0);
   gl.uniformMatrix4fv(u.uView,false,V);gl.uniformMatrix4fv(u.uProj,false,Pm);
   gl.uniform2f(u.uVp,w,h);gl.uniform1f(u.uPx,h/(2*tyv));gl.uniform1f(u.uMul,S.size/1.1);
-  gl.uniform1f(u.uFog,Z.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,Z.focus);gl.uniform1f(u.uDef,Z.defocus);gl.uniform1f(u.uFR,Z.focusRange);
+  gl.uniform1f(u.uFog,DEPTHP?0:Z.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,Z.focus);gl.uniform1f(u.uDef,DEPTHP?0:Z.defocus);gl.uniform1f(u.uFR,Z.focusRange);
   gl.uniform2f(u.uSlice,Math.min(Z.sliceA,Z.sliceB),Math.max(Z.sliceA,Z.sliceB));
   /* dist here is the depth of the camera's focus point, so the depth effects stay put when the view moves */
-  gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1i(u.uMode,Z.render==="solid"?1:Z.render==="depth"?2:Z.render==="points"?3:0);
-  gl.uniform1f(u.uLit,Z.lit>0.001?Z.lit:0);gl.uniform3f(u.uAmb,Z.amb,Z.amb,Z.amb);gl.uniform1i(u.uLN,Lt.n);gl.uniform4fv(u.uLP,Lt.lp);gl.uniform3fv(u.uLC,Lt.lc);gl.uniform3f(u.uCam,eye[0],eye[1],eye[2]);
+  gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1f(u.uFar,DEPTHP?DEPTHP.far:1);gl.uniform1i(u.uMode,DEPTHP?4:Z.render==="solid"?1:Z.render==="depth"?2:Z.render==="points"?3:0);
+  gl.uniform1f(u.uLit,!DEPTHP&&Z.lit>0.001?Z.lit:0);gl.uniform3f(u.uAmb,Z.amb,Z.amb,Z.amb);gl.uniform1i(u.uLN,Lt.n);gl.uniform4fv(u.uLP,Lt.lp);gl.uniform3fv(u.uLC,Lt.lc);gl.uniform3f(u.uCam,eye[0],eye[1],eye[2]);
   gl.uniform1i(u.uG,0);gl.uniform1i(u.uC,1);gl.uniform1i(u.uN,2);
   /* sort every object first */
   list.forEach(function(it){
@@ -1204,6 +1205,16 @@ function drawCamMarks(c){
 }
 var OFF0={y:0,p:0,z:1,x:0};
 function draw(ao){drawScene(ao);drawOverlay()}
+/* where the camera is for a frame (also used by the TouchDesigner export, which needs poses without drawing) */
+function viewNow(ao,w,h){
+  var o=ao||OFF0,vA=w/h;
+  var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
+  var zm=1+scene.R/2,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,15,110)*Math.PI/360),tyv=tyBase*tyf/TY;
+  var dist=zm*zoom*o.z*TY/tyf;
+  var po=mv(Rv,[o.x*scene.tx*zm,0,0]),tg=[TG[0]+po[0],TG[1]+po[1],-zm+TG[2]+po[2]];
+  var eo=mv(Rv,[0,0,dist]),eye=[tg[0]+eo[0],tg[1]+eo[1],tg[2]+eo[2]],upv=mv(Rv,[0,1,0]);
+  return {V:lookAt(eye,tg,upv),eye:eye,tyv:tyv,vA:vA,dist:dist};
+}
 function drawScene(ao){
   var dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(2,Math.round(cv.clientWidth*dpr/2)*2),h=Math.max(2,Math.round(cv.clientHeight*dpr/2)*2);
   if(RO){w=RO.w;h=RO.h}
@@ -1213,22 +1224,17 @@ function drawScene(ao){
   if(!scene)return;
   /* the view never shifts when a panel opens (the old recentre also broke the lens shader's screen coords) */
   var vx=0,vy=0,vw=w,vh=h;
-  if(TRANSP&&initPost()){PF.on=false;ensureFBO(vw,vh);gl.bindFramebuffer(gl.FRAMEBUFFER,PF.fbo);gl.viewport(0,0,vw,vh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}
+  if(DEPTHP&&ensureDF(vw,vh)){PF.on=false;gl.bindFramebuffer(gl.FRAMEBUFFER,DF.fbo);gl.viewport(0,0,vw,vh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}
+  else if(TRANSP&&initPost()){PF.on=false;ensureFBO(vw,vh);gl.bindFramebuffer(gl.FRAMEBUFFER,PF.fbo);gl.viewport(0,0,vw,vh);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)}
   else beginPost(vx,vy,vw,vh,bg);
-  var o=ao||OFF0;
-  var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
-  var zm=1+scene.R/2,vA=w/h,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,15,110)*Math.PI/360),tyv=tyBase*tyf/TY;
-  var dist=zm*zoom*o.z*TY/tyf;lastTyv=tyv;
-  var po=mv(Rv,[o.x*scene.tx*zm,0,0]),tg=[TG[0]+po[0],TG[1]+po[1],-zm+TG[2]+po[2]];
-  var eo=mv(Rv,[0,0,dist]),eye=[tg[0]+eo[0],tg[1]+eo[1],tg[2]+eo[2]],upv=mv(Rv,[0,1,0]);
-  var Vm=lookAt(eye,tg,upv),Pm=persp(2*Math.atan(tyv),vA,0.01,500);
+  var vs=viewNow(ao,w,h),vA=vs.vA,tyv=vs.tyv,dist=vs.dist,eye=vs.eye,Vm=vs.V,Pm=persp(2*Math.atan(tyv),vA,0.01,500);lastTyv=tyv;
   var kk=cv.width/Math.max(1,cv.clientWidth);
   LASTM={V:Vm,P:Pm,vx:vx,vy:vy,vw:w,vh:h,k:kk,tyv:tyv,vA:vA,dist:dist,eye:eye};
   if(MODE==="edit")drawHelpers(Vm,Pm);
   var fpt=null,cc=MODE==="render"?curCam():null;
   if(cc)fpt=camFocusPt(cc);else if(scene.bb){var bb=scene.bb;fpt=[(bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2,(bb.z0+bb.z1)/2]}
   var dRef=fpt?Math.max(0.15,-(Vm[2]*fpt[0]+Vm[6]*fpt[1]+Vm[10]*fpt[2]+Vm[14])):dist;
-  if(GL2){drawMeshes(Vm,Pm,eye);drawSplats(Vm,Pm,w,h,tyv,dRef,bg,true,eye)}
+  if(GL2){if(!DEPTHP)drawMeshes(Vm,Pm,eye);drawSplats(Vm,Pm,w,h,tyv,dRef,bg,true,eye)}
   endPost();
 }
 
@@ -1823,6 +1829,9 @@ var PANES={
     seg("rfps",[["24","24 fps"],["25","25 fps"],["30","30 fps"],["60","60 fps"]])+
     (isDesk()?'<p class="lbl">Output</p>'+seg("rfmt",[["zip","PNG zip"],["prores4444","ProRes 4444"],["prores422","ProRes 422 HQ"],["dnxhr","DNxHR HQX"],["mp4","MP4 (H.264)"]])+'<p class="note">Only ProRes 4444 keeps a transparent background.</p>':'')+
     '<button class="btn primary" type="button" data-act="rFrames">'+(isDesk()?'Render':'Render PNG sequence (.zip)')+'</button>'+
+    '<p class="lbl">TouchDesigner</p><p class="note">Camera path, a 16-bit depth pass and a point cloud in one zip. Uses the size, frame rate and length above.</p>'+
+    chk("tdrgb","Include colour frames")+chk("tdply","Include point cloud (.ply)")+
+    '<button class="btn" type="button" data-act="tdExport">Export for TouchDesigner (.zip)</button>'+
     '<p class="note">Recording plays the move once and saves a video of the viewer, with your lens, look and depth effects. A transparent background skips the lens and look effects (vignette, grain, distortion, LUT).</p>'}
 };
 function syncObjFields(){
@@ -1992,13 +2001,12 @@ document.addEventListener("keydown",function(e){
   else if((c==="Delete"||c==="Backspace")&&SEL&&isGeo(SEL)&&curTool!=="select"&&!TLU.sel.length){e.preventDefault();removeObj(SEL)}
 });
 /* export every visible splat in the scene as one .ply, with moves, rotation, scale and crop baked in */
-function exportScenePLY(){
+function collectScene(){
   var C0=0.28209479177387814,parts=[],total=0,gf=S.bakeGrade?gradeFn():null;
-  setStatus("Packing the whole scene…");
   var jobs=OBJS.filter(function(o){return o.kind==="splat"&&o.vis}).map(function(o){
     return o.blob.arrayBuffer().then(function(ab){return {o:o,raw:parsePly(ab),M:ident3()}});
   });
-  Promise.all(jobs).then(function(js){
+  return Promise.all(jobs).then(function(js){
     js.forEach(function(j){
       if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.gs.ext,c=o.crop,keep=[],i;
       var cx0=e.x0+(e.x1-e.x0)*c.x0,cx1=e.x0+(e.x1-e.x0)*c.x1,cy0=e.y0+(e.y1-e.y0)*c.y0,cy1=e.y0+(e.y1-e.y0)*c.y1,cz0=e.z0+(e.z1-e.z0)*c.z0,cz1=e.z0+(e.z1-e.z0)*c.z1;
@@ -2019,6 +2027,13 @@ function exportScenePLY(){
       }
       parts.push(rows.subarray(0,k*17));total+=k;
     });
+    return {parts:parts,total:total};
+  });
+}
+function exportScenePLY(){
+  setStatus("Packing the whole scene…");
+  collectScene().then(function(r){
+    var parts=r.parts,total=r.total;
     if(!total){setStatus("Nothing visible to export.","warn");return}
     var props=["x","y","z","nx","ny","nz","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2","rot_0","rot_1","rot_2","rot_3"];
     var head="ply\nformat binary_little_endian 1.0\nelement vertex "+total+"\n"+props.map(function(p){return "property float "+p+"\n"}).join("")+"end_header\n";
@@ -2107,6 +2122,7 @@ $("popB").addEventListener("click",function(e){
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="rFrames")renderSeq();
+  else if(a==="tdExport")tdExport();
   else if(a==="cube")$("cubeIn").click();
   else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="level"){levelHorizon()}
@@ -2910,6 +2926,158 @@ function renderSeq(o){
 function rjCancel(){if(RJ)RJ.cancel=true}
 $("rjX").addEventListener("click",rjCancel);
 document.addEventListener("keydown",function(e){if(RJ&&e.code==="Escape"){e.preventDefault();rjCancel()}});
+
+/* ---------- V032: TouchDesigner export (camera path, 16-bit depth pass, point cloud) ---------- */
+function depthOK(){
+  if(!GL2)return false;
+  try{return !!gl.getExtension("EXT_color_buffer_float")}catch(e){return false}
+}
+/* a float target the splats are drawn into: R = coverage-weighted depth, A = coverage (same blending as the colour pass) */
+function ensureDF(w,h){
+  if(!depthOK())return false;
+  if(DF.fbo&&DF.w===w&&DF.h===h)return true;
+  var f32=!!gl.getExtension("EXT_float_blend");
+  if(DF.fbo){gl.deleteFramebuffer(DF.fbo);gl.deleteTexture(DF.tex);gl.deleteRenderbuffer(DF.rb);DF.fbo=null}
+  DF.tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,DF.tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,f32?gl.RGBA32F:gl.RGBA16F,w,h,0,gl.RGBA,f32?gl.FLOAT:gl.HALF_FLOAT,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  DF.rb=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,DF.rb);gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,w,h);
+  DF.fbo=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,DF.fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,DF.tex,0);gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,DF.rb);
+  var okk=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);DF.w=w;DF.h=h;DF.f32=f32;
+  if(!okk){gl.deleteFramebuffer(DF.fbo);DF.fbo=null;return false}
+  return true;
+}
+/* 16-bit depth: 0 = nothing there, 1..65535 = distance / far */
+function rReadDepth(w,h){
+  var px=new Float32Array(w*h*4);gl.bindFramebuffer(gl.FRAMEBUFFER,DF.fbo);gl.readPixels(0,0,w,h,gl.RGBA,gl.FLOAT,px);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  var out=new Uint16Array(w*h),row,i,s,o=0,a,v;
+  for(row=0;row<h;row++){s=(h-1-row)*w*4;for(i=0;i<w;i++,s+=4,o++){a=px[s+3];if(a>0.02){v=Math.round(px[s]/a*65535);out[o]=v<1?1:v>65535?65535:v}}}
+  return out;
+}
+function pngChunk(type,data){
+  var n=data.length,b=new Uint8Array(12+n),dv=new DataView(b.buffer),i;
+  dv.setUint32(0,n);for(i=0;i<4;i++)b[4+i]=type.charCodeAt(i);b.set(data,8);dv.setUint32(8+n,crc32(b.subarray(4,8+n)));return b;
+}
+/* a 16-bit greyscale PNG (canvases can't make these, so it is written by hand) */
+function png16(w,h,u16){
+  var rowB=w*2,raw=new Uint8Array(h*(rowB+1)),y,x,s,o;
+  for(y=0;y<h;y++){o=y*(rowB+1);for(x=0;x<w;x++){s=u16[y*w+x];raw[o+1+x*2]=s>>8;raw[o+2+x*2]=s&255}}
+  var ih=new Uint8Array(13),dv=new DataView(ih.buffer);dv.setUint32(0,w);dv.setUint32(4,h);ih[8]=16;
+  return new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate"))).arrayBuffer().then(function(z){
+    var sig=new Uint8Array([137,80,78,71,13,10,26,10]),a=pngChunk("IHDR",ih),b=pngChunk("IDAT",new Uint8Array(z)),c=pngChunk("IEND",new Uint8Array(0)),out=new Uint8Array(8+a.length+b.length+c.length);
+    out.set(sig,0);out.set(a,8);out.set(b,8+a.length);out.set(c,8+a.length+b.length);return out;
+  });
+}
+function f6(v){return +v.toFixed(6)}
+function tdCamInfo(poses,w,h,fps,far,name){
+  var prev=null,asp=w/h,csv="frame,time,tx,ty,tz,rx,ry,rz,fov_y,fov_x\n",chan="",cam=[];
+  poses.forEach(function(p,i){
+    var V=p.V,rt=[V[0],V[4],V[8]],up=[V[1],V[5],V[9]],bk=[V[2],V[6],V[10]],e=[p.eye[0],p.eye[1],p.eye[2]-ZC];
+    var m=[[rt[0],up[0],bk[0]],[rt[1],up[1],bk[1]],[rt[2],up[2],bk[2]]];
+    var sy=-m[2][0],ry=Math.asin(clamp(sy,-1,1)),rx,rz;
+    if(Math.abs(sy)<0.99999){rx=Math.atan2(m[2][1],m[2][2]);rz=Math.atan2(m[1][0],m[0][0])}else{rx=Math.atan2(-m[1][2],m[1][1]);rz=0}
+    var r=[rx,ry,rz].map(function(a){return a*180/Math.PI});
+    if(prev)r=r.map(function(a,j){while(a-prev[j]>180)a-=360;while(a-prev[j]<-180)a+=360;return a});
+    prev=r;
+    var fy=2*Math.atan(p.tyv)*180/Math.PI,fx=2*Math.atan(p.tyv*asp)*180/Math.PI,t=i/fps;
+    var row=[i+1,f6(t),f6(e[0]),f6(e[1]),f6(e[2]),f6(r[0]),f6(r[1]),f6(r[2]),f6(fy),f6(fx)];
+    csv+=row.join(",")+"\n";chan+=row.slice(0,1).concat(row.slice(2,8)).join(" ")+"\n";
+    cam.push({frame:i+1,time:f6(t),position:[f6(e[0]),f6(e[1]),f6(e[2])],rotation_xyz_deg:[f6(r[0]),f6(r[1]),f6(r[2])],
+      matrix:[f6(rt[0]),f6(up[0]),f6(bk[0]),f6(e[0]),f6(rt[1]),f6(up[1]),f6(bk[1]),f6(e[1]),f6(rt[2]),f6(up[2]),f6(bk[2]),f6(e[2])],fov_y:f6(fy),fov_x:f6(fx)});
+  });
+  var json={format:"splatbox-touchdesigner",version:1,name:name,width:w,height:h,fps:fps,frames:poses.length,
+    space:"Right-handed, Y up, the camera looks down -Z (same as TouchDesigner). Units are scene units, the same in this file, the depth frames and points.ply.",
+    depth:{files:"depth/*.png",encoding:"16-bit greyscale PNG. Planar distance along the view direction = value / 65535 * far. 0 means no splat was there.",far:far},
+    matrix_layout:"12 numbers, row-major 3x4: [r00 r01 r02 tx, r10 r11 r12 ty, r20 r21 r22 tz]. The columns are the camera's right, up and back axes, then its position.",
+    rotation_layout:"rotation_xyz_deg are degrees, rotate order XYZ (matrix = Rz*Ry*Rx), unwrapped so they never jump by 360.",
+    camera:cam};
+  return {json:json,csv:csv,chan:chan};
+}
+function tdReadme(w,h,fps,n,far,rgb,ply){
+  return "Splatbox -> TouchDesigner\n\n"+
+  "camera.json   Per-frame camera: position, 3x4 matrix, rotation (degrees, XYZ), vertical and horizontal field of view.\n"+
+  "camera.csv    The same as a table: frame,time,tx,ty,tz,rx,ry,rz,fov_y,fov_x (Table DAT, or CHOP File In).\n"+
+  "camera.chan   frame tx ty tz rx ry rz, one line per frame (CHOP File In).\n"+
+  "depth/        16-bit greyscale PNGs, "+n+" frames at "+w+"x"+h+". Distance = value / 65535 * "+far+" scene units. 0 = nothing there.\n"+
+  (rgb?"rgb/          Colour frames, the same frames as a normal render.\n":"")+
+  (ply?"points.ply    Coloured point cloud of the visible splats (positions and colour only).\n":"")+
+  "\nSpace: right-handed, Y up, the camera looks down -Z. That is TouchDesigner's own convention, so nothing needs flipping.\n"+
+  "Frame rate: "+fps+" fps. Frame 1 is time 0.\n\n"+
+  "Tips\n- Load depth with a Movie File In TOP and set its pixel format to 16-bit fixed so you keep all 65535 steps.\n"+
+  "- If the camera orientation looks wrong, use the matrices in camera.json: they are exact, and the Euler angles depend on the rotate order you pick.\n";
+}
+function pointsPLY(r){
+  var n=0,k,j,o,C0=0.28209479177387814;
+  r.parts.forEach(function(p){for(k=0;k<p.length;k+=17)if(1/(1+Math.exp(-p[k+9]))>=0.2)n++});
+  var head=new TextEncoder().encode("ply\nformat binary_little_endian 1.0\ncomment Splatbox point cloud, right-handed, Y up\nelement vertex "+n+"\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n");
+  var out=new Uint8Array(head.length+n*15),dv=new DataView(out.buffer);o=head.length;out.set(head,0);
+  r.parts.forEach(function(p){for(k=0;k<p.length;k+=17){
+    if(1/(1+Math.exp(-p[k+9]))<0.2)continue;
+    dv.setFloat32(o,p[k],true);dv.setFloat32(o+4,p[k+1],true);dv.setFloat32(o+8,p[k+2],true);
+    for(j=0;j<3;j++){var c=0.5+C0*p[k+6+j];out[o+12+j]=Math.round(255*(c<0?0:c>1?1:c))}
+    o+=15}});
+  return {bytes:out,n:n};
+}
+/* one zip: camera path (json/csv/chan), 16-bit depth frames, optional colour frames and point cloud. Resolves with the zip or null. */
+function tdExport(o){
+  o=o||{};if(RJ||!scene)return Promise.resolve(null);
+  if(!depthOK()){setStatus("The depth pass needs WebGL 2 with float buffers, which this browser doesn't have.","bad");return Promise.resolve(null)}
+  if(MODE!=="render")setMode("render");
+  if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
+  stopAnim();closeTool();
+  var sz=o.w?[o.w,o.h]:rSize(),w=sz[0]&~1,h=sz[1]&~1,fps=o.fps||(+S.rfps)||30,dur=Math.max(0.5,S.dur||6),n=o.frames||Math.max(1,Math.round(dur*fps));
+  var wantRGB=o.rgb!=null?o.rgb:S.tdrgb!==false,wantPly=o.ply!=null?o.ply:S.tdply!==false;
+  if(n*w*h*(wantRGB?4:2.5)>2.2e9){setStatus("That's too much for one zip ("+n+" frames at "+w+"×"+h+"). Pick a smaller size or a shorter length.","bad");return Promise.resolve(null)}
+  var useTl=tlHasKeys(),saveT=TL.t,z=zipNew(),base=(photoName||"splatbox").replace(/[^\w-]+/g,"_"),far=1,poses=[],i;
+  var splats=OBJS.filter(function(q){return q.kind==="splat"&&q.vis&&q.gs&&q.gs.ext});
+  function frameAO(k){var t=k/fps;if(useTl){tlSetTime(t);return null}return camOff(S.cam,t/dur)}
+  RJ={cancel:false,i:0,n:n};rjUI(true,"Working out the camera path…",0);
+  /* pass 1: the camera on every frame, and the farthest the scene gets from it (so depth uses the full 16 bits) */
+  for(i=0;i<n;i++){
+    var vs=viewNow(frameAO(i),w,h),V=vs.V;
+    poses.push({V:V.slice(),eye:vs.eye.slice(),tyv:vs.tyv});
+    splats.forEach(function(q){
+      var e=q.gs.ext,VM=mat4mul(V,objModel(q)),cx=[e.x0,e.x1],cy=[e.y0,e.y1],cz=[e.z0,e.z1],a,b,c,d;
+      for(a=0;a<2;a++)for(b=0;b<2;b++)for(c=0;c<2;c++){d=-(VM[2]*cx[a]+VM[6]*cy[b]+VM[10]*cz[c]+VM[14]);if(d>far)far=d}
+    });
+  }
+  far=Math.ceil(far*1.02*100)/100;
+  rBegin(w,h,false);
+  return new Promise(function(res){
+    function done(x){DEPTHP=null;rEnd();RJ=null;rjUI(false);tlSetTime(saveT);dirty=true;res(x)}
+    function fail(e){setStatus("The export stopped: "+(e&&e.message||e),"bad");done(null)}
+    function put(name,txt){zipAdd(z,name,new TextEncoder().encode(txt))}
+    function finish(){
+      rjUI(true,"Packing…",0.97);
+      var info=tdCamInfo(poses,w,h,fps,far,base);
+      put("camera.json",JSON.stringify(info.json,null,1));put("camera.csv",info.csv);put("camera.chan",info.chan);put("README.txt",tdReadme(w,h,fps,n,far,wantRGB,wantPly));
+      var pc=wantPly?collectScene():Promise.resolve(null),pn=0;
+      pc.then(function(r){
+        if(r&&r.total){var pp=pointsPLY(r);pn=pp.n;if(pn)zipAdd(z,"points.ply",pp.bytes)}
+        var blob=zipEnd(z);saveBlob(blob,"splatbox-"+base+"-touchdesigner.zip");
+        setStatus("Exported "+n+" frames of depth"+(wantRGB?" and colour":"")+", the camera path"+(pn?" and "+pn.toLocaleString("en-GB")+" points":"")+" ("+(blob.size/1e6).toFixed(1)+" MB).","ok");done(blob);
+      })["catch"](fail);
+    }
+    function step(k){
+      if(RJ.cancel){setStatus("Export cancelled.","warn");return done(null)}
+      if(k>=n)return finish();
+      var ao=frameAO(k),pRGB=null,nm=String(k+1).padStart(4,"0"),dp;
+      try{
+        if(wantRGB){drawScene(ao);pRGB=toBlob(cv,"image/png")}
+        DEPTHP={far:far};drawScene(ao);DEPTHP=null;dp=rReadDepth(w,h);
+      }catch(e){return fail(e)}
+      Promise.all([pRGB?pRGB.then(function(b){return b?b.arrayBuffer():null}):null,png16(w,h,dp)]).then(function(r){
+        if(wantRGB){if(!r[0])throw new Error("A colour frame came out empty.");zipAdd(z,"rgb/"+base+"_rgb_"+nm+".png",new Uint8Array(r[0]))}
+        zipAdd(z,"depth/"+base+"_depth_"+nm+".png",r[1]);
+        RJ.i=k+1;rjUI(true,"Frame "+(k+1)+" of "+n,(k+1)/n*0.95);setTimeout(function(){step(k+1)},0);
+      })["catch"](fail);
+    }
+    step(0);
+  });
+}
 
 /* ---------- projects (saved on this device) ---------- */
 var dbP=null;
