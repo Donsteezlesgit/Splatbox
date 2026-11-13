@@ -66,6 +66,13 @@ async def run(br,site,fx):
     # bring back + undo history is per project
     await t.ev("openTool('select')"); await t.wait(400); await t.pg.click("[data-act=sx-restore]"); await t.wait(300)
     ok("bring deleted back clears the mask",(await counts(t))["del"]==0)
+    # removing a whole object with Delete can be undone; Delete in the Select tool only deletes the selection
+    await t.ev("closeTool()"); await t.ev("SEL=OBJS[0]"); await t.pg.keyboard.press("Delete"); await t.wait(500)
+    ok("Delete with no tool open removes the object",(await t.ev("OBJS.length"))==0)
+    await t.pg.keyboard.press("Control+z"); await t.wait(1500)
+    ok("Ctrl+Z brings the removed object back",(await t.ev("OBJS.length"))==1 and (await t.ev("OBJS[0].gs.n"))==n,await t.ev("OBJS.length"))
+    await t.ev("SEL=OBJS[0];openTool('select')"); await t.wait(400); await t.pg.keyboard.press("Backspace"); await t.wait(400)
+    ok("Backspace in the Select tool leaves the object alone",(await t.ev("OBJS.length"))==1)
     # floater finder on a synthetic cloud: dense blob plus 20 loners
     r=json.loads(await t.ev("""(function(){var n=6020,pos=new Float32Array(n*3),al=new Float32Array(n).fill(0.9),i,s=7;
       function rnd(){s=(s*16807)%2147483647;return s/2147483647}

@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 024
+- Fixed: Backspace/Delete in the Select tool no longer removes the whole splat object; it only deletes the selected splats.
+- Removing an object (Delete with no tool open) can now be undone with Ctrl+Z.
+
 ## Version 023
 - New Select tool (left rail, between Crop and Orient). Select splats with Brush, Box, Lasso or Sphere. Shift adds, Alt removes, right-drag still moves the view.
 - Delete selected, Keep only selected, Invert, Select all, Clear, and Bring deleted back. Deleting never changes your splat file: it is a mask that is saved with the project and left out of exports.
