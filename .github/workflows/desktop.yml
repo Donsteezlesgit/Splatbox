@@ -36,6 +36,14 @@ jobs:
         if: steps.ex.outputs.exists == 'false'
         working-directory: desktop
         run: npm ci
+      - name: Check the bundled ffmpeg has the encoders we need
+        if: steps.ex.outputs.exists == 'false'
+        working-directory: desktop
+        shell: bash
+        run: |
+          FF=$(node -e "console.log(require('@ffmpeg-installer/ffmpeg').path)")
+          "$FF" -hide_banner -encoders > enc.txt
+          for e in prores_ks dnxhd libx264; do grep -q " $e " enc.txt || { echo "missing encoder $e"; exit 1; }; done
       - name: Build installer
         if: steps.ex.outputs.exists == 'false'
         working-directory: desktop

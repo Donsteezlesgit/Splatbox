@@ -2,7 +2,7 @@
 import subprocess, time, sys, os, json
 from playwright.sync_api import sync_playwright
 D="/home/claude/donsteezlesgit/splatbox/desktop"
-p=subprocess.Popen(["xvfb-run","-a",D+"/node_modules/.bin/electron",D,"--no-sandbox","--use-angle=swiftshader","--enable-unsafe-swiftshader","--ignore-gpu-blocklist","--remote-debugging-port=9333"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+p=subprocess.Popen(["xvfb-run","-a",D+"/node_modules/.bin/electron",D,"--no-sandbox","--use-angle=swiftshader","--enable-unsafe-swiftshader","--ignore-gpu-blocklist","--remote-debugging-port=9333"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,start_new_session=True)
 try:
     with sync_playwright() as pw:
         b=None
@@ -33,4 +33,4 @@ try:
           return o}""")
         print(json.dumps(r))
 finally:
-    p.terminate()
+    import signal;os.killpg(os.getpgid(p.pid),signal.SIGKILL)

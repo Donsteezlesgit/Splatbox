@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 031
+- Desktop app: render straight to ProRes 4444 (with transparency), ProRes 422 HQ, DNxHR HQX or MP4 (H.264). Pick it under Output in the Capture panel; PNG zip is still there.
+- ffmpeg is bundled inside the app, so there is nothing to install. It encodes frame by frame as the render runs, and asks where to save first.
+- Only ProRes 4444 keeps a transparent background; the others say so instead of rendering a wrong result.
+- Web version unchanged (PNG zip only).
+
 ## Version 030
 - Windows desktop app (Electron). Same app, installed per-user, runs offline.
 - Updates itself in place from GitHub Releases: checks on launch and every 4 hours, then offers "Restart now". One install, no pile of exes.

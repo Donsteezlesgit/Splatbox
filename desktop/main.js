@@ -1,6 +1,7 @@
 // Splatbox desktop shell. Serves the released app from an app:// origin (stable storage, secure context)
 // and updates itself in place from GitHub Releases.
-const { app, BrowserWindow, protocol, session, shell, dialog, Menu } = require("electron");
+const { app, BrowserWindow, protocol, session, shell, dialog, Menu, ipcMain } = require("electron");
+const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { Readable } = require("stream");
@@ -33,6 +34,77 @@ function serve(req) {
     headers: { "Content-Type": MIME[path.extname(file).toLowerCase()] || "application/octet-stream", "Content-Length": String(st.size) }
   });
 }
+
+/* ---------- video encoding: PNG frames in, ProRes / DNxHR / H.264 out (bundled ffmpeg) ---------- */
+const TESTING = !!process.env.SPLATBOX_TEST;
+const BT709 = ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709"];
+const FORMATS = {
+  prores4444: { ext: "mov", label: "ProRes 4444", args: (t) => ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", t ? "yuva444p10le" : "yuv444p10le", "-vendor", "apl0"].concat(t ? ["-alpha_bits", "16"] : []) },
+  prores422: { ext: "mov", label: "ProRes 422 HQ", args: () => ["-c:v", "prores_ks", "-profile:v", "hq", "-pix_fmt", "yuv422p10le", "-vendor", "apl0"] },
+  dnxhr: { ext: "mov", label: "DNxHR HQX", args: () => ["-c:v", "dnxhd", "-profile:v", "dnxhr_hqx", "-pix_fmt", "yuv422p10le"] },
+  mp4: { ext: "mp4", label: "H.264 MP4", args: () => ["-c:v", "libx264", "-preset", "medium", "-crf", "14", "-pix_fmt", "yuv420p", "-movflags", "+faststart"] }
+};
+const encoders = new Map();
+let encSeq = 0;
+function ffmpegPath() { return require("@ffmpeg-installer/ffmpeg").path.replace("app.asar" + path.sep, "app.asar.unpacked" + path.sep); }
+function encWrite(e, buf) {
+  return new Promise((res, rej) => {
+    if (e.dead) return rej(new Error(e.err || "ffmpeg stopped"));
+    e.pend = () => (e.dead ? rej(new Error(e.err || "ffmpeg stopped")) : res());
+    if (e.p.stdin.write(buf)) { e.pend = null; res(); }
+    else e.p.stdin.once("drain", () => { const f = e.pend; e.pend = null; if (f) f(); });
+  });
+}
+ipcMain.handle("enc:start", async (ev, o) => {
+  const f = FORMATS[o && o.fmt];
+  if (!f) throw new Error("Unknown format");
+  const base = String(o.name || "splatbox").replace(/[^\w-]+/g, "_");
+  let out;
+  if (process.env.SPLATBOX_TEST_OUT) out = path.join(process.env.SPLATBOX_TEST_OUT, base + "." + f.ext);
+  else {
+    const r = await dialog.showSaveDialog(win || undefined, { title: "Save " + f.label, defaultPath: path.join(app.getPath("videos"), base + "." + f.ext), filters: [{ name: f.label, extensions: [f.ext] }] });
+    if (r.canceled || !r.filePath) return null;
+    out = r.filePath;
+  }
+  const fps = Math.max(1, Math.min(240, +o.fps || 30));
+  const args = ["-y", "-hide_banner", "-loglevel", "error", "-f", "image2pipe", "-framerate", String(fps), "-c:v", "png", "-i", "-",
+    "-vf", "scale=out_color_matrix=bt709:out_range=tv"].concat(BT709, f.args(!!o.transp), ["-an", out]);
+  const p = spawn(ffmpegPath(), args, { stdio: ["pipe", "ignore", "pipe"], windowsHide: true });
+  const e = { p, out, err: "", dead: false, pend: null, closed: null, bytes: 0 };
+  e.closed = new Promise((res) => p.on("close", (code) => { e.dead = true; e.code = code; if (e.pend) e.pend(); res(code); }));
+  p.on("error", (er) => { e.dead = true; e.err = String(er.message || er); if (e.pend) e.pend(); });
+  p.stderr.on("data", (d) => { e.err = (e.err + d).slice(-2000); });
+  p.stdin.on("error", () => { e.dead = true; if (e.pend) e.pend(); });
+  const id = ++encSeq;
+  encoders.set(id, e);
+  return id;
+});
+ipcMain.handle("enc:frame", (ev, id, bytes) => {
+  const e = encoders.get(id);
+  if (!e) throw new Error("No such encode");
+  return encWrite(e, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
+});
+ipcMain.handle("enc:finish", async (ev, id) => {
+  const e = encoders.get(id);
+  if (!e) throw new Error("No such encode");
+  encoders.delete(id);
+  if (!e.dead) e.p.stdin.end();
+  const code = await e.closed;
+  if (code !== 0) { try { fs.unlinkSync(e.out); } catch (er) {} throw new Error("ffmpeg failed: " + (e.err || "code " + code).trim()); }
+  const size = fs.statSync(e.out).size;
+  if (!TESTING) shell.showItemInFolder(e.out);
+  return { path: e.out, name: path.basename(e.out), bytes: size };
+});
+ipcMain.handle("enc:cancel", async (ev, id) => {
+  const e = encoders.get(id);
+  if (!e) return false;
+  encoders.delete(id);
+  try { e.p.kill(); } catch (er) {}
+  await e.closed;
+  try { fs.unlinkSync(e.out); } catch (er) {}
+  return true;
+});
+app.on("before-quit", () => { encoders.forEach((e) => { try { e.p.kill(); } catch (er) {} }); });
 
 function createWindow() {
   win = new BrowserWindow({

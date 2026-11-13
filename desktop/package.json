@@ -12,6 +12,7 @@
     "dist": "node prepare.js && electron-builder --win --publish never"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "electron-updater": "^6.8.11"
   },
   "devDependencies": {
@@ -21,10 +22,26 @@
   "build": {
     "appId": "com.maxthompson.splatbox",
     "productName": "Splatbox",
-    "directories": { "output": "dist" },
-    "files": ["main.js", "preload.js", "www/**"],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "www/**"
+    ],
     "artifactName": "Splatbox-Setup-${version}.exe",
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "icon.png" },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.png"
+    },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
@@ -33,6 +50,16 @@
       "createStartMenuShortcut": true,
       "deleteAppDataOnUninstall": false
     },
-    "publish": [{ "provider": "github", "owner": "Donsteezlesgit", "repo": "Splatbox", "releaseType": "release" }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Donsteezlesgit",
+        "repo": "Splatbox",
+        "releaseType": "release"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/@ffmpeg-installer/**"
+    ]
   }
 }
