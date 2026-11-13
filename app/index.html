@@ -800,6 +800,7 @@ function uploadGSGeo(g){
   texNearest(g.tn);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,TW,g.ch,0,gl.RGBA,gl.UNSIGNED_BYTE,g.nrm);
   g.idx=new Int32Array(g.n);for(var i=0;i<g.n;i++)g.idx[i]=i;
   g.cnt=new Uint32Array(65537);g.key=new Uint16Array(g.n);g.dd=new Float32Array(g.n);g.lastV=null;g.lastT=0;g.ibReady=false;
+  if(g.wId){try{if(SW)SW.postMessage({t:'free',id:g.wId})}catch(_){}delete SWM[g.wId];g.wId=0;g.wBusy=false}
   uploadGSColour(g);
 }
 function uploadGSColour(g){
@@ -808,11 +809,40 @@ function uploadGSColour(g){
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,TW,g.ch,0,gl.RGBA,gl.UNSIGNED_BYTE,g.col);
 }
 function freeGS(g){
-  if(!g||!gl)return;try{if(g.tg){gl.deleteTexture(g.tg);gl.deleteTexture(g.tc);gl.deleteTexture(g.tn);gl.deleteBuffer(g.ib)}}catch(_){}g.tg=g.tc=g.tn=g.ib=null;
+  if(!g||!gl)return;if(g.wId){try{if(SW)SW.postMessage({t:'free',id:g.wId})}catch(_){}delete SWM[g.wId];g.wId=0;g.wBusy=false}try{if(g.tg){gl.deleteTexture(g.tg);gl.deleteTexture(g.tc);gl.deleteTexture(g.tn);gl.deleteBuffer(g.ib)}}catch(_){}g.tg=g.tc=g.tn=g.ib=null;
 }
 function allGS(){
   var out=[];OBJS.forEach(function(o){if(o.kind==="splat"&&o.gs)out.push(o.gs)});
   if(scene&&scene.gs&&out.indexOf(scene.gs)<0)out.push(scene.gs);return out;
+}
+/* V032: big scenes sort in a background thread so dragging stays smooth. The picture uses the last finished order until the new one arrives.
+   Only a lone splat object sorts this way (several overlapping objects need the in-thread depths); renders and the first sort always wait. */
+var SORT_ASYNC_N=300000,SW=null,SWID=0,SWM={};
+function sortWorker(){
+  if(SW!==null)return SW||null;
+  try{
+    var src="var P={};onmessage=function(e){var m=e.data;if(m.t==='pos'){P[m.id]={p:m.pos,n:m.pos.length/3,cnt:new Uint32Array(65537)};return}if(m.t==='free'){delete P[m.id];return}"+
+    "var q=P[m.id];if(!q)return;var n=q.n,p=q.p,a=m.v[0],b=m.v[1],c=m.v[2],d0=m.v[3],dd=new Float32Array(n),key=new Uint16Array(n),idx=new Int32Array(n),cnt=q.cnt,i,mn=1e9,mx=-1e9,v;"+
+    "for(i=0;i<n;i++){v=-(a*p[i*3]+b*p[i*3+1]+c*p[i*3+2]+d0);dd[i]=v;if(v<mn)mn=v;if(v>mx)mx=v}var sc=65535/Math.max(1e-6,mx-mn);cnt.fill(0);"+
+    "for(i=0;i<n;i++){var k=((dd[i]-mn)*sc)|0;key[i]=k;cnt[k]++}var pos=0,k2;for(k2=65535;k2>=0;k2--){var cc=cnt[k2];cnt[k2]=pos;pos+=cc}"+
+    "for(i=0;i<n;i++)idx[cnt[key[i]]++]=i;postMessage({id:m.id,idx:idx,mn:mn,mx:mx,v:m.v},[idx.buffer])}";
+    var w=new Worker(URL.createObjectURL(new Blob([src],{type:"text/javascript"})));
+    w.onmessage=function(e){
+      var m=e.data,g=SWM[m.id];if(!g)return;
+      g.wBusy=false;if(!g.ib||g.wId!==m.id)return;
+      gl.bindBuffer(gl.ARRAY_BUFFER,g.ib);gl.bufferData(gl.ARRAY_BUFFER,m.idx,gl.DYNAMIC_DRAW);
+      g.lastV=m.v;g.lastT=performance.now();g.dmn=m.mn;g.dmx=m.mx;g.ibReady=true;g.wDone=(g.wDone||0)+1;dirty=true;
+    };
+    w.onerror=function(){SW=0;Object.keys(SWM).forEach(function(k){var g=SWM[k];g.wBusy=false;g.wId=0});SWM={}};
+    SW=w;
+  }catch(_){SW=0}
+  return SW||null;
+}
+function sortGSAsync(g,VM){
+  var w=sortWorker();if(!w)return false;
+  if(!g.wId){g.wId=++SWID;SWM[g.wId]=g;w.postMessage({t:"pos",id:g.wId,pos:g.pos.slice()})}
+  if(g.wBusy)return true;
+  g.wBusy=true;w.postMessage({t:"sort",id:g.wId,v:[VM[2],VM[6],VM[10],VM[14]]});return true;
 }
 function sortGS(g,VM){
   var n=g.n,P=g.pos,a=VM[2],b=VM[6],c=VM[10],d0=VM[14],dd=g.dd,i,mn=1e9,mx=-1e9,v;
@@ -890,7 +920,8 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
     var g=it.o.gs,VM=it.VM,lv=g.lastV;
     var ch=!lv||Math.abs(lv[0]-VM[2])+Math.abs(lv[1]-VM[6])+Math.abs(lv[2]-VM[10])>2e-4||Math.abs(lv[3]-VM[14])>2e-3;
     if(ch){
-      if(FORCESORT||!lv||now-g.lastT>45||!g.ibReady){sortGS(g,VM);g.ibReady=true}
+      if(!FORCESORT&&lv&&g.ibReady&&list.length===1&&g.n>=SORT_ASYNC_N&&sortGSAsync(g,VM)){}
+      else if(FORCESORT||!lv||now-g.lastT>45||!g.ibReady){sortGS(g,VM);g.ibReady=true}
       else{clearTimeout(gsTrail);gsTrail=setTimeout(function(){dirty=true},70)}
     }
   });
