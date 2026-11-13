@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 025
+- New: timeline engine. Camera position, rotation, lens and focus distance, object transforms and visibility, light intensity, crop boxes and the colour/lens/depth settings can all hold keyframes.
+- Keys are saved in the project (format 5; older projects upgrade by themselves) and can be undone with Ctrl+Z.
+- Camera tool: a time slider, "Key camera here", and "Turn the move into keys", which converts Orbit, Push in and the other moves into editable camera keys.
+- Play follows the keys when a project has any, and uses the old move presets when it has none.
+- The full timeline panel (dope sheet, then curves) comes next.
+
 ## Version 024
 - Fixed: Backspace/Delete in the Select tool no longer removes the whole splat object; it only deletes the selected splats.
 - Removing an object (Delete with no tool open) can now be undone with Ctrl+Z.
