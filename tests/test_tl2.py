@@ -75,6 +75,10 @@ async def run(br,site,fx):
     ar=json.loads(await t.ev("JSON.stringify({a0:anim.a0,dur:anim.dur})")); ok("play uses only the range",ar=={"a0":2,"dur":3},ar)
     await t.ev("stopAnim()"); await t.wait(100)
     await t.ev("tlRangeClear()"); ok("Clear removes the range",(await t.ev("TL.range"))is None)
+    await t.ev("S.loop=false;TL.bounce=false;tlSetTime(3)"); await t.ev("startAnim(false)"); await t.wait(250)
+    tp=await t.ev("TL.t"); ok("Play starts from the playhead, not the start",tp>=3 and tp<3.6,tp); await t.ev("stopAnim()"); await t.wait(100)
+    await t.ev("tlSetTime(S.dur)"); await t.ev("startAnim(false)"); await t.wait(250)
+    tp=await t.ev("TL.t"); ok("Play from the very end starts over",tp<0.6,tp); await t.ev("stopAnim()"); await t.wait(100)
     # loop modes
     await t.ev("S.loop=false;TL.bounce=false;tlLoopUI()"); modes=[]
     for i in range(3):

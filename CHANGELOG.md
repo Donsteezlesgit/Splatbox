@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 038
+- Play now starts from the playhead instead of always from the start. If the playhead is at the end (or outside the preview range) it starts over.
+
 ## Version 037
 - Timeline layout: two tidy rows. Top row has transport (start, previous key, Play, next key, end, Once/Loop/Bounce), the time, Length, and the range and marker buttons. Second row has keying, easing, copy/paste and the view buttons.
 - Stretch keys: select two or more keys and drag the handles at either end of the orange band in the ruler. The keys squeeze or stretch to fit instead of moving.

@@ -298,7 +298,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 037";
+var VERSION="Version 038";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1316,7 +1316,10 @@ function startAnim(rec){
   var useTl=tlHasKeys();
   if((MODE==="render"||(useTl&&tlHasCam()))&&!THRU&&curCam())enterThru(curCam());
   var rg=useTl&&!rec&&TL.range&&TL.range.b>TL.range.a?TL.range:null;
-  anim={t0:performance.now(),dur:rg?rg.b-rg.a:S.dur,a0:rg?rg.a:0,preset:S.cam,rec:!!rec,loop:S.loop&&!rec,bounce:!!(TL.bounce&&useTl&&!rec&&S.loop),tl:useTl};
+  var a0=rg?rg.a:0,ad=rg?rg.b-rg.a:S.dur,off=0;
+  /* play from the playhead if it's inside the part being played; from the start if it's at the end or outside */
+  if(useTl&&!rec&&typeof TL==="object"&&TL.t>=a0&&TL.t<a0+ad-0.5/(TL.fps||30))off=TL.t-a0;
+  anim={t0:performance.now()-off*1000,dur:ad,a0:a0,preset:S.cam,rec:!!rec,loop:S.loop&&!rec,bounce:!!(TL.bounce&&useTl&&!rec&&S.loop),tl:useTl};
   vyaw=vpitch=0;dirty=true;syncPlay();
 }
 function stopAnim(){if(anim&&!anim.rec){anim=null;dirty=true;syncPlay()}}
