@@ -105,6 +105,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .tlh{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow-x:auto;flex:none;border-bottom:1px solid var(--line);font:12px var(--font-mono);color:var(--mute);white-space:nowrap}
 .tlh .tb{min-height:34px;padding:0 12px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
 .tlh .tb:active{background:var(--raise2)}
+.tlh .tb[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tlseg{display:inline-flex;gap:0}.tlseg .tb:first-child{border-radius:8px 0 0 8px}.tlseg .tb:last-child{border-radius:0 8px 8px 0}
 .tlh select,.tlh input{min-height:34px;background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:13px var(--font-ui);padding:0 8px}
 .tlh input{width:64px}.tlh select{max-width:180px}
 .tlt{min-width:150px;color:var(--fg)}.tlsep{flex:1}
@@ -231,14 +233,15 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div class="tld" id="tld" hidden aria-label="Timeline">
       <div class="tlh">
         <button class="tb" type="button" data-tla="play" id="tlPlay">Play</button>
+        <span class="tlseg"><button class="tb" type="button" data-tla="mode" data-m="dope" aria-pressed="true">Dope sheet</button><button class="tb" type="button" data-tla="mode" data-m="curve" aria-pressed="false">Curves</button></span>
         <span class="tlt" id="tlTime2">0.00 s</span>
         <label class="tll">Length <input id="tlDur" type="number" min="0.5" max="600" step="0.5" value="6"> s</label>
         <select id="tlAdd" aria-label="Add a track"><option value="">Add a track…</option></select><button class="tb" type="button" data-tla="add">Key it</button>
         <span class="tlsep"></span>
-        <button class="tb" type="button" data-tla="ease" data-e="smooth" title="Smooth between the selected key and the next">Smooth</button><button class="tb" type="button" data-tla="ease" data-e="linear">Linear</button><button class="tb" type="button" data-tla="ease" data-e="step">Step</button>
+        <button class="tb" type="button" data-tla="ease" data-e="smooth" title="Smooth between the selected key and the next">Smooth</button><button class="tb" type="button" data-tla="ease" data-e="linear">Linear</button><button class="tb" type="button" data-tla="ease" data-e="step">Step</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,1,1">Ease in</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0,0,0.58,1">Ease out</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,0.58,1">In-out</button>
         <button class="tb" type="button" data-tla="del">Delete key</button><button class="tb" type="button" data-tla="fit">Fit</button><button class="tb" type="button" data-tla="close" aria-label="Close timeline">Close</button>
       </div>
-      <div class="tlw" id="tlw"><canvas id="tlc" tabindex="0" aria-label="Dope sheet. Click the ruler to move the playhead, drag diamonds to retime, Delete removes keys, double-click a row to add a key."></canvas></div>
+      <div class="tlw" id="tlw"><canvas id="tlc" tabindex="0" aria-label="Timeline. Drag the ruler to move the playhead, drag in the empty space to select keys, drag diamonds to retime, Delete removes keys, double-click a row name to open its menu."></canvas></div>
     </div>
     <div class="pop" id="pop" hidden>
       <header><span id="popT"></span><button id="popX" type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
@@ -266,7 +269,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 027";
+var VERSION="Version 028";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 
@@ -2386,6 +2389,11 @@ function tlAllProps(){
   OBJS.forEach(function(o){["pos","rot","scl","vis","fov","fdist","inten","crop"].forEach(function(f){var d=tlProp("o:"+o.id+":"+f);if(d)out.push(d)})});
   return out;
 }
+function tlBez(c,u){
+  var x1=c[0],y1=c[1],x2=c[2],y2=c[3],lo=0,hi=1,s=u,i;
+  for(i=0;i<24;i++){s=(lo+hi)/2;var m=1-s,bx=3*m*m*s*x1+3*m*s*s*x2+s*s*s;if(bx<u)lo=s;else hi=s}
+  var m2=1-s;return 3*m2*m2*s*y1+3*m2*s*s*y2+s*s*s;
+}
 var TL_EASE={linear:function(u){return u},smooth:function(u){return u*u*(3-2*u)},step:function(){return 0}};
 function tlEval(tr,t,d){
   var k=tr.k;if(!k||!k.length)return null;
@@ -2393,7 +2401,7 @@ function tlEval(tr,t,d){
   var L=k[k.length-1];if(t>=L.t)return L.v.slice();
   var i=0;while(i<k.length-2&&t>=k[i+1].t)i++;
   var A=k[i],B=k[i+1],u=(t-A.t)/Math.max(1e-9,B.t-A.t),e=d.step?"step":(A.e||"smooth");
-  u=(TL_EASE[e]||TL_EASE.smooth)(u);
+  u=(e==="bezier"&&A.c)?tlBez(A.c,u):(TL_EASE[e]||TL_EASE.smooth)(u);
   if(d.quat)return tlSlerp(A.v,B.v,u);
   var r=[],j;for(j=0;j<A.v.length;j++)r.push(A.v[j]+(B.v[j]-A.v[j])*u);return r;
 }
@@ -2521,8 +2529,9 @@ function tlAutoFlush(){
   undoPush(tlUndoCmd("keyframe",ids,before));
 }
 
-/* ---------- V026 timeline dock: dope sheet (rows = animated properties, diamonds = keys) ---------- */
-var TLU={row:null,open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1,hover:null};
+/* ---------- V026 timeline dock: dope sheet + V028 curves (rows = animated properties, diamonds = keys) ---------- */
+var TLU={row:null,mode:"dope",open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1};
+var TL_COL=["#ff6a3d","#5ad17a","#4aa3ff","#c58cff"];
 function tlRows(){
   var rows=[];for(var id in TL.tracks){var d=tlProp(id);if(d&&TL.tracks[id].k.length)rows.push({id:id,d:d,tr:TL.tracks[id]})}
   rows.sort(function(a,b){return a.d.group<b.d.group?-1:a.d.group>b.d.group?1:a.d.label<b.d.label?-1:1});return rows;
@@ -2530,8 +2539,45 @@ function tlRows(){
 function tlT2X(t){return TLU.LW+(t-TLU.v0)/Math.max(1e-6,TLU.v1-TLU.v0)*(TLU.W-TLU.LW)}
 function tlX2T(x){return TLU.v0+(x-TLU.LW)/Math.max(1,TLU.W-TLU.LW)*(TLU.v1-TLU.v0)}
 function tlFit(){TLU.v0=0;TLU.v1=Math.max(0.5,S.dur||6);tlDockDraw()}
-function tlKeyXY(id,i){var rows=tlRows(),r=-1,j;for(j=0;j<rows.length;j++)if(rows[j].id===id)r=j;if(r<0)return null;return {x:tlT2X(rows[r].tr.k[i].t),y:TLU.RH+r*TLU.RW+TLU.RW/2-TLU.sy}}
 function tlSelHas(k){for(var i=0;i<TLU.sel.length;i++)if(TLU.sel[i].k===k)return true;return false}
+/* curve view helpers: the row being plotted, which component is the "main" one (handles live there), and the value scale */
+function tlCurveRow(rows){for(var i=0;i<rows.length;i++)if(rows[i].id===TLU.row)return rows[i];return rows.length?rows[0]:null}
+function tlPrimary(row){
+  var k=row.tr.k,best=0,bs=-1,c,i;
+  for(c=0;c<row.d.dim;c++){var mn=1e18,mx=-1e18;for(i=0;i<k.length;i++){mn=Math.min(mn,k[i].v[c]);mx=Math.max(mx,k[i].v[c])}if(mx-mn>bs){bs=mx-mn;best=c}}
+  return best;
+}
+function tlScale(row){
+  var k=row.tr.k,mn=1e18,mx=-1e18,i,c;
+  for(i=0;i<k.length;i++)for(c=0;c<row.d.dim;c++){mn=Math.min(mn,k[i].v[c]);mx=Math.max(mx,k[i].v[c])}
+  if(mx-mn<1e-9){mn-=1;mx+=1}var pad=(mx-mn)*0.2;return {mn:mn-pad,mx:mx+pad};
+}
+function tlV2Y(v,sc){var top=TLU.RH+12,bot=TLU.H-12;return bot-(v-sc.mn)/(sc.mx-sc.mn)*(bot-top)}
+function tlY2V(y,sc){var top=TLU.RH+12,bot=TLU.H-12;return sc.mn+(bot-y)/(bot-top)*(sc.mx-sc.mn)}
+function tlBezC(A){return A.c||(A.e==="linear"?[1/3,1/3,2/3,2/3]:[1/3,0,2/3,1])}
+function tlSegGeom(row,i,pc,sc){
+  var k=row.tr.k,A=k[i],B=k[i+1];if(!B)return null;
+  var c=tlBezC(A),dt=B.t-A.t,dv=B.v[pc]-A.v[pc];if(Math.abs(dv)<1e-9)dv=(sc.mx-sc.mn)*0.3;
+  return {A:A,B:B,c:c,dt:dt,dv:dv,
+    p1:{x:tlT2X(A.t),y:tlV2Y(A.v[pc],sc)},p2:{x:tlT2X(B.t),y:tlV2Y(B.v[pc],sc)},
+    h1:{x:tlT2X(A.t+c[0]*dt),y:tlV2Y(A.v[pc]+c[1]*dv,sc)},h2:{x:tlT2X(A.t+c[2]*dt),y:tlV2Y(A.v[pc]+c[3]*dv,sc)}};
+}
+/* the handles that belong to the selected keys: a key owns the "out" handle of its own segment and the "in" handle of the one before */
+function tlHandles(row){
+  var out=[],pc=tlPrimary(row),sc=tlScale(row),k=row.tr.k,i;if(row.d.step||row.d.quatless)return out;
+  for(i=0;i<k.length;i++){
+    if(!tlSelHas(k[i]))continue;
+    if(i<k.length-1&&k[i].e!=="step"){var g=tlSegGeom(row,i,pc,sc);out.push({seg:i,which:1,g:g,x:g.h1.x,y:g.h1.y,kx:g.p1.x,ky:g.p1.y})}
+    if(i>0&&k[i-1].e!=="step"){var g2=tlSegGeom(row,i-1,pc,sc);out.push({seg:i-1,which:2,g:g2,x:g2.h2.x,y:g2.h2.y,kx:g2.p2.x,ky:g2.p2.y})}
+  }
+  return out;
+}
+function tlKeyPos(row,r,k){
+  if(TLU.mode==="curve"){var sc=tlScale(row);return {x:tlT2X(k.t),y:tlV2Y(k.v[tlPrimary(row)],sc)}}
+  return {x:tlT2X(k.t),y:TLU.RH+r*TLU.RW+TLU.RW/2-TLU.sy};
+}
+function tlKeyXY(id,i){var rows=tlRows(),r;for(r=0;r<rows.length;r++)if(rows[r].id===id)return tlKeyPos(rows[r],r,rows[r].tr.k[i]);return null}
+function tlHandleXY(id,seg,which){var rows=tlRows(),r;for(r=0;r<rows.length;r++)if(rows[r].id===id){var row=rows[r],g=tlSegGeom(row,seg,tlPrimary(row),tlScale(row));return which===1?{x:g.h1.x,y:g.h1.y}:{x:g.h2.x,y:g.h2.y}}return null}
 function tlDockSize(){
   var c=$("tlc"),w=c.parentNode;if(!w)return;TLU.dpr=Math.min(window.devicePixelRatio||1,2);
   TLU.W=Math.max(100,w.clientWidth);TLU.H=Math.max(60,w.clientHeight);
@@ -2539,45 +2585,68 @@ function tlDockSize(){
 }
 function tlDockDraw(){
   if(!TLU.open)return;var c=$("tlc"),g=c.getContext("2d");if(!TLU.W)tlDockSize();
-  var W=TLU.W,H=TLU.H,LW=TLU.LW,RH=TLU.RH,RW=TLU.RW,rows=tlRows(),i,j;
+  var W=TLU.W,H=TLU.H,LW=TLU.LW,RH=TLU.RH,RW=TLU.RW,rows=tlRows(),i,j,curve=TLU.mode==="curve",cr=curve?tlCurveRow(rows):null;
   g.setTransform(TLU.dpr,0,0,TLU.dpr,0,0);g.clearRect(0,0,W,H);
   g.fillStyle="#0e1116";g.fillRect(0,0,W,H);
   var maxSy=Math.max(0,rows.length*RW-(H-RH));TLU.sy=clamp(TLU.sy,0,maxSy);
-  /* time after the project length is dimmed */
   var xe=tlT2X(Math.max(0.5,S.dur||6));if(xe<W){g.fillStyle="#00000055";g.fillRect(Math.max(LW,xe),RH,W-Math.max(LW,xe),H-RH)}
-  /* rows */
-  g.save();g.beginPath();g.rect(0,RH,W,H-RH);g.clip();
-  for(i=0;i<rows.length;i++){
-    var y=RH+i*RW-TLU.sy;if(y>H||y+RW<RH)continue;
-    g.fillStyle=rows[i].id===TLU.row?"#1c2735":(i%2?"#12161c":"#0f1318");g.fillRect(LW,y,W-LW,RW);
-    var tr=rows[i].tr.k;
-    g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
-    for(j=0;j<tr.length-1;j++){var xa=tlT2X(tr[j].t),xb=tlT2X(tr[j+1].t);if(xb<LW||xa>W)continue;g.moveTo(Math.max(LW,xa),y+RW/2);g.lineTo(xb,y+RW/2)}g.stroke();
-    for(j=0;j<tr.length;j++){
-      var x=tlT2X(tr[j].t);if(x<LW-6||x>W+6)continue;var sel=tlSelHas(tr[j]);
-      g.save();g.translate(x,y+RW/2);g.rotate(Math.PI/4);
-      g.fillStyle=sel?"#ff6a3d":(tr[j].e==="step"?"#8a94a0":tr[j].e==="linear"?"#cfd6de":"#ffffff");
-      g.strokeStyle=sel?"#ffb04a":"#0008";g.lineWidth=1.5;
-      if(tr[j].e==="step"){g.fillRect(-4,-4,8,8);g.strokeRect(-4,-4,8,8)}else{g.beginPath();g.arc(0,0,0.01,0,0);g.fillRect(-4.5,-4.5,9,9);g.strokeRect(-4.5,-4.5,9,9)}
-      g.restore();
+  var span=TLU.v1-TLU.v0,steps=[0.04,0.1,0.25,0.5,1,2,5,10,30,60],st=steps[steps.length-1];
+  for(i=0;i<steps.length;i++)if(steps[i]/span*(W-LW)>=60){st=steps[i];break}
+  if(!curve){
+    g.save();g.beginPath();g.rect(0,RH,W,H-RH);g.clip();
+    for(i=0;i<rows.length;i++){
+      var y=RH+i*RW-TLU.sy;if(y>H||y+RW<RH)continue;
+      g.fillStyle=rows[i].id===TLU.row?"#1c2735":(i%2?"#12161c":"#0f1318");g.fillRect(LW,y,W-LW,RW);
+      var tr=rows[i].tr.k;
+      g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
+      for(j=0;j<tr.length-1;j++){var xa=tlT2X(tr[j].t),xb=tlT2X(tr[j+1].t);if(xb<LW||xa>W)continue;g.moveTo(Math.max(LW,xa),y+RW/2);g.lineTo(xb,y+RW/2)}g.stroke();
+      for(j=0;j<tr.length;j++){
+        var x=tlT2X(tr[j].t);if(x<LW-6||x>W+6)continue;var sel=tlSelHas(tr[j]);
+        g.save();g.translate(x,y+RW/2);g.rotate(Math.PI/4);
+        g.fillStyle=sel?"#ff6a3d":(tr[j].e==="step"?"#8a94a0":tr[j].e==="linear"?"#cfd6de":"#ffffff");
+        g.strokeStyle=sel?"#ffb04a":"#0008";g.lineWidth=1.5;g.fillRect(-4.5,-4.5,9,9);g.strokeRect(-4.5,-4.5,9,9);g.restore();
+      }
     }
+    g.restore();
+  }else if(cr){
+    /* value curves: every component of the selected row, with the main one carrying the handles */
+    var sc=tlScale(cr),pc=tlPrimary(cr),top=RH+12,bot=H-12;
+    g.save();g.beginPath();g.rect(LW,RH,W-LW,H-RH);g.clip();
+    g.font="10px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";
+    for(i=0;i<=4;i++){var vv=sc.mn+(sc.mx-sc.mn)*i/4,yy=tlV2Y(vv,sc);g.strokeStyle="#ffffff12";g.lineWidth=1;g.beginPath();g.moveTo(LW,yy+.5);g.lineTo(W,yy+.5);g.stroke();g.fillStyle="#6c7580";g.fillText((Math.abs(vv)<10?vv.toFixed(2):vv.toFixed(1)),LW+4,yy-7)}
+    for(var ci=0;ci<cr.d.dim;ci++){
+      g.strokeStyle=TL_COL[ci%4];g.globalAlpha=ci===pc?1:0.55;g.lineWidth=ci===pc?2:1.2;g.beginPath();
+      for(var px=LW;px<=W;px+=3){var tv=tlEval(cr.tr,Math.max(0,tlX2T(px)),cr.d);if(!tv)continue;var py=tlV2Y(tv[ci],sc);if(px===LW)g.moveTo(px,py);else g.lineTo(px,py)}
+      g.stroke();
+    }
+    g.globalAlpha=1;
+    var kk=cr.tr.k;
+    for(i=0;i<kk.length;i++){
+      var kx=tlT2X(kk[i].t),sel2=tlSelHas(kk[i]);
+      for(var cj=0;cj<cr.d.dim;cj++){var ky=tlV2Y(kk[i].v[cj],sc);g.fillStyle=cj===pc?(sel2?"#ff6a3d":"#ffffff"):"#ffffff88";g.strokeStyle=sel2&&cj===pc?"#ffb04a":"#0009";g.lineWidth=1.5;g.beginPath();g.arc(kx,ky,cj===pc?5:3,0,Math.PI*2);g.fill();g.stroke()}
+    }
+    var hs=tlHandles(cr);
+    for(i=0;i<hs.length;i++){g.strokeStyle="#ffb04a99";g.lineWidth=1.2;g.beginPath();g.moveTo(hs[i].kx,hs[i].ky);g.lineTo(hs[i].x,hs[i].y);g.stroke();g.fillStyle="#ffb04a";g.beginPath();g.arc(hs[i].x,hs[i].y,4.5,0,Math.PI*2);g.fill()}
+    g.restore();
   }
-  g.restore();
-  /* labels */
+  /* label column */
   g.fillStyle="#12151a";g.fillRect(0,0,LW,H);g.strokeStyle="#262b33";g.lineWidth=1;g.beginPath();g.moveTo(LW+.5,0);g.lineTo(LW+.5,H);g.stroke();
   g.save();g.beginPath();g.rect(0,RH,LW,H-RH);g.clip();g.font="12px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";
-  for(i=0;i<rows.length;i++){var yy=RH+i*RW-TLU.sy;if(yy>H||yy+RW<RH)continue;if(rows[i].id===TLU.row){g.fillStyle="#1c2735";g.fillRect(0,yy,LW,RW)}g.fillStyle=rows[i].id===TLU.row?"#ffb04a":SEL&&rows[i].d.obj===SEL?"#ffd9a0":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yy+RW/2)}
+  for(i=0;i<rows.length;i++){var yl=RH+i*RW-TLU.sy;if(yl>H||yl+RW<RH)continue;var isr=curve?(cr&&rows[i]===cr):rows[i].id===TLU.row;if(isr){g.fillStyle="#1c2735";g.fillRect(0,yl,LW,RW)}g.fillStyle=isr?"#ffb04a":SEL&&rows[i].d.obj===SEL?"#ffd9a0":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yl+RW/2)}
   if(!rows.length){g.fillStyle="#8a94a0";g.fillText("No keys yet.",10,RH+16);g.fillText("Add a track above,",10,RH+34);g.fillText("or key a camera.",10,RH+50)}
   g.restore();
   /* ruler */
   g.fillStyle="#161a21";g.fillRect(0,0,W,RH);g.strokeStyle="#262b33";g.beginPath();g.moveTo(0,RH+.5);g.lineTo(W,RH+.5);g.stroke();
-  var span=TLU.v1-TLU.v0,steps=[0.04,0.1,0.25,0.5,1,2,5,10,30,60],st=steps[steps.length-1];
-  for(i=0;i<steps.length;i++)if(steps[i]/span*(W-LW)>=60){st=steps[i];break}
   g.fillStyle="#8a94a0";g.font="11px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";g.strokeStyle="#ffffff26";
-  for(var tt=Math.ceil(TLU.v0/st)*st;tt<=TLU.v1+1e-9;tt+=st){var tx=tlT2X(tt);if(tx<LW)continue;g.beginPath();g.moveTo(tx+.5,RH-8);g.lineTo(tx+.5,H);g.stroke();g.fillText((Math.round(tt*100)/100)+"s",tx+4,RH/2-1)}
+  for(var tt=Math.ceil(TLU.v0/st)*st;tt<=TLU.v1+1e-9;tt+=st){var tx=tlT2X(tt);if(tx<LW)continue;g.beginPath();g.moveTo(tx+.5,RH-8);g.lineTo(tx+.5,curve?RH:H);g.stroke();g.fillText((Math.round(tt*100)/100)+"s",tx+4,RH/2-1)}
+  /* box select */
+  var d=TLU.drag;if(d&&d.kind==="marquee"&&d.live){g.fillStyle="#ff6a3d22";g.strokeStyle="#ff6a3d";g.lineWidth=1;g.fillRect(Math.min(d.x0,d.x),Math.min(d.y0,d.y),Math.abs(d.x-d.x0),Math.abs(d.y-d.y0));g.strokeRect(Math.min(d.x0,d.x)+.5,Math.min(d.y0,d.y)+.5,Math.abs(d.x-d.x0),Math.abs(d.y-d.y0))}
   /* playhead */
-  var px=tlT2X(TL.t);if(px>=LW){g.strokeStyle="#ff6a3d";g.fillStyle="#ff6a3d";g.lineWidth=1.5;g.beginPath();g.moveTo(px,RH-2);g.lineTo(px,H);g.stroke();g.beginPath();g.moveTo(px-6,RH-12);g.lineTo(px+6,RH-12);g.lineTo(px,RH-2);g.fill()}
+  var px2=tlT2X(TL.t);if(px2>=LW){g.strokeStyle="#ff6a3d";g.fillStyle="#ff6a3d";g.lineWidth=1.5;g.beginPath();g.moveTo(px2,RH-2);g.lineTo(px2,H);g.stroke();g.beginPath();g.moveTo(px2-6,RH-12);g.lineTo(px2+6,RH-12);g.lineTo(px2,RH-2);g.fill()}
   var ro=$("tlTime2");if(ro)ro.textContent=TL.t.toFixed(2)+" / "+(S.dur||6).toFixed(2)+" s  ·  frame "+Math.round(TL.t*TL.fps);
+}
+function tlSetMode(m){
+  TLU.mode=m;var a=document.querySelectorAll("[data-tla=mode]"),i;for(i=0;i<a.length;i++)a[i].setAttribute("aria-pressed",String(a[i].dataset.m===m));tlDockDraw();
 }
 function tlDockOpen(on){
   TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
@@ -2589,10 +2658,32 @@ function tlAddOpts(){
   Object.keys(groups).forEach(function(g){h+='<optgroup label="'+esc(g)+'">'+groups[g].map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.label)+'</option>'}).join("")+'</optgroup>'});
   sel.innerHTML=h;sel.value=cur&&sel.querySelector('option[value="'+cur+'"]')?cur:"";
 }
+/* what you can hit with the pointer */
+function tlRowAt(y){return Math.floor((y-TLU.RH+TLU.sy)/TLU.RW)}
 function tlHit(x,y){
-  var rows=tlRows(),r=Math.floor((y-TLU.RH+TLU.sy)/TLU.RW);if(y<TLU.RH||x<TLU.LW||r<0||r>=rows.length)return null;
-  var k=rows[r].tr.k,best=null,bd=9,j;for(j=0;j<k.length;j++){var d=Math.abs(tlT2X(k[j].t)-x);if(d<bd){bd=d;best={id:rows[r].id,k:k[j],row:r}}}
+  var rows=tlRows(),best=null,bd=9,j,r;
+  if(y<TLU.RH||x<TLU.LW)return null;
+  if(TLU.mode==="curve"){
+    var cr=tlCurveRow(rows);if(!cr)return null;var kk=cr.tr.k,pc=tlPrimary(cr),sc=tlScale(cr);
+    for(j=0;j<kk.length;j++){var dd=Math.hypot(tlT2X(kk[j].t)-x,tlV2Y(kk[j].v[pc],sc)-y);if(dd<bd+1){bd=dd;best={id:cr.id,k:kk[j],row:rows.indexOf(cr)}}}
+    return best;
+  }
+  r=tlRowAt(y);if(r<0||r>=rows.length)return null;
+  var k=rows[r].tr.k;for(j=0;j<k.length;j++){var d2=Math.abs(tlT2X(k[j].t)-x);if(d2<bd){bd=d2;best={id:rows[r].id,k:k[j],row:r}}}
   return best;
+}
+function tlHandleAt(x,y){
+  if(TLU.mode!=="curve")return null;var cr=tlCurveRow(tlRows());if(!cr)return null;var hs=tlHandles(cr),i;
+  for(i=0;i<hs.length;i++)if(Math.hypot(hs[i].x-x,hs[i].y-y)<8)return {id:cr.id,h:hs[i],row:cr};
+  return null;
+}
+function tlKeysIn(x0,y0,x1,y1){
+  var rows=tlRows(),out=[],xa=Math.min(x0,x1),xb=Math.max(x0,x1),ya=Math.min(y0,y1),yb=Math.max(y0,y1),r,j;
+  for(r=0;r<rows.length;r++){
+    if(TLU.mode==="curve"&&rows[r]!==tlCurveRow(rows))continue;
+    for(j=0;j<rows[r].tr.k.length;j++){var q=tlKeyPos(rows[r],r,rows[r].tr.k[j]);if(q.x>=xa-4&&q.x<=xb+4&&q.y>=ya-4&&q.y<=yb+4)out.push({id:rows[r].id,k:rows[r].tr.k[j]})}
+  }
+  return out;
 }
 function tlSelIds(){var o={};TLU.sel.forEach(function(s){o[s.id]=1});return Object.keys(o)}
 function tlDeleteSel(){
@@ -2600,44 +2691,86 @@ function tlDeleteSel(){
   TLU.sel.forEach(function(s){var tr=TL.tracks[s.id];if(tr)tr.k=tr.k.filter(function(x){return x!==s.k});if(tr&&!tr.k.length)delete TL.tracks[s.id]});
   TLU.sel=[];undoPush(tlUndoCmd("delete keyframes",ids,before));tlChanged();tlSetTime(TL.t);
 }
-function tlEaseSel(e){
+function tlEaseSel(e,cs){
   if(!TLU.sel.length){setStatus("Click a key first.","warn");return}
-  var ids=tlSelIds(),before=ids.map(tlTrackCopy);TLU.sel.forEach(function(s){s.k.e=e});
+  var ids=tlSelIds(),before=ids.map(tlTrackCopy);
+  TLU.sel.forEach(function(s){s.k.e=e;if(e==="bezier"&&cs)s.k.c=cs.split(",").map(Number);else if(e!=="bezier")delete s.k.c});
   undoPush(tlUndoCmd("key easing",ids,before));tlChanged();tlSetTime(TL.t);
 }
+/* double-click a row: open the menu that holds that property */
+function tlToolFor(d){
+  var a=d.id.split(":"),i,h;
+  if(a[0]==="s"){for(i=0;i<TOOLS.length;i++){h="";try{h=PANES[TOOLS[i][0]]()}catch(_){}if(h.indexOf('data-kd="s:'+a[1]+'"')>=0)return TOOLS[i][0]}return null}
+  var o=d.obj;if(!o)return null;
+  if(o.kind==="camera")return "camera";if(isLight(o))return "light";if(a[2]==="crop")return "crop";return "objects";
+}
+function tlOpenMenu(row){
+  var tool=tlToolFor(row.d);if(!tool){setStatus("There's no menu for that one.","warn");return}
+  TLU.row=row.id;if(row.d.obj){SEL=row.d.obj;if(isCam(SEL))ACAM=SEL}
+  if(EDIT_T[tool]){if(MODE!=="edit")setMode("edit")}else if(MODE!=="render")setMode("render");
+  openTool(tool,true);if(row.d.obj)camUI();dirty=true;tlDockDraw();
+}
 (function(){
-  var c=$("tlc"),mk=null;
+  var c=$("tlc");
   function pos(e){var r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+  function scrubTo(x){tlSetTime(tlSnap(Math.max(0,tlX2T(x))));tlDockDraw()}
   c.addEventListener("pointerdown",function(e){
-    if(e.button!==0)return;c.focus();var p=pos(e);c.setPointerCapture(e.pointerId);
-    if(p.y<TLU.RH){TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))));tlDockDraw();return}
-    if(p.x<TLU.LW){var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(rows[r]){TLU.row=rows[r].id;if(rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}}tlDockDraw();return}
-    var h=tlHit(p.x,p.y),rr=tlRows()[Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW)];if(rr)TLU.row=rr.id;
+    if(e.button!==0)return;c.focus();var p=pos(e);c.setPointerCapture(e.pointerId);var rows=tlRows(),ids;
+    /* only the ruler moves the playhead */
+    if(p.y<TLU.RH){TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)scrubTo(p.x);else tlDockDraw();return}
+    if(p.x<TLU.LW){var r=tlRowAt(p.y);if(rows[r]){TLU.row=rows[r].id;if(rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}}tlDockDraw();return}
+    var hh=tlHandleAt(p.x,p.y);
+    if(hh){var sg=hh.h.seg,pcx=tlPrimary(hh.row);TLU.drag={kind:"handle",id:hh.id,h:hh.h,row:hh.row,pc:pcx,sc:tlScale(hh.row),before:[tlTrackCopy(hh.id)],moved:false};return}
+    var h=tlHit(p.x,p.y),rr=curveOrRow(rows,p);if(rr)TLU.row=rr.id;
     if(h){
       if(e.shiftKey){if(tlSelHas(h.k))TLU.sel=TLU.sel.filter(function(s){return s.k!==h.k});else TLU.sel.push({id:h.id,k:h.k})}
       else if(!tlSelHas(h.k))TLU.sel=[{id:h.id,k:h.k}];
-      var ids=tlSelIds();TLU.drag={kind:"move",x0:p.x,ids:ids,before:ids.map(tlTrackCopy),orig:TLU.sel.map(function(s){return s.k.t}),moved:false};
-    }else{if(!e.shiftKey)TLU.sel=[];TLU.drag={kind:"scrub"};tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))))}
+      ids=tlSelIds();
+      TLU.drag={kind:"move",x0:p.x,y0:p.y,ids:ids,before:ids.map(tlTrackCopy),orig:TLU.sel.map(function(s){return s.k.t}),origV:TLU.sel.map(function(s){return s.k.v.slice()}),moved:false,
+        sc:TLU.mode==="curve"&&rr?tlScale(rr):null,rowId:rr?rr.id:null};
+    }else{
+      /* empty space: drag a box to pick keys (Shift adds to what's picked) */
+      TLU.drag={kind:"marquee",x0:p.x,y0:p.y,x:p.x,y:p.y,add:e.shiftKey,base:TLU.sel.slice(),live:false};
+    }
     tlDockDraw();
   });
+  function curveOrRow(rows,p){if(TLU.mode==="curve")return tlCurveRow(rows);return rows[tlRowAt(p.y)]||null}
   c.addEventListener("pointermove",function(e){
     var d=TLU.drag;if(!d)return;var p=pos(e);
-    if(d.kind==="scrub"){tlSetTime(tlSnap(Math.max(0,tlX2T(p.x))));tlDockDraw();return}
-    var dt=tlSnap(tlX2T(p.x))-tlSnap(tlX2T(d.x0));if(!d.moved&&Math.abs(p.x-d.x0)<3)return;d.moved=true;
-    var mn=Math.min.apply(null,d.orig);if(mn+dt<0)dt=-mn;
-    TLU.sel.forEach(function(s,i){s.k.t=tlSnap(d.orig[i]+dt)});
+    if(d.kind==="scrub"){if(p.x>=TLU.LW||true)scrubTo(Math.max(TLU.LW,p.x));return}
+    if(d.kind==="marquee"){
+      d.x=p.x;d.y=p.y;if(!d.live&&Math.hypot(p.x-d.x0,p.y-d.y0)<4)return;d.live=true;
+      var inside=tlKeysIn(d.x0,d.y0,d.x,d.y);
+      if(d.add){TLU.sel=d.base.slice();inside.forEach(function(s){if(!tlSelHas(s.k))TLU.sel.push(s)})}else TLU.sel=inside;
+      tlDockDraw();return;
+    }
+    if(d.kind==="handle"){
+      var A=d.h.g.A,B=d.h.g.B,dt=B.t-A.t,dv=d.h.g.dv,cc=tlBezC(A).slice(),tt=(tlX2T(p.x)-A.t)/dt,vv=(tlY2V(p.y,d.sc)-A.v[d.pc])/dv;
+      var ix=d.h.which===1?0:2;cc[ix]=clamp(tt,0,1);cc[ix+1]=clamp(vv,-1,2);A.c=cc;A.e="bezier";d.moved=true;tlSetTime(TL.t);tlDockDraw();return;
+    }
+    var dt2=tlSnap(tlX2T(p.x))-tlSnap(tlX2T(d.x0));if(!d.moved&&Math.hypot(p.x-d.x0,p.y-d.y0)<3)return;d.moved=true;
+    var mn=Math.min.apply(null,d.orig);if(mn+dt2<0)dt2=-mn;
+    TLU.sel.forEach(function(s,i){
+      s.k.t=tlSnap(d.orig[i]+dt2);
+      if(d.sc&&s.id===d.rowId){var rw=tlRows().filter(function(r){return r.id===s.id})[0];if(rw&&rw.d.dim===1&&!rw.d.step)s.k.v=[d.origV[i][0]+(tlY2V(p.y,d.sc)-tlY2V(d.y0,d.sc))]}
+    });
     d.ids.forEach(function(id){TL.tracks[id].k.sort(function(a,b){return a.t-b.t})});
     tlSetTime(TL.t);tlDockDraw();
   });
   function up(e){
-    var d=TLU.drag;TLU.drag=null;if(!d||d.kind!=="move"||!d.moved){tlDockDraw();return}
+    var d=TLU.drag;TLU.drag=null;
+    if(d&&d.kind==="marquee"){if(!d.live&&!d.add)TLU.sel=[];tlDockDraw();return}
+    if(d&&d.kind==="handle"){if(d.moved){undoPush(tlUndoCmd("curve handle",[d.id],d.before));tlChanged();tlSetTime(TL.t)}tlDockDraw();return}
+    if(!d||d.kind!=="move"||!d.moved){tlDockDraw();return}
     /* two keys on the same frame: the one you moved wins */
     d.ids.forEach(function(id){var tr=TL.tracks[id];if(!tr)return;tr.k=tr.k.filter(function(x){if(tlSelHas(x))return true;return !TLU.sel.some(function(s){return s.id===id&&Math.abs(s.k.t-x.t)<1e-6})})});
     undoPush(tlUndoCmd("move keyframes",d.ids,d.before));tlChanged();tlSetTime(TL.t);
   }
   c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
   c.addEventListener("dblclick",function(e){
-    var p=pos(e);if(p.y<TLU.RH||p.x<TLU.LW)return;var rows=tlRows(),r=Math.floor((p.y-TLU.RH+TLU.sy)/TLU.RW);if(!rows[r]||tlHit(p.x,p.y))return;
+    var p=pos(e);if(p.y<TLU.RH)return;var rows=tlRows(),r=tlRowAt(p.y);
+    if(p.x<TLU.LW){if(rows[r])tlOpenMenu(rows[r]);return}
+    if(TLU.mode==="curve"||!rows[r]||tlHit(p.x,p.y))return;
     var t=tlSnap(Math.max(0,tlX2T(p.x))),v=tlEval(rows[r].tr,t,rows[r].d);tlKey(rows[r].id,t,v);tlDockDraw();
   });
   c.addEventListener("wheel",function(e){
@@ -2651,6 +2784,7 @@ function tlEaseSel(e){
     if(e.code==="Delete"||e.code==="Backspace"){e.preventDefault();e.stopPropagation();tlDeleteSel()}
     else if(e.code==="ArrowLeft"||e.code==="ArrowRight"){e.preventDefault();tlSetTime(tlSnap(Math.max(0,TL.t+(e.code==="ArrowLeft"?-1:1)/TL.fps)));tlDockDraw()}
     else if(e.code==="Space"){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false)}
+    else if(e.code==="KeyA"&&!e.ctrlKey&&!e.metaKey){e.preventDefault();var rows=tlRows();TLU.sel=[];rows.forEach(function(r){if(TLU.mode==="curve"&&r!==tlCurveRow(rows))return;r.tr.k.forEach(function(k){TLU.sel.push({id:r.id,k:k})})});tlDockDraw()}
   });
   if(window.ResizeObserver)new ResizeObserver(function(){if(TLU.open){tlDockSize();tlDockDraw()}}).observe($("tlw"));
   $("tlBtn").addEventListener("click",function(){tlDockOpen()});
@@ -2660,7 +2794,8 @@ function tlEaseSel(e){
     else if(a==="close")tlDockOpen(false);
     else if(a==="fit")tlFit();
     else if(a==="del")tlDeleteSel();
-    else if(a==="ease")tlEaseSel(el.dataset.e);
+    else if(a==="mode")tlSetMode(el.dataset.m);
+    else if(a==="ease")tlEaseSel(el.dataset.e,el.dataset.c);
     else if(a==="add"){var id=$("tlAdd").value||TLU.row;if(id&&tlProp(id)){if(THRU&&tlProp(id).obj===ACAM)camFromView(ACAM);tlKey(id,TL.t);TLU.row=id;$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Click a row in the list, or pick a track, then press Key it.","warn")}
   });
   $("tlAdd").addEventListener("mousedown",tlAddOpts);$("tlAdd").addEventListener("focus",tlAddOpts);

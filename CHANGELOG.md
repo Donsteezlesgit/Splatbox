@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 028
+- New: Curves tab in the timeline dock. It plots the selected row's values over time. Select a key to get Bezier handles for the segments on either side, and drag them to shape the easing. Ease in, Ease out and In-out presets; Smooth, Linear and Step still work. Dragging a key up or down in Curves changes its value (single-value rows).
+- Drag in empty space in the timeline to box-select keys (Shift adds). Clicking empty space no longer moves the playhead; only the ruler along the top does.
+- Double-click a row name to open that property's menu (and select its object).
+- Curve shapes are saved with the project.
+
 ## Version 027
 - Keyframe diamonds next to everything you can animate (colour, depth and lens sliders; position, rotation and scale; camera lens and focus distance; light intensity; crop box; the eye toggle in object lists). Grey = not animated, orange outline = animated, filled = a key at the playhead. Click to key, click a filled one to remove.
 - Auto-key: change something that already has keys, at a new time, and a key is written there. Works for sliders, number boxes, the gizmo and flying an animated camera. A drag is one Ctrl+Z step.
