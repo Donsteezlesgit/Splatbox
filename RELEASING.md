@@ -7,7 +7,7 @@
 ## Small fix
 1. Edit `app/`, bump `VERSION` in both files.
 2. `./release.sh stable` (runs all tests, copies to root).
-3. Commit, `git tag vNNN`, push. Check the live page shows the new version.
+3. Commit and push to main. Check the live page shows the new version. (`git tag vNNN` is optional: pushing tags is refused in the Claude sandbox, and rollback finds a version by its commit message when no tag exists. GitHub also tags every Windows build itself as v0.NNN.1.)
 
 ## Big update
 1. Edit `app/`, bump version.
