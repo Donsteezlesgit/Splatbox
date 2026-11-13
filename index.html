@@ -104,16 +104,18 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .rjob[hidden]{display:none}
 .rjc{display:flex;flex-direction:column;gap:12px;align-items:center;min-width:260px;padding:20px 24px;background:#12151a;border:1px solid #ffffff22;border-radius:16px;font:600 14px var(--font-ui)}
 .rbar{width:100%;height:8px;border-radius:4px;background:#ffffff1c;overflow:hidden}.rbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent))}
-.tld{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(268px,46%);display:flex;flex-direction:column;background:#10131af5;border-top:1px solid #ffffff22;box-shadow:0 -10px 30px #0008}
+.tld{position:absolute;z-index:3;left:0;right:0;bottom:0;height:min(320px,54%);display:flex;flex-direction:column;background:#10131af5;border-top:1px solid #ffffff22;box-shadow:0 -10px 30px #0008}
 .tld[hidden]{display:none}
 .tlh{display:flex;align-items:center;gap:8px;padding:6px 10px;overflow-x:auto;flex:none;border-bottom:1px solid var(--line);font:12px var(--font-mono);color:var(--mute);white-space:nowrap}
-.tlh .tb{min-height:34px;padding:0 12px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
+.tlh .tb{min-height:34px;padding:0 9px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:8px;font:500 13px var(--font-ui);cursor:pointer}
 .tlh .tb:active{background:var(--raise2)}
 .tlh .tb[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .tlseg{display:inline-flex;gap:0}.tlseg .tb:first-child{border-radius:8px 0 0 8px}.tlseg .tb:last-child{border-radius:0 8px 8px 0}
 .tlh select,.tlh input{min-height:34px;background:var(--raise);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:13px var(--font-ui);padding:0 8px}
-.tlh input{width:64px}.tlh select{max-width:180px}
-.tlt{min-width:150px;color:var(--fg)}.tlsep{flex:1}
+.tlh input{width:64px}.tlh select{max-width:150px}
+.tlt{min-width:230px;color:var(--fg)}.tlsep{flex:1}
+.tlh{flex-wrap:wrap;row-gap:4px;overflow-x:visible}.tlg{display:inline-flex;align-items:center;gap:4px;padding-right:6px;margin-right:0;border-right:1px solid var(--line)}.tlg:last-of-type{border-right:0}
+.tlh .tb.sm{min-width:30px;padding:0 7px}.tll{display:inline-flex;align-items:center;gap:4px}.tlh input[type=checkbox]{width:auto;min-height:0}.tlh2{color:var(--mute);font:11px var(--font-ui);white-space:normal;flex:1;min-width:160px}
 .tlw{position:relative;flex:1;min-height:0}
 .tlw canvas{position:absolute;inset:auto;left:0;top:0;outline:none;touch-action:none;cursor:default}
 .stage.tlopen .hud{bottom:min(276px,48%)}
@@ -237,14 +239,35 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div class="hud" id="hud"></div>
     <div class="tld" id="tld" hidden aria-label="Timeline">
       <div class="tlh">
-        <button class="tb" type="button" data-tla="play" id="tlPlay">Play</button>
-        <span class="tlseg"><button class="tb" type="button" data-tla="mode" data-m="dope" aria-pressed="true">Dope sheet</button><button class="tb" type="button" data-tla="mode" data-m="curve" aria-pressed="false">Curves</button></span>
-        <span class="tlt" id="tlTime2">0.00 s</span>
-        <label class="tll">Length <input id="tlDur" type="number" min="0.5" max="600" step="0.5" value="6"> s</label>
-        <select id="tlAdd" aria-label="Add a track"><option value="">Add a track…</option></select><button class="tb" type="button" data-tla="add">Key it</button>
+        <span class="tlg">
+          <button class="tb sm" type="button" data-tla="first" title="Go to start (Home)" aria-label="Go to start">|&#9664;</button><button class="tb sm" type="button" data-tla="prevkey" title="Previous key (J or Up)" aria-label="Previous key">&#9664;&#9670;</button><button class="tb" type="button" data-tla="play" id="tlPlay" title="Play or stop (Space)">Play</button><button class="tb sm" type="button" data-tla="nextkey" title="Next key (K or Down)" aria-label="Next key">&#9670;&#9654;</button><button class="tb sm" type="button" data-tla="last" title="Go to end (End)" aria-label="Go to end">&#9654;|</button>
+          <button class="tb" type="button" data-tla="loopmode" id="tlLoop" title="What happens at the end: Once, Loop or Bounce">Loop</button>
+        </span>
+        <span class="tlg"><span class="tlt" id="tlTime2">0.00 s</span></span>
+        <span class="tlg">
+          <label class="tll">Length <input id="tlDur" type="number" min="0.5" max="600" step="0.5" value="6"> s</label>
+          <label class="tll"><input id="tlDurF" type="number" min="1" max="18000" step="1" value="180"> frames</label>
+          <label class="tll" title="When on, changing the length squeezes or stretches every key to fit"><input type="checkbox" id="tlFit2" checked> Stretch keys</label>
+        </span>
+        <span class="tlg">
+          <button class="tb sm" type="button" data-tla="rin" title="Start of the preview range (I)">In</button><button class="tb sm" type="button" data-tla="rout" title="End of the preview range (O)">Out</button><button class="tb sm" type="button" data-tla="rclear" title="Clear the preview range">Clear</button>
+          <button class="tb sm" type="button" data-tla="marker" title="Add or remove a marker at the playhead (M). , and . jump between markers">Marker</button>
+          <button class="tb sm" type="button" data-tla="snap" id="tlSnapB" aria-pressed="true" title="Snap the playhead and dragged keys to markers, keys and the range">Snap</button>
+        </span>
+      </div>
+      <div class="tlh">
+        <span class="tlg">
+          <select id="tlAdd" aria-label="Add a track"><option value="">Add a track…</option></select><button class="tb" type="button" data-tla="add" title="Key the picked or selected row at the playhead">Key it</button>
+        </span>
+        <span class="tlg">
+          <button class="tb" type="button" data-tla="ease" data-e="smooth" title="Smooth between the selected key and the next (1)">Smooth</button><button class="tb" type="button" data-tla="ease" data-e="linear" title="2">Linear</button><button class="tb" type="button" data-tla="ease" data-e="step" title="3">Step</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,1,1" title="4">Ease in</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0,0,0.58,1" title="5">Ease out</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,0.58,1" title="6">In-out</button>
+        </span>
+        <span class="tlg">
+          <button class="tb" type="button" data-tla="copy" title="Copy the selected keys (Ctrl+C)">Copy</button><button class="tb" type="button" data-tla="paste" title="Paste at the playhead (Ctrl+V)">Paste</button><button class="tb" type="button" data-tla="dup" title="Duplicate at the playhead (Ctrl+D)">Duplicate</button><button class="tb" type="button" data-tla="del" title="Delete">Delete key</button>
+        </span>
         <span class="tlsep"></span>
-        <button class="tb" type="button" data-tla="ease" data-e="smooth" title="Smooth between the selected key and the next">Smooth</button><button class="tb" type="button" data-tla="ease" data-e="linear">Linear</button><button class="tb" type="button" data-tla="ease" data-e="step">Step</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,1,1">Ease in</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0,0,0.58,1">Ease out</button><button class="tb" type="button" data-tla="ease" data-e="bezier" data-c="0.42,0,0.58,1">In-out</button>
-        <button class="tb" type="button" data-tla="del">Delete key</button><button class="tb" type="button" data-tla="fit">Fit</button><button class="tb" type="button" data-tla="close" aria-label="Close timeline">Close</button>
+        <span class="tlseg"><button class="tb" type="button" data-tla="mode" data-m="dope" aria-pressed="true" title="Dope sheet (Tab swaps)">Dope sheet</button><button class="tb" type="button" data-tla="mode" data-m="curve" aria-pressed="false">Curves</button></span>
+        <button class="tb" type="button" data-tla="fit" title="Fit the whole length (F). Shift+F frames the selected keys">Fit</button><button class="tb" type="button" data-tla="close" aria-label="Close timeline">Close</button>
       </div>
       <div class="tlw" id="tlw"><canvas id="tlc" tabindex="0" aria-label="Timeline. Drag the ruler to move the playhead, drag in the empty space to select keys, drag diamonds to retime, Delete removes keys, double-click a row name to open its menu."></canvas></div>
     </div>
@@ -275,7 +298,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 036";
+var VERSION="Version 037";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1292,7 +1315,8 @@ function startAnim(rec){
   if(!scene)return;
   var useTl=tlHasKeys();
   if((MODE==="render"||(useTl&&tlHasCam()))&&!THRU&&curCam())enterThru(curCam());
-  anim={t0:performance.now(),dur:S.dur,preset:S.cam,rec:!!rec,loop:S.loop&&!rec,tl:useTl};
+  var rg=useTl&&!rec&&TL.range&&TL.range.b>TL.range.a?TL.range:null;
+  anim={t0:performance.now(),dur:rg?rg.b-rg.a:S.dur,a0:rg?rg.a:0,preset:S.cam,rec:!!rec,loop:S.loop&&!rec,bounce:!!(TL.bounce&&useTl&&!rec&&S.loop),tl:useTl};
   vyaw=vpitch=0;dirty=true;syncPlay();
 }
 function stopAnim(){if(anim&&!anim.rec){anim=null;dirty=true;syncPlay()}}
@@ -1308,11 +1332,12 @@ function loop(t){
   }
   if(anim){
     var u=(t-anim.t0)/1000/anim.dur;
+    if(anim.bounce){var bm=u%2;u=bm<1?bm:2-bm}
     if(u>=1){
       if(anim.loop){anim.t0=t;u=0}
-      else{var wasRec=anim.rec;if(anim.tl){tlSetTime(anim.dur);draw(null)}else draw(camOff(anim.preset,1));anim=null;syncPlay();if(wasRec)finishRecord();dirty=true;return}
+      else{var wasRec=anim.rec;if(anim.tl){tlSetTime((anim.a0||0)+anim.dur);draw(null)}else draw(camOff(anim.preset,1));anim=null;syncPlay();if(wasRec)finishRecord();dirty=true;return}
     }
-    if(anim.tl){tlSetTime(u*anim.dur);draw(null)}else{draw(camOff(anim.preset,u));if(TLU.open){TL.t=u*anim.dur;tlDockDraw()}}return;
+    if(anim.tl){tlSetTime((anim.a0||0)+u*anim.dur);draw(null)}else{draw(camOff(anim.preset,u));if(TLU.open){TL.t=u*anim.dur;tlDockDraw()}}return;
   }
   if(!dirty)return;
   dirty=false;
@@ -2549,10 +2574,10 @@ document.addEventListener("keydown",function(e){
 });
 
 /* ---------- V025 timeline engine: every animatable value is a named property, keys live in cur.timeline, one clock drives them all ---------- */
-var TL={tracks:{},fps:30,t:0};
+var TL={tracks:{},fps:30,t:0,markers:[],range:null,bounce:false};
 var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
 var TL_CROP=["x0","x1","y0","y1","z0","z1"];
-function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false}
+function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false;if(!Array.isArray(p.timeline.markers))p.timeline.markers=[];TL.markers=p.timeline.markers;TL.range=p.timeline.range&&p.timeline.range.b>p.timeline.range.a?p.timeline.range:null;TL.bounce=!!p.timeline.bounce}
 function tlHasKeys(){for(var k in TL.tracks)if(TL.tracks[k].k&&TL.tracks[k].k.length&&tlProp(k))return true;return false}
 function tlHasCam(){for(var k in TL.tracks){var d=tlProp(k);if(d&&d.obj&&d.obj.kind==="camera"&&TL.tracks[k].k.length)return true}return false}
 /* quaternion helpers (w,x,y,z) */
@@ -2613,6 +2638,7 @@ function tlEval(tr,t,d){
 function tlSetTime(t){
   t=Math.max(0,+t||0);TL.t=t;var cam=false;
   for(var id in TL.tracks){
+    if(TL.tracks[id].mute)continue;
     var d=tlProp(id);if(!d)continue;var v=tlEval(TL.tracks[id],t,d);if(!v)continue;
     d.set(v);if(d.obj&&d.obj===ACAM)cam=true;
   }
@@ -2621,6 +2647,7 @@ function tlSetTime(t){
 }
 /* keys */
 function tlSnap(t){return Math.round(t*TL.fps)/TL.fps}
+function tlStoreX(){var p=cur&&cur.timeline;if(p){p.markers=TL.markers;p.range=TL.range;p.bounce=!!TL.bounce}saveSoon();if(TLU.open)tlDockDraw()}
 function tlTrackCopy(id){var tr=TL.tracks[id];return tr?JSON.parse(JSON.stringify(tr)):null}
 function tlSetTrack(id,tr){if(tr&&tr.k&&tr.k.length)TL.tracks[id]=tr;else delete TL.tracks[id];tlChanged()}
 function tlChanged(quiet){if(!quiet&&TL.ready!==false)tlSetTime(TL.t);saveSoon();dirty=true;if(!quiet&&curTool==="camera")openTool("camera",true);if(typeof tlDockDraw==="function")tlDockDraw();tlKdRefresh()}
@@ -2632,6 +2659,7 @@ function tlUndoCmd(label,ids,before){
 /* write (or replace) a key for one property at time t. v defaults to the property's current value. */
 function tlKey(id,t,v,ease,noUndo,quiet){
   var d=tlProp(id);if(!d)return false;
+  if(TL.tracks[id]&&TL.tracks[id].lock){setStatus("That row is locked.","warn");return false}
   t=tlSnap(Math.max(0,t));v=(v||d.get()).slice();
   var before=noUndo?null:[tlTrackCopy(id)],tr=TL.tracks[id]||(TL.tracks[id]={k:[]}),k=tr.k,i;
   if(d.quat&&k.length){var P=k[0];for(i=0;i<k.length;i++)if(k[i].t<t)P=k[i];if(P.v[0]*v[0]+P.v[1]*v[1]+P.v[2]*v[2]+P.v[3]*v[3]<0)v=v.map(function(x){return -x})}
@@ -2641,7 +2669,7 @@ function tlKey(id,t,v,ease,noUndo,quiet){
   tlChanged(quiet);return true;
 }
 function tlDelKey(id,t){
-  var tr=TL.tracks[id];if(!tr)return;var before=[tlTrackCopy(id)];
+  var tr=TL.tracks[id];if(!tr||tr.lock)return;var before=[tlTrackCopy(id)];
   tr.k=tr.k.filter(function(x){return Math.abs(x.t-t)>1e-6});
   if(!tr.k.length)delete TL.tracks[id];
   undoPush(tlUndoCmd("delete keyframe",[id],before));tlChanged();
@@ -2720,7 +2748,7 @@ function tlSame(a,b,d){
 function tlAutoCheck(){
   if(anim||TLU.drag||!cur||!TL.ready)return;
   for(var id in TL.tracks){
-    var tr=TL.tracks[id];if(!tr.k.length)continue;var d=tlProp(id);if(!d)continue;
+    var tr=TL.tracks[id];if(!tr.k.length||tr.mute||tr.lock)continue;var d=tlProp(id);if(!d)continue;
     var now=d.get(),ev=tlEval(tr,TL.t,d);if(!ev||tlSame(now,ev,d))continue;
     if(!TLA.ids[id]){TLA.ids[id]=1;TLA.before[id]=tlTrackCopy(id)}
     tlKey(id,TL.t,now,null,true,true);
@@ -2734,7 +2762,7 @@ function tlAutoFlush(){
 }
 
 /* ---------- V026 timeline dock: dope sheet + V028 curves (rows = animated properties, diamonds = keys) ---------- */
-var TLU={row:null,mode:"dope",open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:176,RH:26,RW:24,W:0,H:0,dpr:1};
+var TLU={snap:true,row:null,mode:"dope",open:false,v0:0,v1:6,sy:0,sel:[],drag:null,LW:200,RH:26,RW:24,W:0,H:0,dpr:1};
 var TL_COL=["#ff6a3d","#5ad17a","#4aa3ff","#c58cff"];
 function tlRows(){
   var rows=[];for(var id in TL.tracks){var d=tlProp(id);if(d&&TL.tracks[id].k.length)rows.push({id:id,d:d,tr:TL.tracks[id]})}
@@ -2742,7 +2770,80 @@ function tlRows(){
 }
 function tlT2X(t){return TLU.LW+(t-TLU.v0)/Math.max(1e-6,TLU.v1-TLU.v0)*(TLU.W-TLU.LW)}
 function tlX2T(x){return TLU.v0+(x-TLU.LW)/Math.max(1,TLU.W-TLU.LW)*(TLU.v1-TLU.v0)}
-function tlFit(){TLU.v0=0;TLU.v1=Math.max(0.5,S.dur||6);tlDockDraw()}
+function tlDurUI(){var a=$("tlDur"),b=$("tlDurF");if(a)a.value=+(S.dur||6).toFixed(3);if(b)b.value=Math.round((S.dur||6)*TL.fps)}
+function tlFit(){TLU.v0=0;TLU.v1=Math.max(0.5,S.dur||6);tlDurUI();tlDockDraw()}
+function tlFrameSel(){var sp=tlSelSpan();if(!sp){tlFit();return}var pad=Math.max(0.3,(sp.b-sp.a)*0.1);TLU.v0=Math.max(0,sp.a-pad);TLU.v1=sp.b+pad;tlDockDraw()}
+function tlSelSpan(){if(TLU.sel.length<2)return null;var a=1e18,b=-1e18;TLU.sel.forEach(function(s){a=Math.min(a,s.k.t);b=Math.max(b,s.k.t)});return b-a>1e-6?{a:a,b:b}:null}
+/* keep one key per frame on a track; a selected key wins over an unselected one */
+function tlDedupe(id){
+  var tr=TL.tracks[id];if(!tr)return;tr.k.sort(function(a,b){return a.t-b.t});var out=[];
+  tr.k.forEach(function(x){var l=out[out.length-1];if(l&&Math.abs(l.t-x.t)<1e-6){if(tlSelHas(l)&&!tlSelHas(x))return;out[out.length-1]=x}else out.push(x)});
+  tr.k=out;TLU.sel=TLU.sel.filter(function(s){return TL.tracks[s.id]&&TL.tracks[s.id].k.indexOf(s.k)>=0});
+}
+/* change the whole timeline's length; with stretch on, every key (and marker and range) is scaled to fit */
+function tlSetDur(v,stretch){
+  v=clamp(+v||6,0.5,600);var old=S.dur||6,ids=Object.keys(TL.tracks),f=v/old,mb=TL.markers.slice(),rb=TL.range?{a:TL.range.a,b:TL.range.b}:null;
+  if(stretch&&Math.abs(f-1)>1e-9&&(ids.length||mb.length||rb)){
+    var before=ids.map(tlTrackCopy);
+    ids.forEach(function(id){TL.tracks[id].k.forEach(function(k){k.t=Math.min(tlSnap(k.t*f),tlSnap(v))});tlDedupe(id)});
+    var nm=[];mb.forEach(function(m){var t=Math.min(tlSnap(m*f),tlSnap(v));if(nm.indexOf(t)<0)nm.push(t)});TL.markers=nm.sort(function(a,b){return a-b});
+    if(rb){var a2=tlSnap(rb.a*f),b2=Math.min(tlSnap(rb.b*f),tlSnap(v));if(b2<=a2)b2=a2+1/TL.fps;TL.range={a:a2,b:b2}}
+    S.dur=v;var cmd=tlUndoCmd("timeline length",ids,before),u0=cmd.undo,r0=cmd.redo,ra=TL.range?{a:TL.range.a,b:TL.range.b}:null,ma=TL.markers.slice();
+    cmd.undo=function(){S.dur=old;TL.markers=mb.slice();TL.range=rb?{a:rb.a,b:rb.b}:null;u0();tlStoreX();tlFit()};
+    cmd.redo=function(){S.dur=v;TL.markers=ma.slice();TL.range=ra?{a:ra.a,b:ra.b}:null;r0();tlStoreX();tlFit()};
+    undoPush(cmd);tlStoreX();tlChanged();
+  }else{S.dur=v;if(TL.range&&TL.range.b>v){TL.range=TL.range.a<v?{a:TL.range.a,b:v}:null}}
+  saveSoon();tlFit();if(curTool==="camera")openTool("camera",true);
+}
+/* jumping around */
+function tlGo(t){tlSetTime(tlSnap(Math.max(0,t)));if(TL.t<TLU.v0||TL.t>TLU.v1){var w=TLU.v1-TLU.v0;TLU.v0=Math.max(0,TL.t-w*0.1);TLU.v1=TLU.v0+w}tlDockDraw()}
+function tlAllTimes(){var o=[],id;for(id in TL.tracks)if(tlProp(id))TL.tracks[id].k.forEach(function(k){o.push(k.t)});return o.sort(function(a,b){return a-b})}
+function tlJumpKey(dir){var ts=tlAllTimes(),e=0.5/TL.fps,i;if(dir>0){for(i=0;i<ts.length;i++)if(ts[i]>TL.t+e){tlGo(ts[i]);return}}else{for(i=ts.length-1;i>=0;i--)if(ts[i]<TL.t-e){tlGo(ts[i]);return}}setStatus(dir>0?"No key after the playhead.":"No key before the playhead.","warn")}
+function tlJumpMarker(dir){var m=TL.markers,e=0.5/TL.fps,i;if(dir>0){for(i=0;i<m.length;i++)if(m[i]>TL.t+e){tlGo(m[i]);return}}else{for(i=m.length-1;i>=0;i--)if(m[i]<TL.t-e){tlGo(m[i]);return}}setStatus("No more markers that way.","warn")}
+function tlHome(){tlGo(TL.range?TL.range.a:0)}
+function tlEnd(){tlGo(TL.range?TL.range.b:(S.dur||6))}
+function tlMarkerToggle(){var t=tlSnap(TL.t),i;for(i=0;i<TL.markers.length;i++)if(Math.abs(TL.markers[i]-t)<0.5/TL.fps){TL.markers.splice(i,1);tlStoreX();return}TL.markers.push(t);TL.markers.sort(function(a,b){return a-b});tlStoreX()}
+function tlRangeSet(w){
+  var t=tlSnap(TL.t),d=S.dur||6,mf=1/TL.fps,r=TL.range?{a:TL.range.a,b:TL.range.b}:{a:0,b:d};
+  if(w==="a"){r.a=t;if(r.b<=r.a)r.b=Math.max(d,r.a+mf)}else{r.b=Math.max(t,mf);if(r.a>=r.b)r.a=0}
+  TL.range=r;tlStoreX();setStatus("Preview range "+r.a.toFixed(2)+" to "+r.b.toFixed(2)+" s. Play now loops just that part.","ok");
+}
+function tlRangeClear(){TL.range=null;tlStoreX()}
+function tlLoopUI(){var b=$("tlLoop");if(b)b.textContent=!S.loop?"Once":TL.bounce?"Bounce":"Loop"}
+function tlLoopCycle(){var m=!S.loop?"once":TL.bounce?"bounce":"loop",n=m==="once"?"loop":m==="loop"?"bounce":"once";S.loop=n!=="once";TL.bounce=n==="bounce";tlStoreX();tlLoopUI();if(curTool==="camera")openTool("camera",true)}
+/* nearest marker, playhead or range edge within a few pixels (for scrubbing and dragging keys) */
+function tlSnapT(t,skipHead){
+  if(!TLU.snap)return null;var c=TL.markers.slice(),best=null,bd=6,i,d;
+  if(!skipHead)c.push(TL.t);if(TL.range){c.push(TL.range.a);c.push(TL.range.b)}c.push(0);
+  for(i=0;i<c.length;i++){d=Math.abs(tlT2X(c[i])-tlT2X(t));if(d<bd){bd=d;best=c[i]}}
+  return best;
+}
+/* copy, paste, duplicate */
+var TLCLIP=null;
+function tlCopySel(){
+  if(!TLU.sel.length){setStatus("Select some keys first.","warn");return false}
+  var t0=1e18;TLU.sel.forEach(function(s){t0=Math.min(t0,s.k.t)});
+  TLCLIP={items:TLU.sel.map(function(s){return {id:s.id,dt:s.k.t-t0,k:JSON.parse(JSON.stringify(s.k))}})};
+  setStatus("Copied "+TLCLIP.items.length+" key"+(TLCLIP.items.length===1?"":"s")+".","ok");return true;
+}
+function tlPasteAt(t){
+  if(!TLCLIP){setStatus("Nothing copied yet.","warn");return}
+  t=tlSnap(Math.max(0,t));var ids={};
+  TLCLIP.items.forEach(function(it){if(!tlProp(it.id))return;var tr=TL.tracks[it.id];if(tr&&tr.lock)return;ids[it.id]=1});
+  var idl=Object.keys(ids);if(!idl.length){setStatus("Those rows are locked or gone.","warn");return}
+  var before=idl.map(tlTrackCopy);TLU.sel=[];
+  TLCLIP.items.forEach(function(it){
+    if(!ids[it.id])return;var tr=TL.tracks[it.id]||(TL.tracks[it.id]={k:[]}),nt=tlSnap(Math.max(0,t+it.dt)),kk=JSON.parse(JSON.stringify(it.k));
+    kk.t=nt;tr.k=tr.k.filter(function(x){return Math.abs(x.t-nt)>1e-6});tr.k.push(kk);TLU.sel.push({id:it.id,k:kk});
+  });
+  idl.forEach(function(id){TL.tracks[id].k.sort(function(a,b){return a.t-b.t})});
+  undoPush(tlUndoCmd("paste keyframes",idl,before));tlChanged();tlSetTime(TL.t);tlDockDraw();
+}
+function tlDuplicate(){
+  var sp0=TLU.sel.length?{a:Math.min.apply(null,TLU.sel.map(function(s){return s.k.t})),b:Math.max.apply(null,TLU.sel.map(function(s){return s.k.t}))}:null;
+  if(!tlCopySel())return;var e=0.5/TL.fps,t=TL.t;if(sp0&&t>=sp0.a-e&&t<=sp0.b+e)t=sp0.b+1/TL.fps;tlPasteAt(t);
+}
+function tlToggleRow(w,id){var tr=TL.tracks[id];if(!tr)return;if(tr[w])delete tr[w];else tr[w]=1;if(w==="lock"||w==="mute")TLU.sel=TLU.sel.filter(function(s){return !(s.id===id&&TL.tracks[id]&&TL.tracks[id].lock)});saveSoon();tlSetTime(TL.t);tlDockDraw()}
 function tlSelHas(k){for(var i=0;i<TLU.sel.length;i++)if(TLU.sel[i].k===k)return true;return false}
 /* curve view helpers: the row being plotted, which component is the "main" one (handles live there), and the value scale */
 function tlCurveRow(rows){for(var i=0;i<rows.length;i++)if(rows[i].id===TLU.row)return rows[i];return rows.length?rows[0]:null}
@@ -2801,8 +2902,8 @@ function tlDockDraw(){
     for(i=0;i<rows.length;i++){
       var y=RH+i*RW-TLU.sy;if(y>H||y+RW<RH)continue;
       g.fillStyle=rows[i].id===TLU.row?"#1c2735":(i%2?"#12161c":"#0f1318");g.fillRect(LW,y,W-LW,RW);
-      var tr=rows[i].tr.k;
-      g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
+      var tr=rows[i].tr.k,rdim=rows[i].tr.mute||rows[i].tr.lock;
+      g.globalAlpha=rdim?0.4:1;g.strokeStyle="#ffffff22";g.lineWidth=2;g.beginPath();
       for(j=0;j<tr.length-1;j++){var xa=tlT2X(tr[j].t),xb=tlT2X(tr[j+1].t);if(xb<LW||xa>W)continue;g.moveTo(Math.max(LW,xa),y+RW/2);g.lineTo(xb,y+RW/2)}g.stroke();
       for(j=0;j<tr.length;j++){
         var x=tlT2X(tr[j].t);if(x<LW-6||x>W+6)continue;var sel=tlSelHas(tr[j]);
@@ -2810,6 +2911,7 @@ function tlDockDraw(){
         g.fillStyle=sel?"#ff6a3d":(tr[j].e==="step"?"#8a94a0":tr[j].e==="linear"?"#cfd6de":"#ffffff");
         g.strokeStyle=sel?"#ffb04a":"#0008";g.lineWidth=1.5;g.fillRect(-4.5,-4.5,9,9);g.strokeRect(-4.5,-4.5,9,9);g.restore();
       }
+      g.globalAlpha=1;
     }
     g.restore();
   }else if(cr){
@@ -2836,25 +2938,36 @@ function tlDockDraw(){
   /* label column */
   g.fillStyle="#12151a";g.fillRect(0,0,LW,H);g.strokeStyle="#262b33";g.lineWidth=1;g.beginPath();g.moveTo(LW+.5,0);g.lineTo(LW+.5,H);g.stroke();
   g.save();g.beginPath();g.rect(0,RH,LW,H-RH);g.clip();g.font="12px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";
-  for(i=0;i<rows.length;i++){var yl=RH+i*RW-TLU.sy;if(yl>H||yl+RW<RH)continue;var isr=curve?(cr&&rows[i]===cr):rows[i].id===TLU.row;if(isr){g.fillStyle="#1c2735";g.fillRect(0,yl,LW,RW)}g.fillStyle=isr?"#ffb04a":SEL&&rows[i].d.obj===SEL?"#ffd9a0":"#c6ced6";g.fillText(rows[i].d.label.length>24?rows[i].d.label.slice(0,23)+"…":rows[i].d.label,10,yl+RW/2)}
+  for(i=0;i<rows.length;i++){var yl=RH+i*RW-TLU.sy;if(yl>H||yl+RW<RH)continue;var isr=curve?(cr&&rows[i]===cr):rows[i].id===TLU.row;if(isr){g.fillStyle="#1c2735";g.fillRect(0,yl,LW,RW)}g.fillStyle=isr?"#ffb04a":SEL&&rows[i].d.obj===SEL?"#ffd9a0":"#c6ced6";g.fillText(rows[i].d.label.length>19?rows[i].d.label.slice(0,18)+"…":rows[i].d.label,10,yl+RW/2);tlRowIcons(g,rows[i].tr,yl)}
   if(!rows.length){g.fillStyle="#8a94a0";g.fillText("No keys yet.",10,RH+16);g.fillText("Add a track above,",10,RH+34);g.fillText("or key a camera.",10,RH+50)}
   g.restore();
   /* ruler */
   g.fillStyle="#161a21";g.fillRect(0,0,W,RH);g.strokeStyle="#262b33";g.beginPath();g.moveTo(0,RH+.5);g.lineTo(W,RH+.5);g.stroke();
   g.fillStyle="#8a94a0";g.font="11px ui-monospace,Menlo,Consolas,monospace";g.textBaseline="middle";g.strokeStyle="#ffffff26";
-  for(var tt=Math.ceil(TLU.v0/st)*st;tt<=TLU.v1+1e-9;tt+=st){var tx=tlT2X(tt);if(tx<LW)continue;g.beginPath();g.moveTo(tx+.5,RH-8);g.lineTo(tx+.5,curve?RH:H);g.stroke();g.fillText((Math.round(tt*100)/100)+"s",tx+4,RH/2-1)}
+  for(var tt=Math.ceil(TLU.v0/st)*st;tt<=TLU.v1+1e-9;tt+=st){var tx=tlT2X(tt);if(tx<LW)continue;g.beginPath();g.moveTo(tx+.5,RH-8);g.lineTo(tx+.5,curve?RH:H);g.stroke();g.fillText((Math.round(tt*100)/100)+"s",tx+4,RH/2-5)}
+  /* preview range, markers, and the band you drag to stretch selected keys */
+  if(TL.range){var ra=Math.max(LW,tlT2X(TL.range.a)),rb2=Math.min(W,tlT2X(TL.range.b));if(rb2>ra){g.fillStyle="#4aa3ff1c";g.fillRect(ra,RH,rb2-ra,H-RH);g.fillStyle="#4aa3ff";g.fillRect(ra,RH-4,rb2-ra,3)}}
+  for(i=0;i<TL.markers.length;i++){var mx=tlT2X(TL.markers[i]);if(mx<LW||mx>W)continue;g.strokeStyle="#ffd24a66";g.lineWidth=1;g.beginPath();g.moveTo(mx+.5,RH);g.lineTo(mx+.5,H);g.stroke();g.fillStyle="#ffd24a";g.beginPath();g.moveTo(mx,RH-14);g.lineTo(mx+9,RH-10);g.lineTo(mx,RH-6);g.closePath();g.fill();g.fillRect(mx-.5,RH-14,1.5,14)}
+  var sp=tlSelSpan();
+  if(sp){var sa=tlT2X(sp.a),sb=tlT2X(sp.b);g.fillStyle="#ff6a3d33";g.fillRect(sa,RH-12,sb-sa,12);g.fillStyle="#ff6a3d";g.fillRect(sa-3,RH-14,6,14);g.fillRect(sb-3,RH-14,6,14);g.fillRect(sa,RH-3,sb-sa,2)}
   /* box select */
   var d=TLU.drag;if(d&&d.kind==="marquee"&&d.live){g.fillStyle="#ff6a3d22";g.strokeStyle="#ff6a3d";g.lineWidth=1;g.fillRect(Math.min(d.x0,d.x),Math.min(d.y0,d.y),Math.abs(d.x-d.x0),Math.abs(d.y-d.y0));g.strokeRect(Math.min(d.x0,d.x)+.5,Math.min(d.y0,d.y)+.5,Math.abs(d.x-d.x0),Math.abs(d.y-d.y0))}
   /* playhead */
   var px2=tlT2X(TL.t);if(px2>=LW){g.strokeStyle="#ff6a3d";g.fillStyle="#ff6a3d";g.lineWidth=1.5;g.beginPath();g.moveTo(px2,RH-2);g.lineTo(px2,H);g.stroke();g.beginPath();g.moveTo(px2-6,RH-12);g.lineTo(px2+6,RH-12);g.lineTo(px2,RH-2);g.fill()}
   var ro=$("tlTime2");if(ro)ro.textContent=TL.t.toFixed(2)+" / "+(S.dur||6).toFixed(2)+" s  ·  frame "+Math.round(TL.t*TL.fps);
 }
+function tlRowIcons(g,tr,yl){
+  var LW=TLU.LW,RW=TLU.RW,items=[["mute",LW-46,"M"],["lock",LW-24,"L"]],i;
+  g.save();g.font="bold 10px ui-monospace,Menlo,Consolas,monospace";g.textAlign="center";
+  for(i=0;i<2;i++){var on=!!tr[items[i][0]],x=items[i][1];g.fillStyle=on?(i?"#ff6a3d":"#4aa3ff"):"#ffffff10";g.fillRect(x,yl+4,18,RW-8);g.fillStyle=on?"#0e1116":"#8a94a0";g.fillText(items[i][2],x+9,yl+RW/2+1)}
+  g.restore();
+}
 function tlSetMode(m){
   TLU.mode=m;var a=document.querySelectorAll("[data-tla=mode]"),i;for(i=0;i<a.length;i++)a[i].setAttribute("aria-pressed",String(a[i].dataset.m===m));tlDockDraw();
 }
 function tlDockOpen(on){
   TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
-  if(TLU.open){tlFit();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
+  if(TLU.open){tlFit();tlLoopUI();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
 }
 function tlAddOpts(){
   var sel=$("tlAdd");if(!sel)return;var cur=sel.value,groups={},h='<option value="">Add a track…</option>';
@@ -2868,11 +2981,11 @@ function tlHit(x,y){
   var rows=tlRows(),best=null,bd=9,j,r;
   if(y<TLU.RH||x<TLU.LW)return null;
   if(TLU.mode==="curve"){
-    var cr=tlCurveRow(rows);if(!cr)return null;var kk=cr.tr.k,pc=tlPrimary(cr),sc=tlScale(cr);
+    var cr=tlCurveRow(rows);if(!cr||cr.tr.lock)return null;var kk=cr.tr.k,pc=tlPrimary(cr),sc=tlScale(cr);
     for(j=0;j<kk.length;j++){var dd=Math.hypot(tlT2X(kk[j].t)-x,tlV2Y(kk[j].v[pc],sc)-y);if(dd<bd+1){bd=dd;best={id:cr.id,k:kk[j],row:rows.indexOf(cr)}}}
     return best;
   }
-  r=tlRowAt(y);if(r<0||r>=rows.length)return null;
+  r=tlRowAt(y);if(r<0||r>=rows.length||rows[r].tr.lock)return null;
   var k=rows[r].tr.k;for(j=0;j<k.length;j++){var d2=Math.abs(tlT2X(k[j].t)-x);if(d2<bd){bd=d2;best={id:rows[r].id,k:k[j],row:r}}}
   return best;
 }
@@ -2884,7 +2997,7 @@ function tlHandleAt(x,y){
 function tlKeysIn(x0,y0,x1,y1){
   var rows=tlRows(),out=[],xa=Math.min(x0,x1),xb=Math.max(x0,x1),ya=Math.min(y0,y1),yb=Math.max(y0,y1),r,j;
   for(r=0;r<rows.length;r++){
-    if(TLU.mode==="curve"&&rows[r]!==tlCurveRow(rows))continue;
+    if(TLU.mode==="curve"&&rows[r]!==tlCurveRow(rows))continue;if(rows[r].tr.lock)continue;
     for(j=0;j<rows[r].tr.k.length;j++){var q=tlKeyPos(rows[r],r,rows[r].tr.k[j]);if(q.x>=xa-4&&q.x<=xb+4&&q.y>=ya-4&&q.y<=yb+4)out.push({id:rows[r].id,k:rows[r].tr.k[j]})}
   }
   return out;
@@ -2917,12 +3030,23 @@ function tlOpenMenu(row){
 (function(){
   var c=$("tlc");
   function pos(e){var r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
-  function scrubTo(x){tlSetTime(tlSnap(Math.max(0,tlX2T(x))));tlDockDraw()}
+  function scrubTo(x){var t=tlSnap(Math.max(0,tlX2T(x))),sn=tlSnapT(t,true);if(sn!=null)t=sn;tlSetTime(t);tlDockDraw()}
   c.addEventListener("pointerdown",function(e){
     if(e.button!==0)return;c.focus();var p=pos(e);c.setPointerCapture(e.pointerId);var rows=tlRows(),ids;
     /* only the ruler moves the playhead */
-    if(p.y<TLU.RH){TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)scrubTo(p.x);else tlDockDraw();return}
-    if(p.x<TLU.LW){var r=tlRowAt(p.y);if(rows[r]){TLU.row=rows[r].id;if(rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}}tlDockDraw();return}
+    if(p.y<TLU.RH){
+      var sp=tlSelSpan();
+      if(sp&&p.y>=TLU.RH-15){
+        var xa=tlT2X(sp.a),xb=tlT2X(sp.b),dl=Math.abs(p.x-xa),dr=Math.abs(p.x-xb);
+        if(Math.min(dl,dr)<=8){
+          var side=dl<=dr?"L":"R",ids2=tlSelIds();
+          TLU.drag={kind:"stretch",side:side,a:sp.a,b:sp.b,ids:ids2,before:ids2.map(tlTrackCopy),items:TLU.sel.map(function(s){return {k:s.k,t0:s.k.t}}),moved:false};return;
+        }
+      }
+      TLU.drag={kind:"scrub"};if(p.x>=TLU.LW)scrubTo(p.x);else tlDockDraw();return}
+    if(p.x<TLU.LW){var r=tlRowAt(p.y);
+      if(rows[r]&&p.x>=TLU.LW-48){tlToggleRow(p.x>=TLU.LW-26?"lock":"mute",rows[r].id);return}
+      if(rows[r]){TLU.row=rows[r].id;if(rows[r].d.obj){SEL=rows[r].d.obj;if(isCam(SEL))ACAM=SEL;refreshObjs();camUI()}}tlDockDraw();return}
     var hh=tlHandleAt(p.x,p.y);
     if(hh){var sg=hh.h.seg,pcx=tlPrimary(hh.row);TLU.drag={kind:"handle",id:hh.id,h:hh.h,row:hh.row,pc:pcx,sc:tlScale(hh.row),before:[tlTrackCopy(hh.id)],moved:false};return}
     var h=tlHit(p.x,p.y),rr=curveOrRow(rows,p);if(rr)TLU.row=rr.id;
@@ -2930,7 +3054,7 @@ function tlOpenMenu(row){
       if(e.shiftKey){if(tlSelHas(h.k))TLU.sel=TLU.sel.filter(function(s){return s.k!==h.k});else TLU.sel.push({id:h.id,k:h.k})}
       else if(!tlSelHas(h.k))TLU.sel=[{id:h.id,k:h.k}];
       ids=tlSelIds();
-      TLU.drag={kind:"move",x0:p.x,y0:p.y,ids:ids,before:ids.map(tlTrackCopy),orig:TLU.sel.map(function(s){return s.k.t}),origV:TLU.sel.map(function(s){return s.k.v.slice()}),moved:false,
+      TLU.drag={kind:"move",anchor:Math.max(0,TLU.sel.map(function(s){return s.k}).indexOf(h.k)),x0:p.x,y0:p.y,ids:ids,before:ids.map(tlTrackCopy),orig:TLU.sel.map(function(s){return s.k.t}),origV:TLU.sel.map(function(s){return s.k.v.slice()}),moved:false,
         sc:TLU.mode==="curve"&&rr?tlScale(rr):null,rowId:rr?rr.id:null};
     }else{
       /* empty space: drag a box to pick keys (Shift adds to what's picked) */
@@ -2940,7 +3064,18 @@ function tlOpenMenu(row){
   });
   function curveOrRow(rows,p){if(TLU.mode==="curve")return tlCurveRow(rows);return rows[tlRowAt(p.y)]||null}
   c.addEventListener("pointermove",function(e){
-    var d=TLU.drag;if(!d)return;var p=pos(e);
+    var d=TLU.drag;
+    if(!d){var hp=pos(e),sp3=tlSelSpan();c.style.cursor=(sp3&&hp.y<TLU.RH&&hp.y>=TLU.RH-15&&Math.min(Math.abs(hp.x-tlT2X(sp3.a)),Math.abs(hp.x-tlT2X(sp3.b)))<=8)?"ew-resize":"";return}
+    var p=pos(e);
+    if(d.kind==="stretch"){
+      var mf=1/TL.fps,ed=tlSnap(Math.max(0,tlX2T(p.x)));
+      if(d.side==="L")ed=Math.min(ed,d.b-mf);else ed=Math.max(ed,d.a+mf);
+      var sn3=tlSnapT(ed,true);if(sn3!=null&&(d.side==="L"?sn3<=d.b-mf:sn3>=d.a+mf))ed=sn3;
+      var anc=d.side==="L"?d.b:d.a,edge0=d.side==="L"?d.a:d.b,fct=(ed-anc)/(edge0-anc);
+      d.items.forEach(function(it){it.k.t=tlSnap(Math.max(0,anc+(it.t0-anc)*fct))});
+      d.ids.forEach(function(id){TL.tracks[id].k.sort(function(a,b){return a.t-b.t})});
+      d.moved=true;tlSetTime(TL.t);tlDockDraw();return;
+    }
     if(d.kind==="scrub"){if(p.x>=TLU.LW||true)scrubTo(Math.max(TLU.LW,p.x));return}
     if(d.kind==="marquee"){
       d.x=p.x;d.y=p.y;if(!d.live&&Math.hypot(p.x-d.x0,p.y-d.y0)<4)return;d.live=true;
@@ -2953,6 +3088,7 @@ function tlOpenMenu(row){
       var ix=d.h.which===1?0:2;cc[ix]=clamp(tt,0,1);cc[ix+1]=clamp(vv,-1,2);A.c=cc;A.e="bezier";d.moved=true;tlSetTime(TL.t);tlDockDraw();return;
     }
     var dt2=tlSnap(tlX2T(p.x))-tlSnap(tlX2T(d.x0));if(!d.moved&&Math.hypot(p.x-d.x0,p.y-d.y0)<3)return;d.moved=true;
+    if(TLU.snap&&d.orig[d.anchor]!=null){var sn2=tlSnapT(d.orig[d.anchor]+dt2,true);if(sn2!=null)dt2=sn2-d.orig[d.anchor]}
     var mn=Math.min.apply(null,d.orig);if(mn+dt2<0)dt2=-mn;
     TLU.sel.forEach(function(s,i){
       s.k.t=tlSnap(d.orig[i]+dt2);
@@ -2964,6 +3100,7 @@ function tlOpenMenu(row){
   function up(e){
     var d=TLU.drag;TLU.drag=null;
     if(d&&d.kind==="marquee"){if(!d.live&&!d.add)TLU.sel=[];tlDockDraw();return}
+    if(d&&d.kind==="stretch"){if(d.moved){d.ids.forEach(tlDedupe);undoPush(tlUndoCmd("stretch keyframes",d.ids,d.before));tlChanged();tlSetTime(TL.t)}tlDockDraw();return}
     if(d&&d.kind==="handle"){if(d.moved){undoPush(tlUndoCmd("curve handle",[d.id],d.before));tlChanged();tlSetTime(TL.t)}tlDockDraw();return}
     if(!d||d.kind!=="move"||!d.moved){tlDockDraw();return}
     /* two keys on the same frame: the one you moved wins */
@@ -2984,7 +3121,26 @@ function tlOpenMenu(row){
     else TLU.sy+=e.deltaY;
     tlDockDraw();
   },{passive:false});
+  var EASEKEYS={Digit1:["smooth"],Digit2:["linear"],Digit3:["step"],Digit4:["bezier","0.42,0,1,1"],Digit5:["bezier","0,0,0.58,1"],Digit6:["bezier","0.42,0,0.58,1"]};
   c.addEventListener("keydown",function(e){
+    var k=e.code,mod=e.ctrlKey||e.metaKey,done=true;
+    if(e.altKey)done=false;
+    else if(mod){if(k==="KeyC")tlCopySel();else if(k==="KeyV")tlPasteAt(TL.t);else if(k==="KeyD")tlDuplicate();else done=false}
+    else if(k==="KeyJ"||k==="ArrowUp")tlJumpKey(-1);
+    else if(k==="KeyK"||k==="ArrowDown")tlJumpKey(1);
+    else if(k==="Home")tlHome();
+    else if(k==="End")tlEnd();
+    else if(k==="KeyF"){if(e.shiftKey)tlFrameSel();else tlFit()}
+    else if(k==="Tab"&&!e.shiftKey)tlSetMode(TLU.mode==="dope"?"curve":"dope");
+    else if(k==="KeyI")tlRangeSet("a");
+    else if(k==="KeyO")tlRangeSet("b");
+    else if(k==="KeyM")tlMarkerToggle();
+    else if(k==="Comma")tlJumpMarker(-1);
+    else if(k==="Period")tlJumpMarker(1);
+    else if(k==="Escape"&&TLU.sel.length){TLU.sel=[];tlDockDraw()}
+    else if(EASEKEYS[k])tlEaseSel(EASEKEYS[k][0],EASEKEYS[k][1]);
+    else done=false;
+    if(done){e.preventDefault();e.stopPropagation();return}
     if(e.code==="Delete"||e.code==="Backspace"){e.preventDefault();e.stopPropagation();tlDeleteSel()}
     else if(e.code==="ArrowLeft"||e.code==="ArrowRight"){e.preventDefault();tlSetTime(tlSnap(Math.max(0,TL.t+(e.code==="ArrowLeft"?-1:1)/TL.fps)));tlDockDraw()}
     else if(e.code==="Space"){e.preventDefault();if(anim&&!anim.rec)stopAnim();else startAnim(false)}
@@ -2996,6 +3152,19 @@ function tlOpenMenu(row){
     var el=e.target.closest("[data-tla]");if(!el)return;var a=el.dataset.tla;
     if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
     else if(a==="close")tlDockOpen(false);
+    else if(a==="first")tlHome();
+    else if(a==="last")tlEnd();
+    else if(a==="prevkey")tlJumpKey(-1);
+    else if(a==="nextkey")tlJumpKey(1);
+    else if(a==="loopmode")tlLoopCycle();
+    else if(a==="rin")tlRangeSet("a");
+    else if(a==="rout")tlRangeSet("b");
+    else if(a==="rclear")tlRangeClear();
+    else if(a==="marker")tlMarkerToggle();
+    else if(a==="snap"){TLU.snap=!TLU.snap;el.setAttribute("aria-pressed",String(TLU.snap))}
+    else if(a==="copy")tlCopySel();
+    else if(a==="paste")tlPasteAt(TL.t);
+    else if(a==="dup")tlDuplicate();
     else if(a==="fit")tlFit();
     else if(a==="del")tlDeleteSel();
     else if(a==="mode")tlSetMode(el.dataset.m);
@@ -3003,7 +3172,16 @@ function tlOpenMenu(row){
     else if(a==="add"){var id=$("tlAdd").value||TLU.row;if(id&&tlProp(id)){if(THRU&&tlProp(id).obj===ACAM)camFromView(ACAM);tlKey(id,TL.t);TLU.row=id;$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Click a row in the list, or pick a track, then press Key it.","warn")}
   });
   $("tlAdd").addEventListener("mousedown",tlAddOpts);$("tlAdd").addEventListener("focus",tlAddOpts);
-  $("tlDur").addEventListener("change",function(){var v=clamp(+this.value||6,0.5,600);S.dur=v;this.value=v;saveSoon();tlFit();if(curTool==="camera")openTool("camera",true)});
+  $("tlDur").addEventListener("change",function(){tlSetDur(+this.value,$("tlFit2").checked)});
+  $("tlDurF").addEventListener("change",function(){tlSetDur((+this.value||1)/TL.fps,$("tlFit2").checked)});
+  /* the Length slider in the Camera menu stretches the keys too, once you let go */
+  var PB=$("popB");
+  ["pointerdown","keydown"].forEach(function(ev){PB.addEventListener(ev,function(e){if(e.target&&e.target.dataset&&e.target.dataset.k==="dur"&&TLU.durStart==null)TLU.durStart=S.dur},true)});
+  PB.addEventListener("change",function(e){
+    if(!e.target||!e.target.dataset||e.target.dataset.k!=="dur"||TLU.durStart==null)return;
+    var nv=S.dur,ov=TLU.durStart;TLU.durStart=null;
+    if(Math.abs(nv-ov)>1e-9&&$("tlFit2").checked&&(Object.keys(TL.tracks).length||TL.markers.length||TL.range)){S.dur=ov;tlSetDur(nv,true)}else tlDurUI();
+  });
   document.addEventListener("keydown",function(e){
     if(!TLU.open||e.target===c)return;var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
     if((e.code==="Delete"||e.code==="Backspace")&&TLU.sel.length&&!$("editor").hidden){e.preventDefault();tlDeleteSel()}

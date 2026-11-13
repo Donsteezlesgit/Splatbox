@@ -1,6 +1,15 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 037
+- Timeline layout: two tidy rows. Top row has transport (start, previous key, Play, next key, end, Once/Loop/Bounce), the time, Length, and the range and marker buttons. Second row has keying, easing, copy/paste and the view buttons.
+- Stretch keys: select two or more keys and drag the handles at either end of the orange band in the ruler. The keys squeeze or stretch to fit instead of moving.
+- Change the Length (seconds or frames, or the Length slider in the Camera menu) and every key, marker and range is scaled to fit. Untick "Stretch keys" to leave them alone. Undo restores both.
+- Keys: J/K or Up/Down jump between keys, Home/End go to the start and end, F fits, Shift+F frames the selected keys, Tab swaps Dope sheet and Curves, 1 to 6 set the easing, Ctrl+C / Ctrl+V / Ctrl+D copy, paste and duplicate keys.
+- Preview range: I and O set it, Play then loops just that part. Loop button cycles Once, Loop and Bounce.
+- Markers: M adds or removes one at the playhead, , and . jump between them. Snap (on by default) pulls the playhead and dragged keys to markers, the range and the playhead.
+- Row buttons: M mutes a row, L locks it. Muted rows stop driving their setting; locked rows can't be edited.
+
 ## Version 036
 - SHARP is removed. Apple's licence only allows personal, non-commercial use, so it doesn't belong in an app used for client work. The "One photo to 3D" card (photo plus optional depth map) stays.
 - The Windows app no longer carries the AI runtime, so the installer is smaller. If you already downloaded the 1.3 GB SHARP model, it's in the app's data folder (%APPDATA%\Splatbox\sharp) and you can delete it.

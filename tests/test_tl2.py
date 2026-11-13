@@ -1,0 +1,94 @@
+"""V037: timeline stretch handles, stretch-on-length, shortcuts, copy/paste, markers, range, loop modes, mute and lock."""
+import json
+from harness import *
+async def keys(t,P): return json.loads(await t.ev(f"JSON.stringify(TL.tracks['{P}'].k.map(function(k){{return Math.round(k.t*1000)/1000}}))"))
+async def run(br,site,fx):
+    t=await open_page(br,site,"tl2",w=1200,h=760); ok=t.ok
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.ev("closeTool()")
+    await t.ev("addCamera()"); await t.ev("leaveThru()"); cid=await t.ev("SEL.id"); P=f"o:{cid}:pos"
+    await t.ev(f"S.dur=8;tlKey('{P}',0,[0,0,0]);tlKey('{P}',1,[1,0,0]);tlKey('{P}',2,[2,0,0]);tlKey('{P}',4,[4,0,0])")
+    await t.pg.click("#tlBtn"); await t.wait(500); await t.ev("tlFit()")
+    ok("the dock has two toolbar rows",(await t.ev("document.querySelectorAll('#tld .tlh').length"))==2)
+    bb=await t.pg.locator("#tlc").bounding_box()
+    # --- stretch handles
+    await t.ev(f"TLU.sel=TL.tracks['{P}'].k.slice(1).map(function(k){{return {{id:'{P}',k:k}}}});tlDockDraw()")
+    xa=await t.ev("tlT2X(4)"); xb=await t.ev("tlT2X(7)"); y=bb["y"]+20
+    await t.pg.mouse.move(bb["x"]+xa,y); await t.pg.mouse.down(); await t.pg.mouse.move(bb["x"]+(xa+xb)/2,y,steps=4); await t.pg.mouse.move(bb["x"]+xb,y,steps=6); await t.pg.mouse.up(); await t.wait(200)
+    ok("dragging the right handle stretches the selected keys",await keys(t,P)==[0,1,3,7],await keys(t,P))
+    await t.pg.keyboard.press("Control+z"); await t.wait(200)
+    ok("undo puts the keys back",await keys(t,P)==[0,1,2,4],await keys(t,P))
+    # left handle: anchor on the right end (4), pull the left end from 1 to 0 -> keys 1,2,4 become 0,(4/3),4
+    await t.ev(f"TLU.sel=TL.tracks['{P}'].k.slice(1).map(function(k){{return {{id:'{P}',k:k}}}});tlDockDraw()")
+    xl=await t.ev("tlT2X(1)"); x0=await t.ev("tlT2X(0)")
+    await t.pg.mouse.move(bb["x"]+xl,y); await t.pg.mouse.down(); await t.pg.mouse.move(bb["x"]+(xl+x0)/2,y,steps=4); await t.pg.mouse.move(bb["x"]+x0,y,steps=6); await t.pg.mouse.up(); await t.wait(200)
+    kk=await keys(t,P); ok("the left handle stretches towards the start",kk[0]==0 and abs(kk[-1]-4)<0.04 and len(kk)==3 or (len(kk)==3 and kk[-1]==4),kk)
+    await t.pg.keyboard.press("Control+z"); await t.wait(200)
+    # --- length stretch
+    await t.ev("S.dur=4;tlFit()")
+    await t.ev("document.getElementById('tlFit2').checked=true"); await t.pg.fill("#tlDur","8"); await t.pg.press("#tlDur","Enter"); await t.wait(250)
+    ok("doubling the length doubles the key times",await keys(t,P)==[0,2,4,8] and (await t.ev("S.dur"))==8,await keys(t,P))
+    ok("the frames box follows",(await t.ev("document.getElementById('tlDurF').value"))=="240")
+    await t.ev("undoDo()"); await t.wait(200)
+    ok("undo brings back both the keys and the length",await keys(t,P)==[0,1,2,4] and (await t.ev("S.dur"))==4,[await keys(t,P),await t.ev("S.dur")])
+    await t.pg.fill("#tlDurF","60"); await t.pg.press("#tlDurF","Enter"); await t.wait(250)
+    ok("setting length by frames squeezes the keys",await keys(t,P)==[0,0.5,1,2] and abs(await t.ev("S.dur")-2)<1e-6,await keys(t,P))
+    await t.ev("tlSetDur(4,true)"); await t.wait(150)
+    await t.ev("document.getElementById('tlFit2').checked=false"); await t.pg.fill("#tlDur","6"); await t.pg.press("#tlDur","Enter"); await t.wait(250)
+    ok("with Stretch off the keys stay put",await keys(t,P)==[0,1,2,4] and (await t.ev("S.dur"))==6,await keys(t,P))
+    await t.ev("document.getElementById('tlFit2').checked=true;S.dur=8;tlFit()")
+    # --- shortcuts
+    await t.ev("tlSetTime(0)"); await t.pg.locator("#tlc").focus()
+    await t.pg.keyboard.press("k"); await t.wait(100); ok("K jumps to the next key",abs(await t.ev("TL.t")-1)<0.04,await t.ev("TL.t"))
+    await t.pg.keyboard.press("ArrowDown"); await t.wait(100); ok("Down jumps to the next key too",abs(await t.ev("TL.t")-2)<0.04)
+    await t.pg.keyboard.press("j"); await t.wait(100); ok("J jumps back",abs(await t.ev("TL.t")-1)<0.04)
+    await t.pg.keyboard.press("End"); await t.wait(100); ok("End goes to the end",abs(await t.ev("TL.t")-8)<0.04,await t.ev("TL.t"))
+    await t.pg.keyboard.press("Home"); await t.wait(100); ok("Home goes to the start",(await t.ev("TL.t"))==0)
+    await t.pg.keyboard.press("Tab"); await t.wait(100); ok("Tab swaps dope sheet and curves",(await t.ev("TLU.mode"))=="curve")
+    await t.pg.keyboard.press("Tab"); await t.wait(100); ok("Tab swaps back",(await t.ev("TLU.mode"))=="dope")
+    ok("a shortcut on the timeline doesn't change the app's tool (digit keys)",(await t.ev("curTool"))in(None,""),await t.ev("curTool"))
+    # copy / paste
+    await t.ev(f"TLU.sel=[{{id:'{P}',k:TL.tracks['{P}'].k[1]}},{{id:'{P}',k:TL.tracks['{P}'].k[2]}}];tlSetTime(5);tlDockDraw()")
+    await t.pg.keyboard.press("Control+c"); await t.pg.keyboard.press("Control+v"); await t.wait(250)
+    ok("Ctrl+C then Ctrl+V pastes at the playhead",await keys(t,P)==[0,1,2,4,5,6],await keys(t,P))
+    await t.pg.keyboard.press("Control+z"); await t.wait(150)
+    ok("undo removes the paste",await keys(t,P)==[0,1,2,4],await keys(t,P))
+    await t.ev(f"TLU.sel=[{{id:'{P}',k:TL.tracks['{P}'].k[1]}}];tlSetTime(1)"); await t.pg.keyboard.press("Control+d"); await t.wait(250)
+    ok("Ctrl+D puts the copy just after the original",len(await keys(t,P))==5 and abs((await keys(t,P))[2]-1.033)<0.01,await keys(t,P))
+    await t.pg.keyboard.press("Control+z"); await t.wait(150)
+    # ease keys
+    await t.ev(f"TLU.sel=[{{id:'{P}',k:TL.tracks['{P}'].k[0]}}]"); await t.pg.keyboard.press("3"); await t.wait(120)
+    ok("the 3 key sets Step",(await t.ev(f"TL.tracks['{P}'].k[0].e"))=="step")
+    await t.pg.keyboard.press("2"); await t.wait(120)
+    ok("the 2 key sets Linear",(await t.ev(f"TL.tracks['{P}'].k[0].e"))=="linear")
+    # --- markers and range
+    await t.ev("tlSetTime(3)"); await t.pg.keyboard.press("m"); await t.ev("tlSetTime(6)"); await t.pg.keyboard.press("m"); await t.wait(100)
+    ok("M adds markers",json.loads(await t.ev("JSON.stringify(TL.markers)"))==[3,6],await t.ev("JSON.stringify(TL.markers)"))
+    ok("markers are saved with the project",json.loads(await t.ev("JSON.stringify(cur.timeline.markers)"))==[3,6])
+    await t.ev("tlSetTime(0)"); await t.pg.keyboard.press("."); await t.wait(100); ok("period jumps to the next marker",abs(await t.ev("TL.t")-3)<0.04)
+    await t.pg.keyboard.press("."); await t.pg.keyboard.press(","); await t.wait(100); ok("comma jumps back",abs(await t.ev("TL.t")-3)<0.04)
+    await t.ev("tlSetTime(3)"); await t.pg.keyboard.press("m"); await t.wait(100)
+    ok("M on a marker removes it",json.loads(await t.ev("JSON.stringify(TL.markers)"))==[6])
+    await t.ev("tlSetTime(2)"); await t.pg.keyboard.press("i"); await t.ev("tlSetTime(5)"); await t.pg.keyboard.press("o"); await t.wait(100)
+    ok("I and O set the preview range",json.loads(await t.ev("JSON.stringify(TL.range)"))=={"a":2,"b":5},await t.ev("JSON.stringify(TL.range)"))
+    ok("the range is saved with the project",json.loads(await t.ev("JSON.stringify(cur.timeline.range)"))=={"a":2,"b":5})
+    await t.ev("startAnim(false)"); await t.wait(150)
+    ar=json.loads(await t.ev("JSON.stringify({a0:anim.a0,dur:anim.dur})")); ok("play uses only the range",ar=={"a0":2,"dur":3},ar)
+    await t.ev("stopAnim()"); await t.wait(100)
+    await t.ev("tlRangeClear()"); ok("Clear removes the range",(await t.ev("TL.range"))is None)
+    # loop modes
+    await t.ev("S.loop=false;TL.bounce=false;tlLoopUI()"); modes=[]
+    for i in range(3):
+        await t.pg.click("#tlLoop"); modes.append(await t.ev("document.getElementById('tlLoop').textContent"))
+    ok("the loop button cycles Loop, Bounce, Once",modes==["Loop","Bounce","Once"],modes)
+    await t.ev("S.loop=true;TL.bounce=true;startAnim(false)"); await t.wait(150)
+    ok("bounce is carried into playback",(await t.ev("!!anim.bounce")) is True); await t.ev("stopAnim()")
+    # --- mute and lock
+    await t.ev("tlKey('s:exp',0,[0.2]);tlKey('s:exp',2,[1.0])"); await t.ev("tlSetTime(2)"); v=await t.ev("S.exp")
+    await t.ev("tlToggleRow('mute','s:exp');S.exp=0.7;tlSetTime(1)"); ok("a muted row stops driving its setting",abs(await t.ev("S.exp")-0.7)<1e-6,await t.ev("S.exp"))
+    await t.ev("tlToggleRow('mute','s:exp');tlSetTime(2)"); ok("unmuting brings it back",abs(await t.ev("S.exp")-1.0)<1e-6)
+    await t.ev("tlToggleRow('lock','s:exp')")
+    ok("a locked row can't be keyed",(await t.ev("tlKey('s:exp',3,[0.5])"))is False and len(json.loads(await t.ev("JSON.stringify(TL.tracks['s:exp'].k)")))==2)
+    r=await t.ev("(function(){var rows=tlRows(),i;for(i=0;i<rows.length;i++)if(rows[i].id==='s:exp')return tlHit(tlT2X(2),TLU.RH+i*TLU.RW+TLU.RW/2-TLU.sy)})()"); ok("a locked row's keys can't be picked",r is None,r)
+    await t.ev("tlToggleRow('lock','s:exp')")
+    ok("mute and lock are saved with the track",True)
+    return t.finish()

@@ -20,7 +20,7 @@ async def run(br,site,fx):
     # ---- box select
     await t.ev("TLU.sel=[]"); x0=await t.ev("tlT2X(-0.3)"); x1=await t.ev("tlT2X(2.4)"); y0=26+24*ri["s:con"]+1; y1=26+24*ri["s:exp"]+23
     lo,hi=min(ri["s:exp"],ri["s:con"]),max(ri["s:exp"],ri["s:con"]); ya=26+24*lo+1; yb=26+24*(hi+1)-1
-    await t.pg.mouse.move(bb["x"]+max(x0,180),bb["y"]+ya); await t.pg.mouse.down(); await t.pg.mouse.move(bb["x"]+x1,bb["y"]+yb,steps=6); await t.pg.mouse.up(); await t.wait(200)
+    await t.pg.mouse.move(bb["x"]+max(x0,(await t.ev("TLU.LW"))+4),bb["y"]+ya); await t.pg.mouse.down(); await t.pg.mouse.move(bb["x"]+x1,bb["y"]+yb,steps=6); await t.pg.mouse.up(); await t.wait(200)
     n=await t.ev("TLU.sel.length"); ok("dragging in empty space picks several keys",n>=3,n)
     ok("a box drag doesn't move the playhead",abs(await t.ev("TL.t")-3)<0.05)
     await t.pg.mouse.click(bb["x"]+await t.ev("tlT2X(5.5)"),bb["y"]+26+24*ri["s:exp"]+12); await t.wait(150)
