@@ -34,6 +34,16 @@ async def run(br,site,fx):
     await t.ev("OBJS.pop();persistObjs();saveNow()"); await t.wait(1800)
     f3=await files(t)
     ok("a deleted object's asset file is removed",sum("/assets/" in n for n in f3)<len(ass),[n for n in f3])
+    # renaming renames the folder
+    await t.ev("cur.name='Renamed One';saveNow()"); await t.wait(2500)
+    f4=await files(t); top=sorted({n.split('/')[0] for n in f4})
+    ok("renaming the project renames its folder",'Renamed_One' in top and 'Untitled_space' not in top,top)
+    ok("nothing was lost in the move",any(n=='Renamed_One/project.json' for n in f4) and sum(n.startswith('Renamed_One/assets/') for n in f4)>=1,sorted(f4))
+    ok("the open project still reads its files after the move",(await t.ev("packProjects([cur]).arrayBuffer().then(function(b){return b.byteLength})"))>1000)
+    snapR=json.loads(await t.ev("snapshotState()"))
+    await t.wait(1100); await t.ev("saveNow()"); await t.wait(1500)
+    f5=await files(t); ass2=[n for n in f4 if '/assets/' in n]
+    ok("saving again after a rename doesn't rewrite assets",all(f5.get(n)==f4[n] for n in ass2),[n for n in ass2 if f5.get(n)!=f4[n]])
     # duplicate gets its own folder
     await t.ev("goHome()"); await t.wait(1500)
     await t.pg.locator("#grid .card:not(.new) .more").first.click(); await t.pg.click(".menu >> text=Duplicate"); await t.wait(1800)

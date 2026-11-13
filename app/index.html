@@ -233,7 +233,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 021";
+var VERSION="Version 022";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=3;
 
@@ -2153,14 +2153,42 @@ function fsPickDir(p){
   return n;
 }
 function folderPut(p){
-  var dname=fsPickDir(p);p.dir=dname;FOLD.dirs[dname.toLowerCase()]=p.id;
+  /* renaming a project renames its folder: the new folder is written in full, then the old one removed (Chrome has no folder rename) */
+  var want=safeName(p.name),old=(p.dir&&FOLD.dirs[p.dir.toLowerCase()]===p.id)?p.dir:null,dname,ren=false;
+  var typing=document.activeElement&&document.activeElement.id==="c-name";
+  if(old&&p.dirFor&&p.dirFor!==want&&old.toLowerCase()!==want.toLowerCase()&&!typing){
+    ren=true;dname=want;var ii=2;while(FOLD.dirs[dname.toLowerCase()]!==undefined)dname=want+"-"+(ii++);
+  }else dname=fsPickDir(p);
+  if(!(old&&p.dirFor&&p.dirFor!==want&&typing))p.dirFor=want;
+  p.dir=dname;FOLD.dirs[dname.toLowerCase()]=p.id;
   var files=[],json=fsEnc(p,"",files),key=dname.toLowerCase();
   return FOLD.h.getDirectoryHandle(dname,{create:true}).then(function(dh){
     var todo=files.filter(function(f){return FOLD.written.get(key+"/"+f.n)!==f.key});
     return todo.reduce(function(pr,f){return pr.then(function(){return fsWriteFile(dh,f.n,f.b).then(function(){FOLD.written.set(key+"/"+f.n,f.key)})})},Promise.resolve())
       .then(function(){return fsWriteFile(dh,"project.json",new Blob([JSON.stringify(json)],{type:"application/json"}))})
       .then(function(){return fsPrune(dh,files)})
+      .then(function(){return ren?fsFinishRename(p,old,dh,files,key):0})
       .then(function(){if(cur&&cur.id===p.id&&Date.now()-FOLD.lockT>240000)return fsLockWrite(dh)});
+  });
+}
+/* after a rename: point the open project at the files in the new folder (the old ones are about to go), then remove the old folder */
+function fsFinishRename(p,old,dh,files,key){
+  var map=new Map(),ok=old.toLowerCase();
+  return files.filter(function(f){return f.key instanceof Blob}).reduce(function(pr,f){
+    return pr.then(function(){return fsGetFile(dh,f.n).then(function(nf){map.set(f.key,nf);FOLD.written.set(key+"/"+f.n,nf)})});
+  },Promise.resolve()).then(function(){
+    fsRepoint(p,map,0);if(cur&&cur.id===p.id){fsRepoint(cur,map,0);OBJS.forEach(function(o){fsRepoint(o,map,0)})}
+    delete FOLD.dirs[ok];FOLD.written.forEach(function(v,k){if(k.indexOf(ok+"/")===0)FOLD.written.delete(k)});FOLD.lockT=0;
+    return FOLD.h.removeEntry(old,{recursive:true});
+  });
+}
+function fsRepoint(v,map,depth){
+  if(!v||typeof v!=="object"||depth>5)return;
+  Object.keys(v).forEach(function(k){
+    if(k==="gs"||k==="mesh"||k==="main")return;
+    var x=v[k];
+    if(x instanceof Blob){if(map.has(x))v[k]=map.get(x)}
+    else if(x&&typeof x==="object"&&!ArrayBuffer.isView(x))fsRepoint(x,map,depth+1);
   });
 }
 /* assets nothing refers to any more (a deleted object's splats) are removed once project.json no longer mentions them */
@@ -2340,6 +2368,7 @@ function saveProject(){
   }).catch(function(){setStatus("Couldn't save this project.","bad")});
 }
 $("saveBtn").addEventListener("click",saveProject);
+document.addEventListener("focusout",function(e){if(e.target&&e.target.id==="c-name")saveSoon()});
 document.addEventListener("keydown",function(e){if((e.ctrlKey||e.metaKey)&&e.code==="KeyS"&&!$("editor").hidden){e.preventDefault();saveProject()}});
 function goHome(){
   if(anim&&anim.rec)return;

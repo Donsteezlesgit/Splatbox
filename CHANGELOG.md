@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 022
+- Renaming a project now renames its folder too (the new folder is written, then the old one removed). It waits until you stop typing in the name box.
+
 ## Version 021
 - Project folders (PC/Mac Chrome or Edge): on the home screen choose a project folder, e.g. inside Dropbox. Each project becomes a sub-folder with project.json, its splat/model files and a thumbnail. Saving overwrites it; opening reads from it.
 - The browser keeps a mirror copy, but the folder always wins when it is available. If the folder can't be reached, work keeps saving to the browser and the home screen offers Reconnect.
