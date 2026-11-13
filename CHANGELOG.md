@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 034
+- The app now says which one you're in: "Splatbox Desktop" in the Windows app, "Splatbox Web" in the browser, next to the version number and in the window title.
+
 ## Version 033
 - SHARP (desktop app only): turn one photo into a real 3D scene with Apple's SHARP model. Add it from the Add panel. The 1.3 GB model downloads once, the first time you use it, and then everything runs on your PC. No photo ever leaves it.
 - It uses your graphics card when it can (DirectML), otherwise the CPU, which is slower and wants about 8 GB of free memory.

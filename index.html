@@ -276,7 +276,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 033";
+var VERSION="Version 034";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -4174,7 +4174,7 @@ window.addEventListener("appinstalled",function(){instEv=null;$("inst").hidden=t
 $("inst").addEventListener("click",function(){if(!instEv)return;instEv.prompt();instEv.userChoice.then(function(){instEv=null;$("inst").hidden=true})});
 
 /* ---------- app: version + update ---------- */
-$("ver").textContent="Splatbox "+VERSION+(BETA?" BETA":"");
+$("ver").textContent="Splatbox "+(isDesk()?"Desktop":"Web")+" · "+VERSION+(BETA?" BETA":"");try{document.title="Splatbox "+(isDesk()?"Desktop":"Web")}catch(_){}
 if(BETA){document.title="BETA "+document.title;document.documentElement.classList.add("beta")}
 var bkEl=$("bk");if(bkEl)bkEl.textContent=backupText();
 $("homeBackup").addEventListener("click",backupAll);
