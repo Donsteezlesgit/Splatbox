@@ -1,6 +1,6 @@
 // Splatbox desktop shell. Serves the released app from an app:// origin (stable storage, secure context)
 // and updates itself in place from GitHub Releases.
-const { app, BrowserWindow, protocol, session, shell, dialog, Menu, ipcMain } = require("electron");
+const { app, BrowserWindow, protocol, session, shell, dialog, Menu, ipcMain, Notification, powerSaveBlocker } = require("electron");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
@@ -10,6 +10,10 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "app", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } }
 ]);
 app.commandLine.appendSwitch("ignore-gpu-blocklist");
+// The inbox keeps training while the window is minimised or behind others, so the window must not be slowed down for being hidden.
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+const START_HIDDEN = process.argv.includes("--hidden");
 
 const WWW = path.join(__dirname, "www");
 const MIME = {
@@ -106,11 +110,52 @@ ipcMain.handle("enc:cancel", async (ev, id) => {
 });
 app.on("before-quit", () => { encoders.forEach((e) => { try { e.p.kill(); } catch (er) {} }); });
 
+/* ---------- inbox (V039): a watch folder of photo sets, run one at a time, each saved as a project ---------- */
+let psb = null;
+const inbox = require("./inbox").create({
+  dataDir: app.getPath("userData"),
+  stableMs: process.env.SPLATBOX_TEST ? 1500 : undefined,
+  pollMs: process.env.SPLATBOX_TEST ? 500 : undefined,
+  send: (job) => { if (win && !win.isDestroyed()) win.webContents.send("inbox:job", job); },
+  abort: (name) => { if (win && !win.isDestroyed()) win.webContents.send("inbox:abort", name); },
+  onChange: () => { if (win && !win.isDestroyed()) win.webContents.send("inbox:state", inbox.state()); },
+  notify: (title, body) => { try { if (!TESTING && Notification.isSupported()) new Notification({ title, body }).show(); } catch (e) {} },
+  power: {
+    start: () => { if (psb === null) psb = powerSaveBlocker.start("prevent-app-suspension"); },
+    stop: () => { if (psb !== null) { try { powerSaveBlocker.stop(psb); } catch (e) {} psb = null; } }
+  },
+  freeBytes: (p) => fs.promises.statfs(p).then((s) => Number(s.bavail) * Number(s.bsize)),
+  log: (m) => { try { console.log("[inbox] " + m); } catch (e) {} }
+});
+function applyLogin() {
+  if (!app.isPackaged || process.platform !== "win32") return;
+  try { app.setLoginItemSettings({ openAtLogin: !!inbox.state().config.startWithWindows, args: ["--hidden"] }); } catch (e) {}
+}
+ipcMain.handle("inbox:state", () => inbox.state());
+ipcMain.handle("inbox:config", async (ev, p) => { const s = await inbox.setConfig(p); applyLogin(); return s; });
+ipcMain.handle("inbox:scan", async () => { await inbox.scan(); return inbox.state(); });
+ipcMain.handle("inbox:pick", async () => {
+  const r = await dialog.showOpenDialog(win || undefined, { title: "Choose the inbox folder (inside Dropbox is ideal)", properties: ["openDirectory", "createDirectory"] });
+  return r.canceled || !r.filePaths.length ? null : r.filePaths[0];
+});
+ipcMain.handle("inbox:hello", (ev, info) => inbox.hello(info).then(() => inbox.state()));
+ipcMain.handle("inbox:read", (ev, name, file) => { const b = inbox.readPhoto(String(name), String(file)); return new Uint8Array(b.buffer, b.byteOffset, b.byteLength); });
+ipcMain.handle("inbox:report", (ev, m) => inbox.report(m));
+app.on("before-quit", () => { try { inbox.stop(); } catch (e) {} });
+
 function createWindow() {
   win = new BrowserWindow({
-    width: 1500, height: 920, minWidth: 900, minHeight: 600, backgroundColor: "#000000", autoHideMenuBar: true,
+    width: 1500, height: 920, minWidth: 900, minHeight: 600, backgroundColor: "#000000", autoHideMenuBar: true, show: false,
     icon: path.join(__dirname, "icon.png"),
-    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false }
+    webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false }
+  });
+  win.once("ready-to-show", () => { if (START_HIDDEN) { win.showInactive(); win.minimize(); } else win.show(); });
+  win.on("close", (e) => {
+    if (TESTING) return;
+    const st = inbox.state();
+    if (!st.running) return;
+    const r = dialog.showMessageBoxSync(win, { type: "warning", buttons: ["Keep working", "Quit anyway"], defaultId: 0, cancelId: 0, message: "A photo scan from your inbox is still training", detail: "\u201c" + st.running + "\u201d is in progress. If you quit now it starts again from the beginning next time Splatbox opens." });
+    if (r === 0) e.preventDefault();
   });
   win.loadURL("app://splatbox/index.html");
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -176,6 +221,7 @@ else {
     ses.setPermissionCheckHandler((wc, perm) => ok.has(perm));
     buildMenu();
     createWindow();
+    inbox.start();
     setupUpdater();
     app.on("activate", () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
   });

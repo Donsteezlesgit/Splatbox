@@ -69,6 +69,8 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stro
 .beta .hbar .word::after{content:"BETA";margin-left:10px;padding:2px 8px;border-radius:6px;background:#ffb020;color:#1a1200;font:700 11px var(--font-mono);letter-spacing:.08em}
 .hbtns{display:flex;gap:8px}
 .fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-6px 0 14px;font:12px/1.4 var(--font-mono);color:var(--mute)}
+.ibp{flex-basis:100%;display:flex;flex-direction:column;gap:8px;margin-top:6px;padding:12px;border:1px solid var(--line);border-radius:10px}
+.ibp p{margin:0;color:var(--mute)}.ibp ul{margin:0;padding-left:18px}.ibp select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px}
 .fbar button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:36px;cursor:pointer}
 .hfoot button{font:inherit;color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:8px;padding:0 12px;min-height:40px;cursor:pointer}
 
@@ -212,6 +214,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   <div class="hscroll" id="hscroll">
     <h2>Projects</h2>
     <div class="fbar" id="fbar" hidden></div>
+    <div class="fbar" id="ibar" hidden></div>
     <p class="empty" id="emptyMsg" hidden>No projects yet. Start a new project to get an empty 3D space, then add splats, models, photo scans or a photo from the menus.</p>
     <div class="grid" id="grid"></div>
     <div class="hfoot"><span><span id="ver"></span> · <span id="bk"></span></span><span><button id="inst" type="button" hidden>Install app</button> <button id="upd" type="button">Update app</button></span></div>
@@ -298,7 +301,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 038";
+var VERSION="Version 039";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -4363,6 +4366,12 @@ $("fbar").addEventListener("click",function(e){var b=e.target.closest("button");
   if(a==="pick"||a==="change")fsConnect().then(renderHome).catch(function(err){if(err&&err.name!=="AbortError")setStatus("Couldn't use that folder: "+(err.message||err),"bad")});
   else if(a==="reconnect")fsReconnect().then(renderHome).catch(function(){setStatus("The folder wasn't unlocked, so projects are still saved in this browser only.","warn")});
   else if(a==="move")fsMigrate().then(renderHome)});
+$("ibar").addEventListener("click",function(e){var b=e.target.closest("button");if(b&&b.dataset.a)ibAction(b.dataset.a)});
+$("ibar").addEventListener("change",function(e){
+  if(!IB)return;var t=e.target,p=null;
+  if(t.id==="ibOn")p={enabled:t.checked};else if(t.id==="ibQ")p={quality:t.value};else if(t.id==="ibWin")p={startWithWindows:t.checked};
+  if(p)IB.config(p).then(function(s){IBS=s;renderInbox()},function(){});
+});
 $("homeImport").addEventListener("click",function(){$("projIn").click()});
 $("projIn").addEventListener("change",function(e){var f=e.target.files;importFiles(f).then(function(){});e.target.value=""});
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
@@ -4373,11 +4382,214 @@ $("upd").addEventListener("click",function(){
   }).then(done,done);
 });
 
+/* ---------- inbox (V039, desktop app) ----------
+   The desktop shell watches a folder (Dropbox is ideal) where each sub-folder of photos is one scan, keeps the queue, and hands this window one set at a time.
+   Here each set is run without touching the screen you're working in: read the photos, drop blurry ones, solve cameras, train, clean floaters,
+   then write a NEW project (the splat only, never a copy of the photos) into your project folder and check it landed. */
+var IB=(window.splatboxDesktop&&window.splatboxDesktop.inbox)||null,IBS=null,IBRUN=null,ibLast="";
+function ibStatus(){
+  if(!navigator.gpu)return {ready:false,reason:"this computer's browser engine has no WebGPU, so photo scans can't train"};
+  if(!CAN_FS||!FOLD.ok)return {ready:false,reason:"your project folder isn't connected. Open Splatbox, then choose or reconnect the project folder on the home screen"};
+  if(TR&&!IBRUN)return {ready:false,reason:"a photo scan you started by hand is training. The inbox carries on when it finishes"};
+  return {ready:true,reason:""};
+}
+function ibCheck(first){
+  if(!IB)return;
+  var st=ibStatus(),key=(st.ready?"1":"0")+st.reason;
+  if(!first&&key===ibLast)return;
+  ibLast=key;
+  IB.hello({ready:st.ready,reason:st.reason,fresh:!!first}).then(function(s){IBS=s;renderInbox()},function(){});
+}
+function ibStart(){
+  if(!IB)return;
+  IB.onJob(ibRun);IB.onAbort(ibAbort);
+  IB.onState(function(s){IBS=s;renderInbox()});
+  IB.state().then(function(s){IBS=s;renderInbox()},function(){});
+  ibCheck(true);setInterval(function(){ibCheck(false)},8000);
+}
+function ibHash(s){var h=5381,i;for(i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(36)}
+function ibMime(n){return /\.png$/i.test(n)?"image/png":/\.webp$/i.test(n)?"image/webp":"image/jpeg"}
+function ibUnique(base){
+  var n=base,i=2;
+  while(FOLD.dirs[safeName(n).toLowerCase()]!==undefined)n=base+" "+(i++);
+  return n;
+}
+/* did the project really land in the folder? Reads project.json back and checks every asset is there at the right size. */
+function ibVerify(p,blob){
+  if(!FOLD.ok)return Promise.reject(new Error("The project folder became unavailable while saving."));
+  return FOLD.h.getDirectoryHandle(p.dir).then(function(dh){
+    return fsGetFile(dh,"project.json").then(function(f){return f.text()}).then(function(t){
+      var j=JSON.parse(t),o=j.objs&&j.objs[0];
+      if(!o||!o.blob||!o.blob.__file)throw new Error("The saved project is missing its splat.");
+      return fsGetFile(dh,o.blob.__file).then(function(f){if(f.size!==blob.size)throw new Error("The saved splat file is the wrong size ("+f.size+" of "+blob.size+" bytes).")});
+    });
+  });
+}
+function ibExistingProject(id){
+  var have=false;Object.keys(FOLD.dirs).forEach(function(k){if(FOLD.dirs[k]===id)have=true});
+  return have;
+}
+/* the shell gave up on this job (no sign of life): stop it now so the next one can start. Anything it says afterwards is ignored. */
+function ibAbort(n){
+  var r=IBRUN;if(!r||r.name!==n)return;
+  r.abort=true;clearInterval(r.timer);IBRUN=null;
+  try{if(r.s)r.s.dispose()}catch(_){}
+  try{if(r.cancel)r.cancel()}catch(_){}
+}
+function ibRun(job){
+  if(!IB||!job)return;
+  var run=null;
+  var rep=function(o){if(run&&run.abort)return Promise.resolve();return IB.report(Object.assign({name:job.name},o))["catch"](function(){})};
+  var st=ibStatus();
+  if(IBRUN){rep({kind:"failed",error:"The app was busy with another set.",retry:true});return}
+  if(!st.ready){rep({kind:"blocked",reason:st.reason});return}
+  run={name:job.name,abort:false,s:null,text:"Starting",timer:0,notes:[],cancel:null};IBRUN=run;
+  var say=function(t){run.text=t;rep({kind:"progress",text:t})};
+  run.timer=setInterval(function(){rep({kind:"progress",text:run.text})},20000);
+  ibExecute(job,run,say).then(function(res){
+    clearInterval(run.timer);if(IBRUN===run)IBRUN=null;
+    rep({kind:"done",project:res.name,notes:run.notes});
+    if($("home")&&!$("home").hidden)renderHome();
+  },function(err){
+    clearInterval(run.timer);if(IBRUN===run)IBRUN=null;
+    try{if(run.s)run.s.dispose()}catch(_){}
+    if(err&&err.aborted)return;
+    var msg=(err&&err.message)||String(err)||"Something went wrong.";
+    if(/GPUDevice|device.*lost|out of memory|OOM/i.test(msg)&&!err.hard)err.retry=true;
+    rep({kind:"failed",error:msg,retry:!!(err&&err.retry),notes:run.notes});
+  });
+}
+var ibLoadTrainer=function(){return import((BETA?"../":"./")+"lib/splatjs/index.js")};
+function ibChk(run){if(run.abort){var e=new Error("stopped");e.aborted=true;throw e}}
+function ibFail(msg,retry){var e=new Error(msg);e.retry=!!retry;e.hard=!retry;return e}
+function ibExecute(job,run,say){
+  var projId="ib"+ibHash(job.key||job.name),qk=job.quality||"";
+  if(!QUAL[qk]){qk="balanced";try{qk=localStorage.getItem("sbq")||"balanced"}catch(_){}if(!QUAL[qk])qk="balanced"}
+  var q=QUAL[qk];
+  /* if an earlier try already saved this exact set (the app was closed just before it reported back), don't make a second copy */
+  if(ibExistingProject(projId)){
+    return Promise.resolve({name:job.project});
+  }
+  var small=[],scores=[],skipped=[],total=job.photos.length,i=0;
+  return new Promise(function(res,rej){
+    (function next(){
+      if(i>=total)return res();
+      try{ibChk(run)}catch(e){return rej(e)}
+      var f=job.photos[i];say("Reading photos "+(i+1)+" of "+total);
+      IB.read(job.name,f).then(function(u8){
+        var b=new Blob([u8],{type:ibMime(f)});
+        return smallBlob(b,IS_DESK?1600:1024).then(function(sb){return sharpScore(sb)["catch"](function(){return 1}).then(function(sc){small.push(sb);scores.push(sc)})});
+      })["catch"](function(){skipped.push(f)}).then(function(){i++;setTimeout(next,0)});
+    })();
+  }).then(function(){
+    if(skipped.length)run.notes.push("Couldn't read "+skipped.length+" photo"+(skipped.length===1?"":"s")+" and left "+(skipped.length===1?"it":"them")+" out: "+skipped.slice(0,6).join(", ")+(skipped.length>6?" and more":""));
+    if(small.length<3)throw ibFail("Only "+small.length+" of "+total+" photos could be read. Splatbox needs at least 3, and 20 or more of the same subject works best.");
+    var pk=pickSharp(scores),use=pk.keep.map(function(k){return small[k]});
+    if(pk.dropped.length)run.notes.push("Left out "+pk.dropped.length+" blurry photo"+(pk.dropped.length===1?"":"s"));
+    run.use=use;return use;
+  }).then(function(use){
+    ibChk(run);say("Loading the trainer");
+    return ibLoadTrainer().then(function(mod){
+      ibChk(run);
+      var s=mod.createSession({maxIters:q.iters,initTarget:q.init,holdout:-1,maxViewW:Math.ceil(screen.width||800),maxViewH:Math.ceil(screen.height||800),
+        trainer:{maxSplats:q.max,capMult:8},sfm:{workers:Math.max(2,Math.min(12,(navigator.hardwareConcurrency||4)-1))}});
+      run.s=s;
+      var done,fail,fin=new Promise(function(a,b){done=a;fail=b}),lost=0;
+      run.cancel=function(){var e=new Error("stopped");e.aborted=true;fail(e)};
+      s.on("stage",function(e){
+        if(!e)return;var lab=STAGE_TXT[e.stage]||e.stage;
+        if(e.stage!=="train")say(lab+(e.total>1?" "+e.done+" of "+e.total:""));
+      });
+      s.on("metrics",function(m){if(m&&m.iter!=null)say("Training "+Math.min(100,Math.round((m.iter||0)/q.iters*100))+"%")});
+      s.on("event",function(e){
+        if(!e)return;
+        if(e.kind==="train-complete")done();
+        else if(e.kind==="device-lost"){
+          if(++lost>2)return fail(ibFail("The graphics card stopped responding three times.",false));
+          say("Graphics card reset, restarting training");
+          s.recover().then(function(){s.start()})["catch"](function(er){fail(ibFail("Couldn't recover after the graphics card reset: "+((er&&er.message)||er),true))});
+        }
+      });
+      return s.load(use).then(function(){ibChk(run);return s.solve()}).then(function(){
+        ibChk(run);
+        var sv=s.recon.cams.length;
+        if(sv<3)throw ibFail("Only "+sv+" of "+use.length+" photos could be placed in 3D. The photos probably don't overlap enough: take a small step between shots and keep the subject in every frame.");
+        if(sv<use.length/2)run.notes.push("Only "+sv+" of "+use.length+" photos were placed, so this splat may be rough. More overlap between photos helps.");
+        else if(sv<use.length)run.notes.push(sv+" of "+use.length+" photos were placed");
+        return s.seed();
+      }).then(function(){ibChk(run);s.start();return fin}).then(function(){
+        ibChk(run);say("Packing the splats");
+        return Promise.resolve(s.training?s.finish():null);
+      }).then(function(){return s.exportPlyBlob()}).then(function(blob){
+        var up=null,fwd=null;
+        try{var cm=s.recon.cams,fs3=[0,0,0];cm.forEach(function(c){fs3[0]+=c.R[6];fs3[1]+=c.R[7];fs3[2]+=c.R[8]});up=s._camerasUp();fwd=fs3}catch(_){}
+        try{s.dispose()}catch(_){}run.s=null;
+        return {blob:blob,up:up,fwd:fwd};
+      });
+    });
+  }).then(function(r){
+    ibChk(run);say("Saving the project");
+    return r.blob.arrayBuffer().then(function(ab){
+      var raw=parsePly(ab);if(!raw)throw ibFail("Couldn't read the trained splats.",true);
+      var rle=null;
+      if(floatersOn()){
+        try{var g=bakeSplats(raw,ident3(),ZC),fl=findFloaters(g,40),k=0,j;for(j=0;j<fl.length;j++)k+=fl[j];
+          if(k&&k<=g.n*0.3){rle=maskRle(fl);run.notes.push("Masked "+k.toLocaleString("en-GB")+" stray floaters (undo in the editor)")}}catch(_){}
+      }
+      return smallBlob(run.use[0],360).then(function(th){return {blob:r.blob,up:r.up,fwd:r.fwd,rle:rle,thumb:th}});
+    });
+  }).then(function(r){
+    var name=ibUnique(job.project),p=newSpaceRec(name),o=mkObj("splat",name);
+    p.id=projId;
+    if(r.up)o.R=obMat(r.up,r.fwd);
+    o.blob=r.blob;o.fmt="ply";
+    var rec=objRec(o);if(r.rle)rec.mask=r.rle;
+    p.objs=[rec];p.thumb=r.thumb;
+    p.source={inbox:job.name,photos:run.use.length,quality:qk};
+    return dbPut(p).then(function(){return ibVerify(p,r.blob)}).then(function(){return {name:name}},function(err){
+      throw ibFail("Couldn't save the project to your project folder: "+((err&&err.message)||err),true);
+    });
+  });
+}
+/* the Inbox panel on the home screen */
+var IBOPEN=false;
+function ibNice(s){return {queued:"Queued",seen:"Waiting",running:"Working",done:"Done",failed:"Failed"}[s]||s}
+function renderInbox(){
+  var bar=$("ibar");if(!bar)return;
+  if(!IB){bar.hidden=true;return}
+  bar.hidden=false;
+  var s=IBS,cfg=s&&s.config,btn=function(a,t){return '<button type="button" data-a="'+a+'">'+t+'</button>'};
+  if(!cfg||!cfg.dir||!cfg.enabled){
+    bar.innerHTML='<span>Inbox: send photos to this PC (for example through Dropbox) and they become splat projects.</span>'+btn("set","Set up inbox");return;
+  }
+  var run=s.jobs.filter(function(j){return j.status==="running"}).length,qd=s.jobs.filter(function(j){return j.status==="queued"}).length,wt=s.jobs.filter(function(j){return j.status==="seen"}).length;
+  var sum=s.problem?s.problem:(s.pause?"Paused: "+s.pause:(run||qd||wt?[run?"1 working":"",qd?qd+" queued":"",wt?wt+" waiting for files":""].filter(Boolean).join(", "):"Watching for photos"));
+  var h='<span>Inbox: '+esc(cfg.dir)+' · '+esc(sum)+'</span>'+btn("toggle",IBOPEN?"Hide":"Details");
+  if(IBOPEN){
+    h+='<div class="ibp"><label><input type="checkbox" id="ibOn"'+(cfg.enabled?" checked":"")+'> Watch this folder</label>'+
+      '<div>'+btn("pick","Change folder")+btn("scan","Check now")+'</div>'+
+      '<label>Default quality <select id="ibQ"><option value="">Same as the photo scan setting</option>'+Object.keys(QUAL).map(function(k){return '<option value="'+k+'"'+(cfg.quality===k?" selected":"")+'>'+QUAL[k].n+'</option>'}).join("")+'</select></label>'+
+      '<label><input type="checkbox" id="ibWin"'+(cfg.startWithWindows?" checked":"")+'> Start Splatbox with Windows, minimised</label>'+
+      '<p>Put each set of photos in its own folder inside the inbox. End the folder name with [high] (or draft, fast, balanced, ultra) to choose quality for that set. Each finished scan is saved as a new project in your project folder. Your photos are never changed or moved. To run a folder again, delete the STATUS.txt inside it.</p>'+
+      '<ul>'+(s.jobs.length?s.jobs.map(function(j){return '<li><b>'+esc(j.project)+'</b> '+esc(j.line)+(j.count!=null?' · '+j.count+' photos':'')+(j.error?'<br><i>'+esc(j.error)+'</i>':'')+'</li>'}).join(""):'<li>Nothing in the inbox yet.</li>')+'</ul></div>';
+  }
+  bar.innerHTML=h;
+}
+function ibAction(a){
+  if(!IB)return;
+  if(a==="toggle"){IBOPEN=!IBOPEN;renderInbox();return}
+  if(a==="set"||a==="pick"){
+    IB.pick().then(function(p){if(!p)return;return IB.config({dir:p,enabled:true})}).then(function(s){if(s){IBS=s;IBOPEN=true;renderInbox();ibCheck(false)}},function(){});return;
+  }
+  if(a==="scan")IB.scan().then(function(s){IBS=s;renderInbox()},function(){});
+}
+
 /* ---------- start ---------- */
 if(!gl||!GL2){
   document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';
 }else{
-  initGL();requestAnimationFrame(loop);renderHome();
+  initGL();requestAnimationFrame(loop);
+  (function(){var rh=renderHome();(rh&&rh.then?rh:Promise.resolve()).then(ibStart,ibStart)})();
 }
 })();
 </script>

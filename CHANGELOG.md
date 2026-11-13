@@ -1,6 +1,17 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 039
+- Inbox (Windows app): choose a watch folder, for example inside Dropbox, and every sub-folder of photos you drop in becomes a splat project. Scans run one at a time, in the order they arrived.
+- Each finished scan is saved as a new project in your project folder (the splat only: your photos are never copied, moved or changed). A repeated name becomes "name 2", never an overwrite.
+- It never starts on a half-synced folder: a set has to be unchanged for 3 minutes and its photos readable. Dropbox temp files, conflicted copies, folders starting with _ or . and non-photo files are ignored.
+- Add [high] (or draft, fast, balanced, ultra) to the end of a folder name to pick the quality for that set. The default is in the Inbox panel on the home screen.
+- Progress for each set is written to STATUS.txt inside its folder (Waiting, Queued 2nd in line, Training 45%, Done) so you can read it from the Dropbox app on your phone. A set that can't be solved gets FAILED.txt with the reason, and the queue carries on. Windows also shows a notification.
+- Safe against crashes: the queue is saved to disk, an interrupted set restarts from the beginning, and a set that keeps crashing the app is given up on after 3 tries. Lose the queue file and finished folders are still recognised from their STATUS.txt.
+- Delete STATUS.txt in a folder to run it again. Adding photos to a failed folder also tries it again.
+- Windows is kept awake while a set runs, free disk space is checked first, and closing the window mid-scan asks before quitting. Optional: start Splatbox with Windows, minimised.
+- If your project folder isn't connected (or the app can't write to it) the inbox pauses and keeps the queue, instead of failing the sets.
+
 ## Version 038
 - Play now starts from the playhead instead of always from the start. If the playhead is at the end (or outside the preview range) it starts over.
 
