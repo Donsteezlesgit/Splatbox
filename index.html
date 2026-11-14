@@ -120,9 +120,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .tlh .tb.sm{min-width:30px;padding:0 7px}.tll{display:inline-flex;align-items:center;gap:4px}.tlh input[type=checkbox]{width:auto;min-height:0}.tlh2{color:var(--mute);font:11px var(--font-ui);white-space:normal;flex:1;min-width:160px}
 .tlw{position:relative;flex:1;min-height:0}
 .tlw canvas{position:absolute;inset:auto;left:0;top:0;outline:none;touch-action:none;cursor:default}
-.stage.tlopen .hud{bottom:min(276px,48%)}
 @media(max-width:759px){#tlBtn,.tld{display:none!important}}
-@media(min-width:760px){.stage.tlopen .pop{max-height:calc(100% - 84px - min(268px,46%))}}
 .pop{position:absolute;z-index:4;left:max(10px,var(--safe-l));right:max(10px,var(--safe-r));bottom:8px;max-height:min(54dvh,460px);display:flex;flex-direction:column;
   background:#12151af2;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid #ffffff1f;border-radius:16px;box-shadow:0 16px 40px #000b;overflow:hidden}
 .pop header{display:flex;align-items:center;justify-content:space-between;padding:6px 6px 6px 16px;border-bottom:1px solid var(--line);font:600 13px var(--font-ui);letter-spacing:.1em;text-transform:uppercase}
@@ -130,6 +128,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .pop .body{overflow-y:auto;overscroll-behavior:contain;padding:12px 16px 16px;display:grid;gap:14px;min-width:0}
 .sl{display:grid;grid-template-columns:1fr auto;gap:0 12px;align-items:baseline}
 .sl output{font:13px var(--font-mono);color:var(--mute)}
+.sl input.nb{font:13px var(--font-mono);color:var(--mute);background:transparent;border:1px solid transparent;border-radius:6px;text-align:right;width:9em;max-width:48%;padding:2px 6px;justify-self:end}
+.sl.ovr label{color:var(--accent)}
+.sl .ovx{background:none;border:0;color:var(--mute);cursor:pointer;font-size:15px;padding:0 4px}
+.sl:not(.ovr) .ovx{visibility:hidden}
+.sl input.nb:hover{border-color:var(--line)}
+.sl input.nb:focus{border-color:var(--accent);color:var(--fg);background:var(--bg,#0e1012);outline:none}
 .sl input[type=range]{grid-column:1/-1;width:100%;margin:2px 0;height:34px;background:transparent;-webkit-appearance:none;appearance:none}
 .sl input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line)}
 .sl input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
@@ -201,6 +205,63 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 #train .trow{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 16px 14px}
 .card .kind{position:absolute;top:8px;left:8px;padding:2px 8px;border-radius:99px;background:#000a;font:11px var(--font-mono)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+
+/* V040: docked layout - the viewport shares the screen with the side panel and the timeline instead of sitting under them */
+.stagecol{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.stagecol .stage{flex:1 1 auto;min-height:0}
+.stagecol .tld{position:relative;left:auto;right:auto;bottom:auto;height:var(--tlH,260px);flex:none;box-shadow:none}
+.sph{height:7px;margin:-4px 0;cursor:row-resize;position:relative;z-index:6;flex:none;background:transparent}
+.sph:hover,.sph.drag{background:var(--accent)}
+.sph[hidden]{display:none}
+.rdock{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.rdock .pop{position:relative;left:auto;right:auto;top:auto;bottom:auto;width:auto;max-height:none;flex:1 1 auto;min-height:0;margin:0}
+#outl{display:flex;flex-direction:column;min-height:0;background:var(--sheet);border-top:1px solid var(--line)}
+#outl header{display:flex;justify-content:space-between;align-items:center;padding:8px 14px;font:600 12px var(--font-ui);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);flex:none}
+#outl .osub{font:11px var(--font-mono);letter-spacing:0;text-transform:none}
+#outl .ob{overflow-y:auto;flex:1;min-height:0;padding:0 6px 8px}
+.orw{display:flex;align-items:center;gap:4px;padding:2px 4px;border-radius:8px;border:1px solid transparent;cursor:default;font:500 13px var(--font-ui);color:var(--fg)}
+.orw:hover{background:var(--raise)}.hist{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.hrow{text-align:left;background:transparent;border:1px solid transparent;border-radius:8px;color:var(--fg);font:500 13px var(--font-ui);padding:6px 10px;cursor:pointer}
+.hrow:hover{background:var(--raise)}.hrow.fut{color:var(--mute);font-style:italic}
+.hrow.now{color:var(--accent);border-color:var(--accent);cursor:default;font-weight:600}
+.orw.msel{box-shadow:inset 3px 0 0 var(--accent)}
+.orw.sel{background:var(--raise2);border-color:var(--accent)}
+.orw.hid .on{opacity:.4}.orw.dragover{border-top:2px solid var(--accent)}
+.orw .on{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.orw .on input{width:100%;font:500 13px var(--font-ui);background:var(--bg);color:var(--fg);border:1px solid var(--accent);border-radius:6px;padding:2px 6px}
+.orw button{width:28px;height:28px;border:0;background:transparent;color:var(--mute);border-radius:7px;cursor:pointer;display:grid;place-items:center;padding:0;flex:none}
+.orw button:hover{color:var(--fg);background:var(--raise2)}.orw button[aria-pressed=true]{color:var(--accent)}
+.orw .ok{font:10px var(--font-mono);color:var(--mute);text-transform:uppercase;flex:none;width:44px;text-align:right}
+#octx{position:fixed;z-index:50;min-width:150px;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 10px 30px #000a}
+#octx button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--fg);font:500 13px var(--font-ui);padding:8px 10px;border-radius:7px;cursor:pointer}
+#octx button:hover{background:var(--raise2)}
+.psearch{width:100%;min-height:40px;border:1px solid var(--line);background:var(--raise);color:var(--fg);border-radius:10px;padding:0 12px;font:14px var(--font-ui)}
+#sres{display:grid;gap:2px}#sres button{text-align:left;border:0;background:var(--raise);color:var(--fg);border-radius:8px;padding:8px 10px;font:500 13px var(--font-ui);cursor:pointer}
+#sres small{color:var(--mute);font:11px var(--font-mono);margin-left:6px}
+#psecs{display:grid;gap:6px}.sec{border:1px solid var(--line);border-radius:12px;background:#ffffff05}
+.sech{display:flex;align-items:center}
+.sechb{flex:1;text-align:left;border:0;background:transparent;color:var(--mute);font:600 12px var(--font-ui);letter-spacing:.09em;text-transform:uppercase;padding:11px 12px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.sechb::before{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .12s}
+.sec.open .sechb{color:var(--fg)}.sec.open .sechb::before{transform:rotate(45deg)}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.secr{border:0;background:transparent;color:var(--mute);font:12px var(--font-ui);padding:6px 10px;cursor:pointer;text-decoration:underline}
+.secb{display:grid;gap:14px;padding:4px 12px 14px;min-width:0}
+.flash{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+@media(min-width:760px){
+  #editor{grid-template-columns:72px minmax(0,1fr) var(--dockW,340px)}
+  .rail{grid-column:1;grid-row:1}.stagecol{grid-column:2;grid-row:1}.rdock{grid-column:3;grid-row:1;border-left:1px solid var(--line);background:var(--sheet)}
+  .rdock .pop{border-radius:0;border:0;box-shadow:none;background:var(--sheet);width:auto}
+  .rdock .pop[hidden]{display:none}
+  #outl{flex:0 0 var(--olH,230px)}
+  .rdock .pop[hidden]~#outl{flex:1 1 auto}.rdock .pop[hidden]~#spOl{display:none}
+  .spv{position:absolute;left:-4px;top:0;bottom:0;width:7px;height:auto;margin:0;cursor:col-resize}
+}
+@media(max-width:759px){
+  .rdock{position:fixed;left:0;right:0;bottom:calc(58px + var(--safe-b));z-index:6;pointer-events:none;display:block}
+  .rdock .pop{pointer-events:auto;position:relative;margin:0 10px 8px;max-height:min(54dvh,460px)}
+  #outl,#spOl,#spDock,#spTl{display:none!important}
+}
+#editor.nogui .rdock{display:none!important}#editor.nogui .stagecol{grid-column:1}
 </style>
 </head>
 <body>
@@ -222,11 +283,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 </div>
 
 <div id="editor" hidden>
+  <div class="stagecol" id="stagecol">
   <section class="stage" id="stage" aria-label="3D splat viewport">
     <canvas id="gl" aria-label="Splat preview. Left-drag to look around, W A S D to fly, right-drag to slide, double-click to fly to a spot."></canvas>
     <div class="top">
       <button class="ico" id="back" type="button" aria-label="Back to projects"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true">Edit</button><button type="button" data-mode="render" aria-pressed="false">Render</button></div>
+      <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true" title="Work on the scene: gizmos, grids and cameras are shown">Workspace</button><button type="button" data-mode="render" aria-pressed="false" title="Clean view: looks through the camera with no gizmos, grids or markers">Clean view</button></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
       <div class="pname" id="pname"></div>
       <button class="ico" id="tlBtn" type="button" aria-label="Timeline" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 4l2 2-2 2M15 10l2 2-2 2M11 16l2 2-2 2"/></svg></button>
@@ -240,6 +302,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
     <div class="rjob" id="rjob" hidden><div class="rjc"><b id="rjT">Rendering…</b><div class="rbar"><i id="rjF"></i></div><button class="btn small" type="button" id="rjX">Cancel (Esc)</button></div></div>
     <div class="hud" id="hud"></div>
+  </section>
+  <div class="sph" id="spTl" role="separator" aria-orientation="horizontal" aria-label="Drag to resize the timeline" hidden></div>
     <div class="tld" id="tld" hidden aria-label="Timeline">
       <div class="tlh">
         <span class="tlg">
@@ -274,11 +338,16 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       </div>
       <div class="tlw" id="tlw"><canvas id="tlc" tabindex="0" aria-label="Timeline. Drag the ruler to move the playhead, drag in the empty space to select keys, drag diamonds to retime, Delete removes keys, double-click a row name to open its menu."></canvas></div>
     </div>
+  </div>
+  <aside class="rdock" id="rdock" aria-label="Settings and objects">
+    <div class="sph spv" id="spDock" role="separator" aria-orientation="vertical" aria-label="Drag to resize the side panel"></div>
     <div class="pop" id="pop" hidden>
       <header><span id="popT"></span><button id="popX" type="button" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
       <div class="body" id="popB"></div>
     </div>
-  </section>
+    <div class="sph" id="spOl" role="separator" aria-orientation="horizontal" aria-label="Drag to resize the objects window"></div>
+    <section id="outl" aria-label="Objects"><header><span>Objects</span><span class="osub" id="outlN"></span><button type="button" class="btn small" id="outlMerge" hidden>Merge</button></header><div class="ob" id="outlB"></div></section>
+  </aside>
   <nav class="rail" id="rail" aria-label="Tools"></nav>
 </div>
 
@@ -301,7 +370,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 039";
+var VERSION="Version 040";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -311,8 +380,8 @@ var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparen
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
-  fog:0,defocus:0,focus:0.5,sliceA:0,sliceB:1,fxDis:0,fxScat:0,fxPulse:0,fxPhase:0,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
+  fog:0,defocus:0,focus:0.5,dofNear:1,dofFar:1,dofSoft:0,dofTilt:0,dofTiltA:0,dofTiltP:0,dofTiltB:0.25,dofVis:false,fast:false,sliceA:0,sliceB:1,fxDis:0,fxScat:0,fxPulse:0,fxPhase:0,
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,grainSoft:0.5,grainCol:0.35,grainRate:1,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
@@ -451,7 +520,7 @@ function regrade(){
   var m0=0.213+c*0.787-s*0.213,m1=0.715-c*0.715-s*0.715,m2=0.072-c*0.072+s*0.928,
       m3=0.213-c*0.213+s*0.143,m4=0.715+c*0.285+s*0.140,m5=0.072-c*0.072-s*0.283,
       m6=0.213-c*0.213-s*0.787,m7=0.715-c*0.715+s*0.715,m8=0.072+c*0.928+s*0.072;
-  var plain=MODE==="edit"||(!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm);
+  var plain=(!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm);
   for(i=0;i<n;i++){
     o=i*7;b=i*3;
     if(plain){buf[o+3]=B[b];buf[o+4]=B[b+1];buf[o+5]=B[b+2];continue}
@@ -462,7 +531,9 @@ function regrade(){
     r2=l+(r2-l)*sa+wm;g2=l+(g2-l)*sa+wm*0.15;b2=l+(b2-l)*sa-wm;
     buf[o+3]=r2<0?0:r2>1?1:r2;buf[o+4]=g2<0?0:g2>1?1:g2;buf[o+5]=b2<0?0:b2>1?1:b2;
   }
-  allGS().forEach(function(g){gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain)});
+  var seen=[];
+  OBJS.forEach(function(o){if(o.kind==="splat"&&o.gs){seen.push(o.gs);var P=gradePack(o),m=P.m;gradeGS(o.gs,P.ex,P.cf,P.sa,P.wm,m[0],m[1],m[2],m[3],m[4],m[5],m[6],m[7],m[8],P.plain)}});
+  allGS().forEach(function(g){if(seen.indexOf(g)<0)gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain)});
   upload();dirty=true;
 }
 function gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain){
@@ -480,10 +551,16 @@ function gradeGS(g,ex,cf,sa,wm,m0,m1,m2,m3,m4,m5,m6,m7,m8,plain){
 }
 
 /* the same grade as a function, used when baking it into an exported file */
-function gradeFn(){
-  if(!S.exp&&!S.con&&!S.sat&&!S.hue&&!S.warm)return null;
-  var ex=Math.pow(2,S.exp/100*1.5),cf=1+S.con/100,sa=1+S.sat/100,wm=S.warm/100*0.09,hr=S.hue*Math.PI/180,c=Math.cos(hr),s=Math.sin(hr);
-  var m0=0.213+c*0.787-s*0.213,m1=0.715-c*0.715-s*0.715,m2=0.072-c*0.072+s*0.928,m3=0.213-c*0.213+s*0.143,m4=0.715+c*0.285+s*0.140,m5=0.072-c*0.072-s*0.283,m6=0.213-c*0.213-s*0.787,m7=0.715-c*0.715+s*0.715,m8=0.072+c*0.928+s*0.072;
+/* the grade for one object: its own overrides, else the scene's. ownOnly = just the object's overrides (used when merging, so the scene grade isn't baked in twice) */
+function gradePack(o,ownOnly){
+  function v(k){return ovHas(o,k)?o.st[k]:(ownOnly?0:S[k])}
+  var e=v("exp"),c=v("con"),sa=v("sat"),h=v("hue"),w=v("warm"),hr=h*Math.PI/180,co=Math.cos(hr),si=Math.sin(hr);
+  return {plain:!e&&!c&&!sa&&!h&&!w,ex:Math.pow(2,e/100*1.5),cf:1+c/100,sa:1+sa/100,wm:w/100*0.09,
+    m:[0.213+co*0.787-si*0.213,0.715-co*0.715-si*0.715,0.072-co*0.072+si*0.928,0.213-co*0.213+si*0.143,0.715+co*0.285+si*0.140,0.072-co*0.072-si*0.283,0.213-co*0.213-si*0.787,0.715-co*0.715+si*0.715,0.072+co*0.928+si*0.072]};
+}
+function gradeFn(o,ownOnly){
+  var P=gradePack(o||null,ownOnly);if(P.plain)return null;
+  var ex=P.ex,cf=P.cf,sa=P.sa,wm=P.wm,m0=P.m[0],m1=P.m[1],m2=P.m[2],m3=P.m[3],m4=P.m[4],m5=P.m[5],m6=P.m[6],m7=P.m[7],m8=P.m[8];
   return function(r,g,b){
     r*=ex;g*=ex;b*=ex;r=(r-0.5)*cf+0.5;g=(g-0.5)*cf+0.5;b=(b-0.5)*cf+0.5;
     var r2=m0*r+m1*g+m2*b,g2=m3*r+m4*g+m5*b,b2=m6*r+m7*g+m8*b,l=0.299*r2+0.587*g2+0.114*b2;
@@ -575,8 +652,15 @@ function drawHelpers(V,Pm){
 var PF={fbo:null,tex:null,rb:null,w:0,h:0,prog:null,on:false,vx:0,vy:0,lut:null,lutN:33,lutKey:""};
 var PVS="#version 300 es\nvoid main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);gl_Position=vec4(p*2.0-1.0,0.0,1.0);}";
 var PFS="#version 300 es\nprecision highp float;precision highp sampler3D;\n"+
-"uniform sampler2D uT;uniform sampler3D uL;uniform vec2 uRes;uniform float uDist,uCA,uVig,uVigS,uVigB,uGrain,uGS,uTime,uLM,uLN;uniform int uHasL;out vec4 o;\n"+
-"float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}\n"+
+"uniform sampler2D uT;uniform sampler3D uL;uniform vec2 uRes;uniform float uDist,uCA,uVig,uVigS,uVigB,uGrain,uGS,uGSoft,uGCol,uLM,uLN;uniform int uHasL,uFr;out vec4 o;\n"+
+"uint pcg(uint v){uint s=v*747796405u+2891336453u;uint w=((s>>((s>>28u)+4u))^s)*277803737u;return (w>>22u)^w;}\n"+
+"float rnd(ivec2 c,int f,uint k){uint h=pcg(uint(c.x)+pcg(uint(c.y)+pcg(uint(f)+pcg(k))));return float(h)*(1.0/4294967295.0);}\n"+
+"float gcell(ivec2 c,int f,uint k){return (rnd(c,f,k)+rnd(c,f,k+11u)-1.0)*2.449;}\n"+
+"float gnoise(vec2 q,int f,uint k){ivec2 i=ivec2(floor(q));vec2 t=fract(q);float hard=gcell(i,f,k);\n"+
+" if(uGSoft<0.01)return hard;vec2 w=t*t*(3.0-2.0*t);\n"+
+" float a=gcell(i,f,k),b=gcell(i+ivec2(1,0),f,k),c=gcell(i+ivec2(0,1),f,k),d=gcell(i+ivec2(1,1),f,k);\n"+
+" float sm=mix(mix(a,b,w.x),mix(c,d,w.x),w.y);float g=1.0/sqrt((1.0-2.0*w.x+2.0*w.x*w.x)*(1.0-2.0*w.y+2.0*w.y*w.y));\n"+
+" return mix(hard,sm*min(g,2.2),uGSoft);}\n"+
 "vec3 fetch(vec2 uv){vec2 ca=(uv-0.5)*uCA*0.025;return vec3(texture(uT,uv+ca).r,texture(uT,uv).g,texture(uT,uv-ca).b);}\n"+
 "void main(){\n"+
 " vec2 uv=gl_FragCoord.xy/uRes;float asp=uRes.x/uRes.y;vec2 c=(uv-0.5)*vec2(asp,1.0);float r2=dot(c,c);\n"+
@@ -588,15 +672,20 @@ var PFS="#version 300 es\nprecision highp float;precision highp sampler3D;\n"+
 " else col=fetch(suv);\n"+
 " if(uHasL==1){vec3 lc=texture(uL,clamp(col,0.0,1.0)*((uLN-1.0)/uLN)+0.5/uLN).rgb;col=mix(col,lc,uLM);}\n"+
 " float v=uVig*smoothstep(mix(0.9,0.1,uVigS),1.04,rN);col*=1.0-v;\n"+
-" if(uGrain>0.001){vec2 gp=floor(gl_FragCoord.xy/uGS);float n=hash(gp+uTime*37.0)-0.5;float n2=hash(gp*1.7+uTime*19.0+7.0)-0.5;float l=dot(col,vec3(0.299,0.587,0.114));\n"+
-"  col+=(vec3(n)+vec3(n2,-n2,n2*0.5)*0.35)*uGrain*0.45*(1.0-abs(l-0.5)*1.2);}\n"+
+" if(uGrain>0.001){vec2 q=gl_FragCoord.xy/uGS;float l=dot(col,vec3(0.299,0.587,0.114));float lv=clamp(l,0.0,1.0);\n"+
+"  float resp=0.3+0.7*(1.0-pow(abs(2.0*lv-1.0),2.0));\n"+
+"  float ln=gnoise(q,uFr,1u);vec3 cn=vec3(gnoise(q,uFr,2u),gnoise(q,uFr,3u),gnoise(q,uFr,4u));\n"+
+"  vec3 g=mix(vec3(ln),cn,uGCol);col+=g*uGrain*0.09*resp;}\n"+
 " o=vec4(col,1.0);}";
-function postActive(){return GL2&&MODE==="render"&&(S.vig>0||S.vigBlur>0||S.dist!==0||S.ca>0||S.grain>0||(S.look!=="none"&&S.lookMix>0))}
+/* grain seed: exports pass the frame number so every frame gets fresh, repeatable noise; the viewer uses the clock (30 per second) */
+var GFIX=-1;
+function grainFrame(){return GFIX>=0?GFIX:Math.floor(performance.now()/33.333)}
+function postActive(){return GL2&&(S.vig>0||S.vigBlur>0||S.dist!==0||S.ca>0||S.grain>0||(S.look!=="none"&&S.lookMix>0))}
 function initPost(){
   if(PF.prog)return PF.prog!==-1;
   var pr=gl.createProgram();gl.attachShader(pr,shader(gl.VERTEX_SHADER,PVS));gl.attachShader(pr,shader(gl.FRAGMENT_SHADER,PFS));gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){PF.prog=-1;try{console.error("post shader: "+gl.getProgramInfoLog(pr))}catch(_){}return false}
-  PF.prog=pr;PF.u={};["uT","uL","uRes","uDist","uCA","uVig","uVigS","uVigB","uGrain","uGS","uTime","uLM","uLN","uHasL"].forEach(function(n){PF.u[n]=gl.getUniformLocation(pr,n)});
+  PF.prog=pr;PF.u={};["uT","uL","uRes","uDist","uCA","uVig","uVigS","uVigB","uGrain","uGS","uGSoft","uGCol","uFr","uLM","uLN","uHasL"].forEach(function(n){PF.u[n]=gl.getUniformLocation(pr,n)});
   PF.fbo=gl.createFramebuffer();PF.tex=gl.createTexture();PF.rb=gl.createRenderbuffer();
   /* a 1x1x1 stand-in for the LUT, so the 3D sampler never shares texture unit 0 with the 2D one (that made every lens draw fail) */
   PF.dummy=gl.createTexture();gl.bindTexture(gl.TEXTURE_3D,PF.dummy);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);gl.texImage3D(gl.TEXTURE_3D,0,gl.RGB8,1,1,1,0,gl.RGB,gl.UNSIGNED_BYTE,new Uint8Array([128,128,128]));
@@ -625,7 +714,7 @@ function endPost(){
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_3D,hasL?PF.lut:PF.dummy);gl.uniform1i(u.uL,2);gl.activeTexture(gl.TEXTURE0);
   gl.uniform1i(u.uHasL,hasL);gl.uniform1f(u.uLM,S.lookMix);gl.uniform1f(u.uLN,PF.lutN);
   gl.uniform2f(u.uRes,PF.w,PF.h);gl.uniform1f(u.uDist,S.dist/100);gl.uniform1f(u.uCA,S.ca);gl.uniform1f(u.uVig,S.vig);gl.uniform1f(u.uVigS,S.vigSoft);gl.uniform1f(u.uVigB,S.vigBlur);
-  gl.uniform1f(u.uGrain,S.grain);gl.uniform1f(u.uGS,Math.max(1,S.grainSize*(PF.h/Math.max(1,cv.clientHeight))));gl.uniform1f(u.uTime,anim?(performance.now()%1000)/1000+Math.floor(performance.now()/1000)%97:0);
+  gl.uniform1f(u.uGrain,S.grain);gl.uniform1f(u.uGS,Math.max(1,S.grainSize*(PF.h/Math.max(1,cv.clientHeight))));gl.uniform1f(u.uGSoft,S.grainSoft);gl.uniform1f(u.uGCol,S.grainCol);gl.uniform1i(u.uFr,Math.floor(grainFrame()/Math.max(1,Math.round(S.grainRate||1))));
   gl.drawArrays(gl.TRIANGLES,0,3);
   gl.activeTexture(gl.TEXTURE0);gl.useProgram(prog);gl.enable(gl.DEPTH_TEST);dotsStale=true;
 }
@@ -699,7 +788,7 @@ function applyLook(){
 var TW=2048,GSP=null,GS={};
 var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "layout(location=0) in vec2 aQ;layout(location=1) in int aIdx;\n"+
-"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform vec4 uFx;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;uniform float uFar;\n"+
+"uniform highp sampler2D uG;uniform highp sampler2D uC;uniform highp sampler2D uN;uniform vec4 uFx;uniform mat4 uView;uniform mat4 uProj;uniform mat4 uModel;uniform vec2 uVp;uniform float uPx;uniform float uMul;uniform float uFog;uniform vec3 uBg;uniform float uFocus;uniform float uDef;uniform float uFR;uniform float uDN;uniform float uDF;uniform float uDW;uniform float uTilt;uniform float uTiltA;uniform float uTiltP;uniform float uTiltB;uniform float uFV;uniform float uOp;uniform vec2 uSlice;uniform float uD0;uniform float uD1;uniform int uMode;uniform float uFar;\n"+
 "uniform vec3 uCmin;uniform vec3 uCmax;uniform int uCOn;uniform float uLit;uniform vec3 uAmb;uniform int uLN;uniform vec4 uLP[4];uniform vec3 uLC[4];uniform vec3 uCam;\n"+
 "out vec4 vCol;out vec2 vPos;\n"+
 "float H(int n){uint x=uint(n)*747796405u+2891336453u;x=((x>>((x>>28u)+4u))^x)*277803737u;x=(x>>22u)^x;return float(x&0xffffu)/65535.;}\n"+
@@ -721,7 +810,9 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 " mat3 W=mat3(VM);float fx=uPx;float id=1.0/d;\n"+
 " mat3 J=mat3(fx*id,0.,0.,0.,fx*id,0.,fx*pv.x*id*id,fx*pv.y*id*id,0.);\n"+
 " mat3 T=J*W;mat3 C=T*S*transpose(T);\n"+
-" float bl=uDef*max(0.,abs(rel-uFocus)-uFR)*28.;\n"+
+" float dz=max(0.,abs(rel-uFocus)-uFR);if(uDW>0.001)dz=dz*dz/(dz+uDW);\n"+
+" float bl=uDef*dz*(rel<uFocus?uDN:uDF)*28.;\n"+
+" if(uTilt>0.001){vec4 cq=uProj*pv;vec2 nd0=cq.xy/cq.w;float ty=-nd0.x*sin(uTiltA)+nd0.y*cos(uTiltA);float tb=max(0.,abs(ty-uTiltP)-uTiltB);bl=sqrt(bl*bl+pow(uTilt*tb*40.,2.));}\n"+
 " float a=C[0][0]+0.3+bl*bl,b=C[0][1],c=C[1][1]+0.3+bl*bl;\n"+
 " float mid=0.5*(a+c);float rad=length(vec2(0.5*(a-c),b));float l1=mid+rad;float l2=max(mid-rad,0.1);\n"+
 " vec2 e=vec2(b,l1-a);if(dot(e,e)<1e-10)e=(a>=c)?vec2(1.,0.):vec2(0.,1.);\n"+
@@ -736,7 +827,8 @@ var GVS="#version 300 es\nprecision highp float;precision highp int;\n"+
 "  for(int i=0;i<4;i++){if(i>=uLN)break;vec3 ld;float at=1.0;if(uLP[i].w<0.5)ld=uLP[i].xyz;else{vec3 dv=uLP[i].xyz-wp;float dd=length(dv);ld=dv/max(dd,1e-4);at=1.0/(1.0+dd*dd*1.5);}L+=uLC[i]*max(dot(n,ld),0.0)*at;}\n"+
 "  rgb*=mix(vec3(1.0),L,uLit);}\n"+
 " if(uMode==2)rgb=mix(vec3(1.0,0.62,0.18),vec3(0.12,0.42,1.0),rel)*(0.55+0.45*col.a);\n"+
-" rgb=mix(rgb,uBg,uFog*rel);if(uMode==4)rgb=vec3(d/uFar);vCol=vec4(rgb,col.a*fa);\n"+
+" if(uFV>0.5){float fz=1.0-clamp(bl/5.0,0.0,1.0);rgb=mix(rgb,vec3(0.1,1.0,0.4),fz*0.6);}\n"+
+" rgb=mix(rgb,uBg,uFog*rel);if(uMode==4)rgb=vec3(d/uFar);vCol=vec4(rgb,col.a*fa*uOp);\n"+
 "}";
 var GFS="#version 300 es\nprecision mediump float;precision highp int;in vec4 vCol;in vec2 vPos;uniform int uMode;out vec4 o;\n"+
 "void main(){float r2=dot(vPos,vPos);if(r2>9.0)discard;float a;\n"+
@@ -748,7 +840,7 @@ function initGS(){
   var pr=gl.createProgram();gl.attachShader(pr,vs);gl.attachShader(pr,fs);
   gl.bindAttribLocation(pr,0,"aQ");gl.bindAttribLocation(pr,1,"aIdx");gl.linkProgram(pr);
   if(!gl.getProgramParameter(pr,gl.LINK_STATUS)){GSP=-1;try{console.error("splat shader: "+gl.getShaderInfoLog(vs)+" | "+gl.getShaderInfoLog(fs)+" | "+gl.getProgramInfoLog(pr))}catch(_){}return false}
-  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uSlice","uFx","uD0","uD1","uMode","uFar","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
+  GSP=pr;GS.u={};["uG","uC","uN","uView","uProj","uModel","uVp","uPx","uMul","uFog","uBg","uFocus","uDef","uFR","uDN","uDF","uDW","uTilt","uTiltA","uTiltP","uTiltB","uFV","uOp","uSlice","uFx","uD0","uD1","uMode","uFar","uCmin","uCmax","uCOn","uLit","uAmb","uLN","uCam"].forEach(function(n){GS.u[n]=gl.getUniformLocation(pr,n)});GS.u.uLP=gl.getUniformLocation(pr,"uLP[0]");GS.u.uLC=gl.getUniformLocation(pr,"uLC[0]");
   GS.q=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,GS.q);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   dotsStale=true;return true;
 }
@@ -758,9 +850,18 @@ function ident3(){return [1,0,0,0,1,0,0,0,1]}
 function newCrop(){return {on:false,inv:false,x0:0,x1:1,y0:0,y1:1,z0:0,z1:1}}
 var OBJ_KINDS=["splat","mesh","sun","point","camera"];
 function mkObj(kind,name){if(OBJ_KINDS.indexOf(kind)<0){try{console.error("Unknown object kind: "+kind+". Add it to OBJ_KINDS, persistObjs and the tests.")}catch(_){}}return {id:uid(),kind:kind,name:name||kind,pos:[0,0,0],R:ident3(),scl:1,vis:true,crop:newCrop()}}
+/* V040: per-object settings. o.st holds only what the object overrides; everything else follows the scene value. */
+var OKEYS=["exp","con","sat","hue","warm","size","opacity","lit","fog","sliceA","sliceB","blur","fxDis","fxScat","fxPulse","fxPhase"],OGRD={exp:1,con:1,sat:1,hue:1,warm:1};
+var OLAB={exp:"exposure",con:"contrast",sat:"saturation",hue:"hue",warm:"warmth",size:"splat size",opacity:"opacity",lit:"light response",fog:"fog",sliceA:"slice near",sliceB:"slice far",blur:"blur",fxDis:"dissolve",fxScat:"scatter",fxPulse:"pulse",fxPhase:"pulse position"};
+function okDef(k){return k==="blur"||k==="opacity"?1:DEF[k]}
+function ovHas(o,k){return !!(o&&o.st&&o.st[k]!==undefined)}
+function ovGet(o,k){return ovHas(o,k)?o.st[k]:(k==="blur"||k==="opacity"?1:S[k])}
+function ovSet(o,k,v){o.st=o.st||{};o.st[k]=v}
+function ovClear(o,k){if(o&&o.st){delete o.st[k];if(!Object.keys(o.st).length)delete o.st}}
 function applyRec(o,r){
   if(!r)return o;
-  if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;
+  if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;if(r.locked)o.locked=true;
+  if(r.st)o.st=Object.assign({},r.st);
   if(r.crop)o.crop=Object.assign(newCrop(),r.crop);if(r.name)o.name=r.name;if(r.color)o.color=r.color;if(r.inten!=null)o.inten=r.inten;
   if(r.mask)o.maskRle=r.mask;if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;if(r.fov)o.fov=r.fov;if(r.fdist)o.fdist=r.fdist;
   return o;
@@ -887,7 +988,7 @@ function sortGS(g,VM){
 function lightsData(force){
   var lp=new Float32Array(16),lc=new Float32Array(12),n=0;
   OBJS.forEach(function(o){
-    if(n>=4||!o.vis||MODE==="edit"||(o.kind!=="sun"&&o.kind!=="point"))return;
+    if(n>=4||!o.vis||(o.kind!=="sun"&&o.kind!=="point"))return;
     var c=hex2rgb(o.color||"#ffffff"),it=o.inten==null?1:o.inten;
     if(o.kind==="sun"){var l=Math.hypot(o.R[1],o.R[4],o.R[7])||1;lp.set([o.R[1]/l,o.R[4]/l,o.R[7]/l,0],n*4)}
     else lp.set([o.pos[0],o.pos[1],ZC+o.pos[2],1],n*4);
@@ -898,7 +999,9 @@ function lightsData(force){
 }
 function meshObjs(){return OBJS.filter(function(o){return o.kind==="mesh"&&o.vis&&o.mesh})}
 /* Edit shows the scene as it will export; Render adds the view-only effects */
-function RV(){return MODE==="render"?S:Object.assign({},S,{fog:0,defocus:0,sliceA:0,sliceB:1,lit:0,render:"splat",focusRange:0,fxDis:0,fxScat:0,fxPulse:0})}
+/* what you see is the render: every effect is on in the workspace too. Fast preview drops the heavy ones in the viewer only (never in exports) */
+function fastOn(){return !!S.fast&&!RO&&!RJ&&!(anim&&anim.rec)}
+function RV(){return fastOn()?Object.assign({},S,{defocus:0,dofTilt:0,dofVis:false,lit:0,fxDis:0,fxScat:0,fxPulse:0}):S}
 var gsTrail=0;
 /* do any two visible splat objects overlap in space? (then whole-object sorting can pick the wrong front/back) */
 function splatsOverlap(list){
@@ -919,6 +1022,18 @@ function splatsOverlap(list){
   }
   return false;
 }
+var FASTK={blur:1,fxDis:1,fxScat:1,fxPulse:1,fxPhase:1,lit:1};
+/* the per-object part of the look: anything the object overrides replaces the scene value for that object only */
+function objUniforms(o,Z){
+  var st=o.st,f=fastOn(),u=GS.u;
+  function has(k){return st&&st[k]!==undefined&&!(f&&FASTK[k])}
+  function g(k){return has(k)?st[k]:Z[k]}
+  gl.uniform1f(u.uMul,g("size")/1.1);gl.uniform1f(u.uOp,has("opacity")?st.opacity:1);
+  gl.uniform1f(u.uFog,DEPTHP?0:g("fog"));gl.uniform1f(u.uDef,DEPTHP?0:Z.defocus*(has("blur")?st.blur:1));
+  var a=g("sliceA"),b=g("sliceB");gl.uniform2f(u.uSlice,Math.min(a,b),Math.max(a,b));
+  gl.uniform4f(u.uFx,g("fxDis"),g("fxScat"),g("fxPulse"),g("fxPhase"));
+  var lt=g("lit");gl.uniform1f(u.uLit,!DEPTHP&&lt>0.001?lt:0);
+}
 function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   if(!initGS())return false;
   var list=[],u=GS.u,now=performance.now(),i;
@@ -928,7 +1043,7 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   }
   if(!list.length)return true;
   list.sort(function(a,b){return a.z-b.z});
-  var Z=RV(),Lt=Z.lit>0.001?lightsData(true):{n:0,lp:new Float32Array(16),lc:new Float32Array(12)},hasMesh=meshObjs().length>0;
+  var Z=RV(),anyLit=Z.lit>0.001||list.some(function(it){return !fastOn()&&ovHas(it.o,"lit")&&it.o.st.lit>0.001}),Lt=anyLit?lightsData(true):{n:0,lp:new Float32Array(16),lc:new Float32Array(12)},hasMesh=meshObjs().length>0;
   gl.useProgram(GSP);
   if(hasMesh){gl.enable(gl.DEPTH_TEST);gl.depthMask(false)}else gl.disable(gl.DEPTH_TEST);
   gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
@@ -936,6 +1051,7 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
   gl.uniformMatrix4fv(u.uView,false,V);gl.uniformMatrix4fv(u.uProj,false,Pm);
   gl.uniform2f(u.uVp,w,h);gl.uniform1f(u.uPx,h/(2*tyv));gl.uniform1f(u.uMul,S.size/1.1);
   gl.uniform1f(u.uFog,DEPTHP?0:Z.fog);gl.uniform3f(u.uBg,bg[0],bg[1],bg[2]);gl.uniform1f(u.uFocus,Z.focus);gl.uniform1f(u.uDef,DEPTHP?0:Z.defocus);gl.uniform1f(u.uFR,Z.focusRange);
+  gl.uniform1f(u.uDN,Z.dofNear);gl.uniform1f(u.uDF,Z.dofFar);gl.uniform1f(u.uDW,Z.dofSoft);gl.uniform1f(u.uTilt,DEPTHP?0:Z.dofTilt);gl.uniform1f(u.uTiltA,Z.dofTiltA*Math.PI/180);gl.uniform1f(u.uTiltP,Z.dofTiltP);gl.uniform1f(u.uTiltB,Z.dofTiltB);gl.uniform1f(u.uFV,(!DEPTHP&&!RO&&Z.dofVis&&MODE==="render")?1:0);
   gl.uniform2f(u.uSlice,Math.min(Z.sliceA,Z.sliceB),Math.max(Z.sliceA,Z.sliceB));gl.uniform4f(u.uFx,Z.fxDis,Z.fxScat,Z.fxPulse,Z.fxPhase);
   /* dist here is the depth of the camera's focus point, so the depth effects stay put when the view moves */
   gl.uniform1f(u.uD0,dist-1.1);gl.uniform1f(u.uD1,dist+1.1);gl.uniform1f(u.uFar,DEPTHP?DEPTHP.far:1);gl.uniform1i(u.uMode,DEPTHP?4:Z.render==="solid"?1:Z.render==="depth"?2:Z.render==="points"?3:0);
@@ -966,6 +1082,7 @@ function drawSplats(V,Pm,w,h,tyv,dist,bg,mainToo,eye){
         gl.uniform3f(u.uCmax,e.x0+(e.x1-e.x0)*c.x1,e.y0+(e.y1-e.y0)*c.y1,e.z0+(e.z1-e.z0)*c.z1);
         gl.uniform1i(u.uCOn,c.inv?2:1);
       }else gl.uniform1i(u.uCOn,0);
+      objUniforms(it.o,Z);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER,g.ib);gl.enableVertexAttribArray(1);gl.vertexAttribIPointer(1,1,gl.INT,0,off*4);gl.vertexAttribDivisor(1,1);
   }
@@ -1196,7 +1313,7 @@ function isCam(o){return !!o&&o.kind==="camera"}
 function cams(){return OBJS.filter(isCam)}
 function curCam(){if(ACAM&&OBJS.indexOf(ACAM)>=0)return ACAM;ACAM=cams()[0]||null;return ACAM}
 function zmNow(){return 1+(scene?scene.R:1.9)/2}
-function tyfNow(f){return Math.tan(clamp(f||50,15,110)*Math.PI/360)}
+function tyfNow(f){return Math.tan(clamp(f||50,4,170)*Math.PI/360)}
 function viewDist(){return zmNow()*zoom*TY/tyfNow(S.fov)}
 /* fly speed is a fixed size in the scene, never tied to zoom or distance, so it can't slow to nothing */
 function flyUnit(){return (scene?scene.R:1.9)*0.6}
@@ -1273,7 +1390,7 @@ function draw(ao){drawScene(ao);drawOverlay()}
 function viewNow(ao,w,h){
   var o=ao||OFF0,vA=w/h;
   var Rv=(o.y||o.p)?mm(Rm,mm(rotAxis([0,1,0],o.y),rotAxis([1,0,0],-o.p))):Rm;
-  var zm=1+scene.R/2,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,15,110)*Math.PI/360),tyv=tyBase*tyf/TY;
+  var zm=1+scene.R/2,tyBase=Math.max(TY,scene.tx/vA),tyf=Math.tan(clamp(S.fov||50,4,170)*Math.PI/360),tyv=tyBase*tyf/TY;
   var dist=zm*zoom*o.z*TY/tyf;
   var po=mv(Rv,[o.x*scene.tx*zm,0,0]),tg=[TG[0]+po[0],TG[1]+po[1],-zm+TG[2]+po[2]];
   var eo=mv(Rv,[0,0,dist]),eye=[tg[0]+eo[0],tg[1]+eo[1],tg[2]+eo[2]],upv=mv(Rv,[0,1,0]);
@@ -1327,7 +1444,9 @@ function startAnim(rec){
 }
 function stopAnim(){if(anim&&!anim.rec){anim=null;dirty=true;syncPlay()}}
 function syncPlay(){var b=document.querySelector("[data-act=play]"),w=anim&&!anim.rec?"Stop":"Play";if(b)b.textContent=w;var q=$("tlPlay");if(q)q.textContent=w}
+var grainT=0;
 function loop(t){
+  if(t-OUTL_T>180){OUTL_T=t;try{renderOutl()}catch(_){}}
   requestAnimationFrame(loop);
   if($("editor").hidden||RJ)return;
   stepKeys(t);
@@ -1345,6 +1464,7 @@ function loop(t){
     }
     if(anim.tl){tlSetTime((anim.a0||0)+u*anim.dur);draw(null)}else{draw(camOff(anim.preset,u));if(TLU.open){TL.t=u*anim.dur;tlDockDraw()}}return;
   }
+  if(!dirty&&S.grain>0.001&&!fastOn()&&t-grainT>33){grainT=t;dirty=true}
   if(!dirty)return;
   dirty=false;
   if(THRU&&ACAM){camFromView(ACAM);clearTimeout(camT);camT=setTimeout(persistObjs,600);if(curTool==="camera"&&t-camSyncT>120){camSyncT=t;syncObjFields()}}
@@ -1397,6 +1517,19 @@ function pickAt(cx,cy){
   });
   return best;
 }
+/* click-to-focus: the focus distance becomes the depth of whatever you click */
+var FOCUSPICK=false;
+function setFocusPick(on){FOCUSPICK=!!on;cv.style.cursor=on?"crosshair":"";if(curTool==="dof")openTool("dof",true)}
+function focusFromDepth(d,dist){return clamp((d-(dist-1.1))/2.2,0,1)}
+function pickFocusAt(cx,cy){
+  var pt=pickAt(cx,cy),L=LASTM;if(!pt||!L){setStatus("Nothing there to focus on. Click on the splat.","warn");return false}
+  var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=focusFromDepth(d,L.dist);
+  setK("focus",+f.toFixed(3));syncControls();return true;
+}
+cv.addEventListener("pointerdown",function(e){
+  if(!FOCUSPICK)return;e.stopImmediatePropagation();e.preventDefault();
+  if(pickFocusAt(e.clientX,e.clientY)){setFocusPick(false);setStatus("Focus set to what you clicked.","ok")}
+},true);
 function focusOn(cx,cy){
   var pt=pickAt(cx,cy);
   if(!pt){frameAll();return}
@@ -1425,7 +1558,7 @@ function boxCorners(o){
 }
 function distSeg(px,py,ax,ay,bx,by){var dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l)):0;return Math.hypot(px-(ax+t*dx),py-(ay+t*dy))}
 function gzGeo(){
-  var o=SEL;if(!o||!o.vis||!LASTM)return null;if(!(MODE==="edit"||(MODE==="render"&&isCam(o)&&!THRU)))return null;
+  var o=SEL;if(!o||!o.vis||o.locked||!LASTM)return null;if(!(MODE==="edit"||(MODE==="render"&&isCam(o)&&!THRU)))return null;
   var wp=worldOf(o),pc=projW(wp);if(!pc)return null;
   var wpp=2*LASTM.tyv*pc[2]/Math.max(1,LASTM.vh/LASTM.k),g={c:pc,wp:wp,wpp:wpp,arm:ARM*wpp,ends:[],rings:[]},i,t;
   for(i=0;i<3;i++){g.ends.push(projW([wp[0]+AXV[i][0]*g.arm,wp[1]+AXV[i][1]*g.arm,wp[2]+AXV[i][2]*g.arm]))}
@@ -1448,6 +1581,15 @@ function gizmoHit(cx,cy){
   }
   return best;
 }
+function drawLightMarks(c){
+  OBJS.forEach(function(o){
+    if(!isLight(o)||!o.vis)return;var p=projW(worldOf(o));if(!p)return;var sel=o===SEL;
+    c.strokeStyle=sel?"#ff7849":"#ffe9a8";c.fillStyle=c.strokeStyle;c.lineWidth=sel?2.2:1.5;c.globalAlpha=0.95;
+    c.beginPath();c.arc(p[0],p[1],6,0,6.2832);c.stroke();
+    var n=o.kind==="sun"?8:4,i;for(i=0;i<n;i++){var a=i/n*6.2832;c.beginPath();c.moveTo(p[0]+Math.cos(a)*9,p[1]+Math.sin(a)*9);c.lineTo(p[0]+Math.cos(a)*14,p[1]+Math.sin(a)*14);c.stroke()}
+    c.globalAlpha=1;
+  });
+}
 function drawOverlay(){
   var c=ov.getContext("2d"),dpr=Math.min(window.devicePixelRatio||1,2),cw=cv.clientWidth,ch=cv.clientHeight;
   var W=Math.round(cw*dpr),H=Math.round(ch*dpr);
@@ -1455,7 +1597,8 @@ function drawOverlay(){
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,cw,ch);
   if(!GUIHID&&MODE==="edit"&&curTool==="select")drawSelOverlay(c);
   if(GUIHID||!LASTM)return;
-  if(MODE==="render"){drawCamMarks(c);if(!(SEL&&isCam(SEL)&&!THRU))return}
+  drawCamMarks(c);drawLightMarks(c);
+  if(MODE==="render"){if(!(SEL&&isCam(SEL)&&!THRU))return}
   else if(MODE!=="edit")return;
   var ACC="#ff7849";
   if(MODE==="edit")OBJS.forEach(function(o){
@@ -1536,15 +1679,17 @@ function tapObj(e){
     return false;
   }
   if(MODE!=="edit")return false;
-  var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,best=null,ba=1e12;
+  var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,best=null,ba=1e12,mk=null,md=24;
+  OBJS.forEach(function(o){if(!o.vis||isGeo(o)||o.locked)return;if(THRU&&o===ACAM)return;var q=projW(worldOf(o));if(!q)return;var dd=Math.hypot(q[0]-x,q[1]-y);if(dd<md){md=dd;mk=o}});
   OBJS.forEach(function(o){
-    if(!o.vis||!isGeo(o))return;var area=null;
+    if(!o.vis||!isGeo(o)||o.locked)return;var area=null;
     var cs=boxCorners(o);if(cs&&cs.every(function(q){return q})){
       var x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;cs.forEach(function(q){x0=Math.min(x0,q[0]);y0=Math.min(y0,q[1]);x1=Math.max(x1,q[0]);y1=Math.max(y1,q[1])});
       if(x>=x0&&x<=x1&&y>=y0&&y<=y1)area=(x1-x0)*(y1-y0)+100;
     }
     if(area!=null&&area<ba){ba=area;best=o}
   });
+  if(mk){SEL=mk;if(isCam(mk))ACAM=mk;if(GM==="scale")GM="move";dirty=true;openTool(isCam(mk)?"camera":"light",true);return true}
   if(best){SEL=best;dirty=true;if(OBJTOOL[curTool])openTool(curTool,true);return true}
   if(SEL&&OBJTOOL[curTool]){SEL=null;dirty=true;openTool(curTool,true);return true}
   return false;
@@ -1622,7 +1767,7 @@ document.addEventListener("keydown",function(e){
   if(e.code==="KeyH"&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();setGui(!GUIHID);return}
   if(GUIHID&&e.code==="Escape"){setGui(false);return}
   if(e.metaKey||(e.ctrlKey&&!/^Numpad/.test(e.code)))return;
-  var c=e.code,ids=TOOLS.map(function(x){return x[0]}).filter(function(id){return !rail.querySelector('[data-tool="'+id+'"]').hidden});
+  var c=e.code,ids=GROUPS.map(function(x){return x[0]});
   if(c==="Escape"){if(!curTool&&SEL){SEL=null;dirty=true}else closeTool();return}
   var dm=/^Digit([1-9])$/.exec(c);
   if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curTool===id)closeTool();else openTool(id);return}
@@ -1734,10 +1879,11 @@ var ICON={
   camera:'<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>',
   export:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
 };
-var EDIT_T={add:1,objects:1,crop:1,select:1,orient:1,file:1},OBJTOOL={objects:1,crop:1,select:1,orient:1,light:1,camera:1};
+var EDIT_T={add:1,objects:1,crop:1,select:1,orient:1,file:1},OBJTOOL={objects:1,ofx:1,crop:1,select:1,orient:1,light:1,camera:1};
 var TOOLS=[["add","Add"],["objects","Objects"],["crop","Crop"],["select","Select"],["orient","Orient"],["file","File"],
-  ["camera","Camera"],["lens","Lens"],["fx","Depth"],["look","Look"],["colour","Colour"],["light","Light"],["display","Display"],["capture","Capture"]];
-ICON.fx=ICON.depth;
+  ["camera","Camera"],["lens","Lens"],["ofx","Object look"],["fx","Depth and effects"],["dof","Depth of field"],["look","Look"],["colour","Colour"],["light","Light"],["display","Display"],["capture","Capture"],["hist","History"]];
+ICON.dof=ICON.depth;
+ICON.hist='<path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 8"/><path d="M4 3v5h5M12 8v4l3 2"/>';ICON.fx=ICON.depth;ICON.ofx=ICON.colour;
 ICON.colour='<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/>';
 ICON.lens='<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/><path d="M12 4v4M4 12h4M20 12h-4M12 20v-4"/>';
 ICON.objects='<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="1.6"/>';
@@ -1750,14 +1896,24 @@ ICON.light='<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-3.5 10.9c.6.5 1 1
 ICON.display='<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/>';
 ICON.capture='<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 7l1.5-3h5L16 7"/>';
 var rail=$("rail");
-TOOLS.forEach(function(t){
-  var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=t[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",t[1]);
-  b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+ICON[t[0]]+'</svg><span>'+t[1]+'</span>';
+/* V040: five groups. Each opens one panel with fold-open sections. */
+var GROUPS=[["object","Object",["add","objects","ofx","crop","select","orient"],ICON.objects],["scene","Scene",["light","fx","display"],ICON.light],["camera","Camera",["camera","dof"],ICON.camera],["image","Image",["colour","look","lens"],ICON.colour],["output","Output",["capture","file","hist"],ICON.capture]];
+var curGroup=null,LASTSEC={};
+GROUPS.forEach(function(g){
+  var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=g[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",g[1]);
+  b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+g[3]+'</svg><span>'+g[1]+'</span>';
   rail.appendChild(b);
 });
+function groupOf(id){var i;for(i=0;i<GROUPS.length;i++)if(GROUPS[i][0]===id||GROUPS[i][2].indexOf(id)>=0)return GROUPS[i];return null}
+function secName(id){var t=TOOLS.filter(function(x){return x[0]===id})[0];return t?t[1]:id}
 function kd(id){return '<button class="kd" type="button" data-kd="'+id+'" aria-label="Keyframe at the playhead" title="Keyframe at the playhead"></button>'}
 function kdO(o,f){return o?kd("o:"+o.id+":"+f):""}
-function sl(k,label,min,max,step){return '<div class="sl"><label for="c-'+k+'">'+label+(TL_S.indexOf(k)>=0?kd("s:"+k):"")+'</label><output id="o-'+k+'"></output><input id="c-'+k+'" data-k="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+/* hard limits: the slider shows the everyday range, the number box accepts anything up to these */
+var HARD={fov:[4,170],cfov:[4,170],exp:[-300,300],con:[-100,300],sat:[-100,300],warm:[-300,300],ca:[-2,2],dist:[-150,150],vig:[-1.5,1.5],vigBlur:[0,2],grain:[0,4],grainSize:[0.25,12],size:[0.05,8],sens:[0.05,10],range:[0.05,4],dur:[0.5,300],linten:[0,10],cut:[0,1],defocus:[0,4],fog:[0,3],lit:[0,2],amb:[0,2]};
+function fovTxt(v){v=+v;return Math.round(v)+"\u00b0 \u00b7 "+Math.round(12/Math.tan(v*Math.PI/360))+" mm"}
+function setOut(o,t){if(!o)return;if(o.tagName==="INPUT")o.value=t;else o.textContent=t}
+function nbBox(id,k){return '<input id="'+id+'" class="nb" type="text" inputmode="decimal" autocomplete="off" data-nb="'+k+'" aria-label="Type a value">'}
+function sl(k,label,min,max,step){return '<div class="sl"><label for="c-'+k+'">'+label+(TL_S.indexOf(k)>=0?kd("s:"+k):"")+'</label>'+nbBox("o-"+k,k)+'<input id="c-'+k+'" data-k="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function chk(k,label){return '<label class="chk"><input type="checkbox" data-k="'+k+'"> '+label+'</label>'}
 function seg(k,items,wrap){return '<div class="seg'+(wrap?' wrap':'')+'">'+items.map(function(i){return '<button type="button" data-k="'+k+'" data-v="'+i[0]+'" aria-pressed="false">'+i[1]+'</button>'}).join("")+'</div>'}
 var SWATCH=["#0a0c0d","#1b2430","#2a1d17","#0e2a2c","#efece6","#ffffff"];
@@ -1773,7 +1929,7 @@ function objRow(o){
     '<span class="okind">'+objKindLabel(o)+'</span>'+
     '<button type="button" data-oid="'+o.id+'" data-oact="del" aria-label="Delete '+esc(nm)+'">✕</button></div>';
 }
-function osl(k,label,min,max,step){var kf=k==="cfov"?"fov":k==="linten"?"inten":null;return '<div class="sl"><label for="oo-'+k+'">'+label+(kf?kdO(SEL,kf):"")+'</label><output id="oov-'+k+'"></output><input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+function osl(k,label,min,max,step){var kf=k==="cfov"?"fov":k==="linten"?"inten":null;return '<div class="sl"><label for="oo-'+k+'">'+label+(kf?kdO(SEL,kf):"")+'</label>'+(k==="cfov"||k==="linten"?nbBox("oov-"+k,k):'<output id="oov-'+k+'"></output>')+'<input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function numIn(k,step){return '<input class="num" type="number" step="'+step+'" data-o="'+k+'" aria-label="'+k+'">'}
 function objList(filter,empty){
   var l=OBJS.filter(filter);
@@ -1788,7 +1944,7 @@ var PANES={
     '<button class="btn" type="button" data-act="addPhotos">Photos to splat (scan)</button>'+
     '<p class="note">Pick 20 or more photos of the same place or object from slightly different spots. Training runs on your graphics card (needs WebGPU) and nothing leaves this PC. The result lands here as an object.</p>'+
     '<button class="btn" type="button" data-act="addPhoto">Photo to 3D (AI depth)</button>'+
-    sl("range","Depth range",0.2,2,0.05)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+sl("detail","Detail (long side)",192,768,64)+
+    sl("range","Depth range",0.1,4,0.05)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+sl("detail","Detail (long side)",192,768,64)+
     '<p class="note">Photo to 3D runs Depth Anything V2 Small on your device. The first run downloads about 40 MB, once. The sliders above apply to the next photo you make. Lights are in Render, under Light.</p>'},
   objects:function(){
     var geo=OBJS.filter(isGeo),h=objList(isGeo,'Nothing here yet. Use Add to bring in a splat, a 3D model, a photo scan or a photo.'),o=SEL&&isGeo(SEL)?SEL:null;
@@ -1804,6 +1960,20 @@ var PANES={
     h+='<p class="keys"><b>G</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
     return h;
   },
+  ofx:function(){
+    var sp=OBJS.filter(function(o){return o.kind==="splat"}),o=SEL&&SEL.kind==="splat"?SEL:null;
+    if(!sp.length)return '<p class="note">Add a splat first. Each splat can have its own colour, size, fog, slice and effects.</p>';
+    var h=sp.length>1?objList(function(o){return o.kind==="splat"},""):"";
+    if(!o)return h+'<p class="note">Pick a splat in the list, or tap it in the view.</p>';
+    function row(k,min,max,step){return '<div class="sl'+(ovHas(o,k)?' ovr':'')+'"><label for="ok-'+k+'">'+OLAB[k]+'<button type="button" class="ovx" data-okx="'+k+'" aria-label="Follow the scene again" title="Follow the scene again">↺</button>'+kdO(o,"st:"+k)+'</label><input id="ok-n-'+k+'" class="nb" type="text" inputmode="decimal" autocomplete="off" data-okn="'+k+'" aria-label="Type a value">'+
+      '<input id="ok-'+k+'" data-ok="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+    return h+'<p class="lbl">Look of: '+esc(o.name)+'</p><p class="note">Anything you change here applies to this splat only. Untouched sliders follow the scene. ↺ puts one back.</p>'+
+      '<p class="lbl">Colour</p>'+row("exp",-100,100,1)+row("con",-100,100,1)+row("sat",-100,100,1)+row("hue",-180,180,1)+row("warm",-100,100,1)+
+      '<p class="lbl">Appearance</p>'+row("size",0.2,3,0.05)+row("opacity",0,1,0.01)+row("lit",0,1,0.01)+row("fog",0,1.5,0.02)+row("blur",0,3,0.05)+
+      '<p class="lbl">Slice and effects</p>'+row("sliceA",0,1,0.01)+row("sliceB",0,1,0.01)+row("fxDis",0,1,0.01)+row("fxScat",0,1,0.01)+row("fxPulse",0,1,0.01)+row("fxPhase",0,1,0.01)+
+      '<button class="btn small" type="button" data-act="oLookReset">Back to the scene look</button>';
+  },
+  hist:function(){return '<div class="row2"><button class="btn small" type="button" id="hUndo" data-act="hUndo">Undo</button><button class="btn small" type="button" id="hRedo" data-act="hRedo">Redo</button></div><p class="note">Every change since you opened the project. Click a step to go back to it. Ctrl+Z and Ctrl+Shift+Z work anywhere in the editor.</p><div class="hist" id="histW">'+histHTML()+'</div>'},
   select:function(){return sxPanel()},
   crop:function(){
     var sp=OBJS.filter(function(o){return o.kind==="splat"});
@@ -1846,7 +2016,7 @@ var PANES={
       if(here)h+='<p class="note">You are looking through it. Fly around and the camera moves with you. Press Leave and it stays put.</p>';
       else h+='<button class="btn small" type="button" data-act="camPlace">Place camera at the free view</button>'+
         '<div class="seg" role="group" aria-label="Gizmo"><button type="button" data-gm="move" aria-pressed="false">Move</button><button type="button" data-gm="rotate" aria-pressed="false">Rotate</button></div>';
-      h+=osl("cfov","Camera lens (field of view)",15,110,1)+
+      h+=osl("cfov","Camera lens (field of view)",8,150,1)+
         '<p class="lbl">Focus distance (depth effects centre here)'+kdO(o,"fdist")+'</p>'+numIn("cfd","0.05")+
         '<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>'+
         '<p class="lbl">Rotation (degrees)'+kdO(o,"rot")+'</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
@@ -1854,20 +2024,23 @@ var PANES={
         '<button class="btn small" type="button" data-act="oDel">Delete this camera</button>';
     }else if(cams().length)h+='<p class="note">Pick a camera in the list, or tap its shape in the view.</p>';
     h+='<p class="lbl">Free view</p>'+seg("ctrl",[["fly","Free fly"],["orbit","Orbit"],["trackball","Free roll"]]);
-    if(!THRU)h+=sl("fov","Free view lens (field of view)",20,100,1);
-    h+=sl("sens","Mouse speed",0.3,3,0.1)+
+    if(!THRU)h+=sl("fov","Free view lens (field of view)",8,150,1);
+    h+=sl("sens","Mouse speed",0.1,6,0.1)+
       '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
       '<p class="keys"><b>Free fly:</b> <b>Left-drag</b> look around · <b>W A S D</b> fly · <b>Q E</b> down / up · <b>Wheel</b> forward / back · <b>Shift</b> faster<br><b>Right or Shift-drag</b> slide sideways · <b>Double-click</b> fly to that spot<br><b>Alt-drag</b> or <b>[ ]</b> roll · <b>L</b> level · <b>F</b> frame all · <b>R</b> reset the free view<br><b>Numpad 1 / 3 / 7</b> front / side / top (Ctrl = opposite)</p>'+
       '<p class="note">The free view never changes a camera. Depth of field, fog and slice are measured from the camera\'s focus distance, so moving around can\'t shift them. Play, Record and Save image use the camera.</p>';
     return h;
   },
-  lens:function(){return sl("vig","Vignette",0,1,0.02)+sl("vigSoft","Vignette softness",0,1,0.02)+sl("vigBlur","Vignette blur",0,1,0.02)+sl("dist","Lens distortion",-100,100,1)+sl("ca","Chromatic aberration",0,1,0.02)+
-    sl("grain","Film grain",0,1,0.02)+sl("grainSize","Grain size",1,4,0.25)+
+  lens:function(){return sl("vig","Vignette",-1,1,0.02)+sl("vigSoft","Vignette softness",0,1,0.02)+sl("vigBlur","Vignette blur",0,2,0.02)+sl("dist","Lens distortion",-100,100,1)+sl("ca","Chromatic aberration",-1,1,0.02)+
+    sl("grain","Film grain",0,2,0.02)+sl("grainSize","Grain size",0.5,6,0.25)+sl("grainSoft","Grain softness",0,1,0.02)+sl("grainCol","Grain colour",0,1,0.02)+sl("grainRate","Grain rate (frames per change)",1,8,1)+
     '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
     '<p class="note">Lens effects show in the viewer, PNG and video. They are never saved into the .ply.</p>'},
-  fx:function(){return sl("defocus","Depth of field (blur amount)",0,1,0.05)+sl("focus","Focus distance",0,1,0.02)+sl("focusRange","Sharp zone (in focus depth)",0,0.6,0.02)+sl("fog","Depth fog",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
+  dof:function(){return sl("defocus","Blur amount",0,2,0.05)+'<button class="btn small'+(FOCUSPICK?' on':'')+'" type="button" data-act="pickFocus">'+(FOCUSPICK?'Click the viewport\u2026':'Pick focus point')+'</button>'+sl("focus","Focus distance",0,1,0.01)+sl("focusRange","Sharp zone size",0,1,0.02)+sl("dofSoft","Falloff softness",0,0.5,0.01)+sl("dofNear","Near blur (in front of focus)",0,2,0.05)+sl("dofFar","Far blur (behind focus)",0,2,0.05)+chk("dofVis","Show the focus zone in green")+
+    '<p class="lbl">Tilt-shift</p>'+sl("dofTilt","Tilt-shift blur",0,2,0.05)+sl("dofTiltA","Band angle",-90,90,1)+sl("dofTiltP","Band position",-1,1,0.02)+sl("dofTiltB","Sharp band size",0,1,0.02)+
+    '<button class="btn small" type="button" data-act="resetDof">Reset depth of field</button><p class="note">Blur is a camera property. It shows while you work and in video and images, and is never saved into the .ply.</p>'},
+  fx:function(){return '<p class="lbl">Fog and slice</p>'+sl("fog","Depth fog",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
     '<p class="lbl">Splat effects</p>'+sl("fxDis","Dissolve",0,1,0.01)+sl("fxScat","Scatter",0,1,0.01)+sl("fxPulse","Pulse strength",0,1,0.02)+sl("fxPhase","Pulse position (keyframe 0 to 1)",0,1,0.01)+
-    '<button class="btn small" type="button" data-act="resetFx">Reset depth and effects</button><p class="note">Depth and splat effects show in Render mode and in video and images. They aren\'t saved into the .ply.</p>'},
+    '<button class="btn small" type="button" data-act="resetFx">Reset depth and effects</button><p class="note">Depth and splat effects show while you work and in video and images. They aren\'t saved into the .ply.</p>'},
   look:function(){return '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+esc((cur.lutName||"Imported LUT").slice(0,18))+'</button>':'')+'</div>'+
     sl("lookMix","Look strength",0,1,0.05)+'<button class="btn small" type="button" data-act="cube">Import .cube LUT</button>'+
     '<p class="note">Looks are hand-built approximations of film stocks and camera styles, not manufacturer LUTs. For an exact match, import your own .cube file. Render only, never exported.</p>'},
@@ -1881,18 +2054,18 @@ var PANES={
       h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Light name">';
       if(o.kind==="point")h+='<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>';
       else h+='<p class="lbl">Direction (rotation, degrees)</p><div class="xyz">'+numIn("r0","5")+numIn("r1","5")+numIn("r2","5")+'</div>';
-      h+='<p class="lbl">Light</p><input type="color" class="txt" data-o="lcol" aria-label="Light colour">'+osl("linten","Intensity",0,4,0.05)+
+      h+='<p class="lbl">Light</p><input type="color" class="txt" data-o="lcol" aria-label="Light colour">'+osl("linten","Intensity",0,6,0.05)+
         '<button class="btn small" type="button" data-act="oDel">Delete this light</button>';
     }
     return h+'<p class="note">Splats have their lighting baked in. "Light the splats" estimates surface direction from each splat, so sun and point lights add a rough relight. At 0 your scan looks exactly as captured. 3D models are always lit. Up to 4 lights are used. Lights are Render only and are not exported.</p>';
   },
-  display:function(){return '<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+
+  display:function(){return chk("fast","Fast preview (viewer only: skips depth of field, effects and lighting)")+'<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+
     '<p class="note">Splats = real soft Gaussians. Solid = hard-edged ellipses. Points = simple dots. Depth = colour by distance.</p>'+
-    sl("size","Splat size",0.6,2.6,0.1)+
+    sl("size","Splat size",0.2,3,0.05)+
     '<p class="lbl">Background</p><div class="sw">'+SWATCH.map(function(c){return '<button type="button" data-k="bg" data-v="'+c+'" style="background:'+c+'" aria-label="Background '+c+'" aria-pressed="false"></button>'}).join("")+
     '<input type="color" data-k="bg" aria-label="Custom background colour"></div>'},
   capture:function(){return '<p class="lbl">Camera move</p>'+seg("cam",[["orbit","Orbit"],["sway","Sway"],["push","Push in"],["pull","Pull out"],["dolly","Dolly"],["hand","Handheld"]],true)+
-    sl("dur","Length",2,12,1)+chk("loop","Loop")+
+    sl("dur","Length",1,30,1)+chk("loop","Loop")+
     '<div class="row2"><button class="btn" type="button" data-act="play">Play</button><button class="btn primary" type="button" data-act="record">Record video</button></div>'+
     '<p class="lbl">Render size</p>'+seg("rsize",[["view","This view"],["720","720p"],["1080","1080p"],["1440","1440p"],["2160","4K"],["sq","Square"],["vert","Vertical"]],true)+
     chk("ralpha","Transparent background")+
@@ -1907,6 +2080,7 @@ var PANES={
     '<p class="note">Recording plays the move once and saves a video of the viewer, with your lens, look and depth effects. A transparent background skips the lens and look effects (vignette, grain, distortion, LUT).</p>'}
 };
 function syncObjFields(){
+  if(typeof okSync==="function")okSync();
   var o=SEL,pb=$("popB");if(!OBJTOOL[curTool]||!pb)return;
   Array.prototype.forEach.call(pb.querySelectorAll("[data-gm]"),function(b){b.setAttribute("aria-pressed",String(b.dataset.gm===GM))});
   if(!o)return;
@@ -1920,17 +2094,17 @@ function syncObjFields(){
     else if(k==="cropOn"){el.checked=!!o.crop.on;return}
     else if(k==="cropInv"){el.checked=!!o.crop.inv;return}
     else if(/^c[xyz][01]$/.test(k)){v=o.crop[k.slice(1)];var oc=$("oov-"+k);if(oc)oc.textContent=Math.round(v*100)+"%"}
-    else if(k==="cfov"){v=o.fov||50;var oq=$("oov-cfov");if(oq)oq.textContent=Math.round(v)+"\u00b0"}
+    else if(k==="cfov"){v=o.fov||50;var oq=$("oov-cfov");if(oq)setOut(oq,fovTxt(v))}
     else if(k==="cfd")v=+(o.fdist||1.95).toFixed(3);
     else if(k==="lcol")v=o.color||"#ffffff";
-    else if(k==="linten"){v=o.inten==null?1:o.inten;var oi=$("oov-linten");if(oi)oi.textContent=(+v).toFixed(2)}
+    else if(k==="linten"){v=o.inten==null?1:o.inten;var oi=$("oov-linten");if(oi)setOut(oi,(+v).toFixed(2))}
     if(v!=null)el.value=v;
   });
 }
 var objSaveT=0;
 function objRec(o){
   var r={id:o.id,kind:o.kind,name:o.name,pos:o.pos.slice(),R:o.R.slice(),scl:o.scl,vis:o.vis,crop:Object.assign({},o.crop)};
-  if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.gs&&o.gs.mask){var ml=maskRle(o.gs.mask);if(ml)r.mask=ml}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist}return r;
+  if(o.locked)r.locked=true;if(o.st&&Object.keys(o.st).length)r.st=Object.assign({},o.st);if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.gs&&o.gs.mask){var ml=maskRle(o.gs.mask);if(ml)r.mask=ml}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist}return r;
 }
 function persistObjs(){
   if(!cur)return;
@@ -1952,7 +2126,7 @@ function removeObj(o,noUndo){
   if(!noUndo)undoPush(objUndoCmd(o));
   if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh);
   if(o===ACAM){if(THRU)leaveThru();ACAM=null}
-  OBJS=OBJS.filter(function(x){return x!==o});if(SEL===o)SEL=null;persistObjs();refreshObjs();camUI();
+  OBJS=OBJS.filter(function(x){return x!==o});MSEL=(MSEL||[]).filter(function(x){return x!==o});if(SEL===o)SEL=null;persistObjs();refreshObjs();camUI();
 }
 function disposeObjs(){undoClear();OBJS.forEach(function(o){if(o.gs)freeGS(o.gs);if(o.mesh)freeMesh(o.mesh)});OBJS=[];SEL=null;ACAM=null;THRU=false;VPS=null;clearTimeout(camT)}
 function spawnPos(){var k=OBJS.filter(isGeo).length;return k?[1.4*k,0,0]:[0,0,0]}
@@ -1982,6 +2156,7 @@ function addLight(kind){
   SEL=o;persistObjs();refreshObjs();return o;
 }
 function loadObjs(list){
+  HLOAD++;
   return (list||[]).reduce(function(pr,r){
     return pr.then(function(){
       if(r.kind==="splat"&&r.blob)return r.blob.arrayBuffer().then(function(ab){var raw=parsePly(ab);if(raw)addSplatObj(raw,r.name,r.blob,r)});
@@ -1989,7 +2164,7 @@ function loadObjs(list){
       if(r.kind==="sun"||r.kind==="point"){OBJS.push(applyRec(mkObj(r.kind,r.name),r))}
       if(r.kind==="camera"){OBJS.push(applyRec(mkCam(r.name),r))}
     }).catch(function(err){try{console.error("object load: "+(err&&err.message))}catch(_){}});
-  },Promise.resolve()).then(function(){regrade();refreshObjs();camUI()});
+  },Promise.resolve()).then(function(){HLOAD--;HREBASE=true;regrade();refreshObjs();camUI()});
 }
 function afterAdd(o,msg){
   if(OBJS.filter(isGeo).length===1)frameAll();
@@ -2070,6 +2245,46 @@ function addMeshFile(f){
 $("objPhoto").addEventListener("change",function(e){var fl=e.target.files;addPhotoFiles(fl).then(function(){});e.target.value=""});
 $("objPly").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addPlyFile(f)});
 $("objMesh").addEventListener("change",function(e){var f=e.target.files[0];e.target.value="";addMeshFile(f)});
+function okSync(){
+  var o=SEL,pb=$("popB");if(!pb||curTool!=="ofx"||!o||o.kind!=="splat")return;var ae=document.activeElement;
+  Array.prototype.forEach.call(pb.querySelectorAll("[data-ok]"),function(el){
+    var k=el.dataset.ok,v=ovGet(o,k);if(el.value!==String(v)&&el!==ae)el.value=v;
+    var n=$("ok-n-"+k);if(n&&n!==ae)n.value=String(+(+v).toFixed(2));
+    var r=el.parentNode;if(r)r.classList.toggle("ovr",ovHas(o,k));
+  });
+}
+function okSet(k,v,final){
+  var o=SEL;if(!o||o.kind!=="splat")return;
+  var h=HARD[k];if(h)v=clamp(v,h[0],h[1]);
+  var cmd=OKUNDO&&OKUNDO.o===o&&OKUNDO.k===k&&Date.now()-OKUNDO.t<900?null:okUndoStart(o,k);
+  ovSet(o,k,v);if(OKUNDO)OKUNDO.t=Date.now();
+  if(OGRD[k])regradeSoon();dirty=true;okSync();clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
+}
+var OKUNDO=null;
+function okUndoStart(o,k){
+  var had=ovHas(o,k),old=had?o.st[k]:null,id=o.id;OKUNDO={o:o,k:k,t:Date.now()};
+  var u={label:OLAB[k]+" on "+(o.name||"splat"),bytes:0,v:undefined,
+    undo:function(){var x=findObj(id);if(!x)return;u.v=ovHas(x,k)?x.st[k]:null;if(had)ovSet(x,k,old);else ovClear(x,k);okAfter(x,k)},
+    redo:function(){var x=findObj(id);if(!x)return;if(u.v==null)ovClear(x,k);else ovSet(x,k,u.v);okAfter(x,k)}};
+  undoPush(u);return u;
+}
+function okAfter(x,k){if(OGRD[k])regradeSoon();dirty=true;persistObjs();okSync();OKUNDO=null}
+$("popB").addEventListener("input",function(e){var el=e.target;if(el.dataset&&el.dataset.ok)okSet(el.dataset.ok,parseFloat(el.value))});
+$("popB").addEventListener("change",function(e){var el=e.target;if(el.dataset&&el.dataset.okn){var n=parseFloat(el.value);if(isFinite(n))okSet(el.dataset.okn,n);okSync()}});
+$("popB").addEventListener("keydown",function(e){var el=e.target;if(el.dataset&&el.dataset.okn&&e.key==="Enter"){e.preventDefault();el.blur()}});
+$("popB").addEventListener("click",function(e){
+  var hj=e.target.closest("[data-hj]");if(hj){histGo(hj.dataset.hj);return}
+  var ha=e.target.closest("[data-act=hUndo],[data-act=hRedo]");if(ha){if(ha.dataset.act==="hUndo")undoDo();else redoDo();return}
+  var el=e.target.closest("[data-okx],[data-act='oLookReset']");if(!el||!SEL||SEL.kind!=="splat")return;var o=SEL;
+  if(el.dataset.okx){okUndoStart(o,el.dataset.okx);ovClear(o,el.dataset.okx);okAfter(o,el.dataset.okx);return}
+  var old=o.st?Object.assign({},o.st):null,id=o.id;
+  if(!old)return;
+  undoPush({label:"reset look of "+(o.name||"splat"),bytes:0,
+    undo:function(){var x=findObj(id);if(x){x.st=Object.assign({},old);regradeSoon();dirty=true;persistObjs();okSync()}},
+    redo:function(){var x=findObj(id);if(x){delete x.st;regradeSoon();dirty=true;persistObjs();okSync()}}});
+  delete o.st;regradeSoon();dirty=true;persistObjs();okSync();
+});
+$("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.ok&&SEL){okUndoStart(SEL,el.dataset.ok);ovClear(SEL,el.dataset.ok);okAfter(SEL,el.dataset.ok)}});
 function objField(el){
   var o=SEL;if(!o)return;var k=el.dataset.o,v=el.type==="checkbox"?el.checked:el.value,n;
   if(k==="name"){o.name=String(v).slice(0,40)||"Object";var rw=document.querySelector('.orow[data-oid="'+o.id+'"] .oname');if(rw)rw.textContent=o.name}
@@ -2083,8 +2298,8 @@ function objField(el){
   else if(k==="cropInv")o.crop.inv=!!v;
   else if(/^c[xyz][01]$/.test(k)){o.crop[k.slice(1)]=+v;var oc=$("oov-"+k);if(oc)oc.textContent=Math.round(+v*100)+"%";if(!o.crop.on&&el.type==="range"){o.crop.on=true;var cb=$("popB").querySelector('[data-o="cropOn"]');if(cb)cb.checked=true}}
   else if(k==="lcol")o.color=v;
-  else if(k==="linten"){o.inten=+v;var oi=$("oov-linten");if(oi)oi.textContent=(+v).toFixed(2)}
-  else if(k==="cfov"){n=parseFloat(v);if(isFinite(n)){o.fov=clamp(n,15,110);var oq=$("oov-cfov");if(oq)oq.textContent=Math.round(o.fov)+"\u00b0"}}
+  else if(k==="linten"){o.inten=+v;var oi=$("oov-linten");if(oi)setOut(oi,(+v).toFixed(2))}
+  else if(k==="cfov"){n=parseFloat(v);if(isFinite(n)){o.fov=clamp(n,4,170);var oq=$("oov-cfov");if(oq)setOut(oq,fovTxt(o.fov))}}
   else if(k==="cfd"){n=parseFloat(v);if(isFinite(n)&&n>0.05)o.fdist=n}
   if(THRU&&o===ACAM&&isCam(o))viewFromCam(o);
   dirty=true;clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
@@ -2201,14 +2416,14 @@ function exportSceneSPZ(){
 }
 
 /* export every visible splat in the scene as one .ply, with moves, rotation, scale and crop baked in */
-function collectScene(){
-  var C0=0.28209479177387814,parts=[],total=0,gf=S.bakeGrade?gradeFn():null;
-  var jobs=OBJS.filter(function(o){return o.kind==="splat"&&o.vis}).map(function(o){
+function collectScene(opts){
+  opts=opts||{};var C0=0.28209479177387814,parts=[],total=0;
+  var jobs=OBJS.filter(function(o){return o.kind==="splat"&&(opts.only?opts.only.indexOf(o)>=0:o.vis)}).map(function(o){
     return o.blob.arrayBuffer().then(function(ab){return {o:o,raw:parsePly(ab),M:ident3()}});
   });
   return Promise.all(jobs).then(function(js){
     js.forEach(function(j){
-      if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.gs.ext,c=o.crop,keep=[],i;
+      if(!j.raw)return;var o=j.o,R=j.raw,M=j.M,Ro=o.R,s=o.scl,n=R.n,e=o.gs.ext,c=o.crop,keep=[],i,gf=opts.own?gradeFn(o,true):(S.bakeGrade?gradeFn(o):null);
       var cx0=e.x0+(e.x1-e.x0)*c.x0,cx1=e.x0+(e.x1-e.x0)*c.x1,cy0=e.y0+(e.y1-e.y0)*c.y0,cy1=e.y0+(e.y1-e.y0)*c.y1,cz0=e.z0+(e.z1-e.z0)*c.z0,cz1=e.z0+(e.z1-e.z0)*c.z1;
       var rows=new Float32Array(n*17),k=0,RM=mm(Ro,M);
       var gm=o.gs&&o.gs.mask;
@@ -2245,13 +2460,13 @@ var FMT=(function(){
   var pm=function(v){v=+v;return v>0?"+"+v:""+v},pc=function(v){return Math.round(v*100)+"%"};
   return {range:function(v){return (+v).toFixed(2)},smooth:function(v){return +v?v+" px":"off"},cut:pc,fill:function(v){return +v?pc(v):"off"},
     size:function(v){return (+v).toFixed(1)+"×"},detail:function(v){return v+" px"},exp:pm,con:pm,sat:pm,hue:function(v){return pm(v)+"°"},warm:pm,
-    fog:pc,defocus:pc,focus:pc,focusRange:pc,lit:pc,amb:pc,sliceA:pc,sliceB:pc,fxDis:pc,fxScat:pc,fxPulse:pc,fxPhase:function(v){return (+v).toFixed(2)},vig:pc,vigSoft:pc,vigBlur:pc,dist:function(v){return pm(v)},ca:pc,grain:pc,grainSize:function(v){return (+v).toFixed(2)+" px"},lookMix:pc,dur:function(v){return v+" s"},fov:function(v){return v+"°"},tiltX:function(v){return v+"°"},tiltZ:function(v){return v+"°"},spin:function(v){return v+"°"},sens:function(v){return (+v).toFixed(1)+"×"}};
+    fog:pc,defocus:pc,focus:pc,focusRange:pc,lit:pc,amb:pc,sliceA:pc,sliceB:pc,fxDis:pc,fxScat:pc,fxPulse:pc,fxPhase:function(v){return (+v).toFixed(2)},vig:pc,vigSoft:pc,vigBlur:pc,dist:function(v){return pm(v)},ca:pc,grain:pc,grainSize:function(v){return (+v).toFixed(2)+" px"},grainSoft:pc,grainCol:pc,grainRate:function(v){return v+(+v===1?" frame":" frames")},dofSoft:pc,dofNear:function(v){return (+v).toFixed(2)+"\u00d7"},dofFar:function(v){return (+v).toFixed(2)+"\u00d7"},dofTilt:pc,dofTiltA:function(v){return v+"\u00b0"},dofTiltP:function(v){return (+v).toFixed(2)},dofTiltB:pc,lookMix:pc,dur:function(v){return v+" s"},fov:fovTxt,tiltX:function(v){return v+"°"},tiltZ:function(v){return v+"°"},spin:function(v){return v+"°"},sens:function(v){return (+v).toFixed(1)+"×"}};
 })();
 var curTool=null;
 function syncControls(){
   Array.prototype.forEach.call($("popB").querySelectorAll("[data-k]"),function(el){
     var k=el.dataset.k;
-    if(el.type==="range"){el.value=S[k];var o=$("o-"+k);if(o)o.textContent=FMT[k]?FMT[k](S[k]):S[k]}
+    if(el.type==="range"){el.value=S[k];var o=$("o-"+k);if(o)setOut(o,FMT[k]?FMT[k](S[k]):S[k])}
     else if(el.type==="checkbox")el.checked=!!S[k];
     else if(el.type==="color")el.value=S[k];
     else if(el.tagName==="BUTTON")el.setAttribute("aria-pressed",String(String(S[k])===el.dataset.v));
@@ -2262,7 +2477,7 @@ function syncControls(){
   syncPlay();
 }
 function applyRail(){
-  Array.prototype.forEach.call(rail.children,function(b){var t=b.dataset.tool;b.hidden=EDIT_T[t]?MODE!=="edit":MODE!=="render"});
+  Array.prototype.forEach.call(rail.children,function(b){var t=b.dataset.tool;b.hidden=false});
   refreshCamBtn();
 }
 function syncModeUI(){Array.prototype.forEach.call(document.querySelectorAll("#modeSeg button"),function(b){b.setAttribute("aria-pressed",String(b.dataset.mode===MODE))})}
@@ -2270,7 +2485,7 @@ function syncModeUI(){Array.prototype.forEach.call(document.querySelectorAll("#m
 function setMode(m){
   if(m===MODE)return;
   stopAnim();closeTool();if(m==="edit")leaveThru();MODE=m;GH=null;GD=null;
-  if(SEL&&((m==="render"&&isGeo(SEL))||(m==="edit"&&(isLight(SEL)||isCam(SEL)))))SEL=null;
+  if(SEL&&m==="render"&&isGeo(SEL))SEL=null;
   applyRail();syncModeUI();buildHelpers();regrade();dirty=true;
 }
 $("modeSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode)});
@@ -2280,21 +2495,56 @@ function autoSel(id){
   if(SEL&&want(SEL)){if(isCam(SEL))ACAM=SEL;return}
   var l=OBJS.filter(want);SEL=l.length===1?l[0]:null;if(SEL&&isCam(SEL))ACAM=SEL;
 }
+function secKeys(id){var h="",ks=[],m,re=/data-k="(\w+)"/g;try{h=PANES[id]()}catch(_){return ks}while((m=re.exec(h)))if(ks.indexOf(m[1])<0&&DEF[m[1]]!==undefined&&typeof DEF[m[1]]!=="object")ks.push(m[1]);return ks}
+function secChanged(id){return secKeys(id).some(function(k){return S[k]!==DEF[k]})}
 function openTool(id,keep){
-  curTool=id;if(OBJTOOL[id]&&!keep)autoSel(id);
-  Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed",String(b.dataset.tool===id))});
-  var t=TOOLS.filter(function(x){return x[0]===id})[0];
-  $("popT").textContent=t[1];$("popB").innerHTML=PANES[id]();$("pop").hidden=false;syncControls();if(OBJTOOL[id])syncObjFields();if(id==="select")syncSel();
+  var g=groupOf(id);if(!g)return;var sec=g[2].indexOf(id)>=0?id:(LASTSEC[g[0]]||g[2][0]);
+  if(id===g[0]&&LASTSEC[g[0]]===null)sec=null;
+  var keepScroll=curGroup===g[0]&&keep?$("popB").scrollTop:0,q=($("psearch")&&keep)?$("psearch").value:"";
+  curTool=sec;curGroup=g[0];if(sec)LASTSEC[g[0]]=sec;if(sec&&OBJTOOL[sec]&&!keep)autoSel(sec);
+  Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed",String(b.dataset.tool===g[0]))});
+  $("popT").textContent=g[1];
+  var h='<input class="psearch" id="psearch" type="search" placeholder="Search all settings" aria-label="Search all settings" autocomplete="off"><div id="sres" hidden></div><div id="psecs">';
+  g[2].forEach(function(t){
+    var on=t===sec,ch=secChanged(t);
+    h+='<div class="sec'+(on?' open':'')+'"><div class="sech"><button type="button" class="sechb" data-sec="'+t+'" aria-expanded="'+on+'">'+secName(t)+(ch?'<i class="cdot" title="Changed from the default"></i>':'')+'</button>'+(ch&&secKeys(t).length?'<button type="button" class="secr" data-secr="'+t+'">Reset</button>':'')+'</div>'+(on?'<div class="secb">'+PANES[t]()+'</div>':'')+'</div>';
+  });
+  $("popB").innerHTML=h+'</div>';$("pop").hidden=false;
+  if(q){$("psearch").value=q}
+  syncControls();if(sec&&OBJTOOL[sec])syncObjFields();if(sec==="select")syncSel();
+  if(keepScroll)$("popB").scrollTop=keepScroll;
+  dirty=true;
 }
 function closeTool(){
-  if(!curTool)return;curTool=null;$("pop").hidden=true;
+  if(FOCUSPICK){FOCUSPICK=false;cv.style.cursor=""}
+  if(!curTool&&!curGroup)return;curTool=null;curGroup=null;$("pop").hidden=true;dirty=true;
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed","false")});
 }
-rail.addEventListener("click",function(e){var b=e.target.closest(".tool");if(!b)return;if(curTool===b.dataset.tool)closeTool();else openTool(b.dataset.tool)});
+rail.addEventListener("click",function(e){var b=e.target.closest(".tool");if(!b)return;if(curGroup===b.dataset.tool)closeTool();else openTool(b.dataset.tool)});
+/* section headers, per-section reset, search */
+function popSearch(q){
+  var box=$("sres"),secs=$("psecs");if(!box)return;q=q.trim().toLowerCase();
+  if(!q){box.hidden=true;secs.hidden=false;return}
+  var out=[],seen={};GROUPS.forEach(function(g){g[2].forEach(function(t){
+    var h="",m,re=/<label for="c-(\w+)">([^<]+)</g,re2=/<label class="chk"><input type="checkbox" data-k="(\w+)"> ([^<]+)</g;try{h=PANES[t]()}catch(_){return}
+    if(secName(t).toLowerCase().indexOf(q)>=0&&!seen["s"+t]){seen["s"+t]=1;out.push({t:t,k:"",l:secName(t),g:g[1]})}
+    while((m=re.exec(h)))if(m[2].toLowerCase().indexOf(q)>=0&&!seen[m[1]]){seen[m[1]]=1;out.push({t:t,k:m[1],l:m[2].trim(),g:g[1]})}
+    while((m=re2.exec(h)))if(m[2].toLowerCase().indexOf(q)>=0&&!seen[m[1]]){seen[m[1]]=1;out.push({t:t,k:m[1],l:m[2].trim(),g:g[1]})}
+  })});
+  box.innerHTML=out.length?out.slice(0,24).map(function(r){return '<button type="button" data-goto="'+r.t+'" data-key="'+r.k+'">'+esc(r.l)+'<small>'+r.g+' \u203a '+esc(secName(r.t))+'</small></button>'}).join(""):'<p class="note">Nothing matches that.</p>';
+  box.hidden=false;secs.hidden=true;
+}
+$("popB").addEventListener("input",function(e){if(e.target.id==="psearch")popSearch(e.target.value)});
+$("popB").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;
+  if(b.dataset.sec){var t=b.dataset.sec;if(curTool===t){var g=groupOf(t);LASTSEC[g[0]]=null;openTool(g[0],true)}else openTool(t,true);return}
+  if(b.dataset.secr){secKeys(b.dataset.secr).forEach(function(k){setK(k,DEF[k])});syncControls();regrade();openTool(curTool||b.dataset.secr,true);return}
+  if(b.dataset.goto){var t2=b.dataset.goto,k=b.dataset.key;openTool(t2);var el=k&&$("c-"+k);if(el){el.scrollIntoView({block:"center"});var w=el.closest(".sl,.chk")||el;w.classList.add("flash");setTimeout(function(){w.classList.remove("flash")},1600)}}
+});
 $("popX").addEventListener("click",closeTool);
 
 var GRD={exp:1,con:1,sat:1,hue:1,warm:1};
-var HELP={gridX:1,gridY:1,gridZ:1,axes:1},LENS={vig:1,vigSoft:1,vigBlur:1,dist:1,ca:1,grain:1,grainSize:1,lookMix:1,look:1,focusRange:1};
+var HELP={gridX:1,gridY:1,gridZ:1,axes:1},LENS={vig:1,vigSoft:1,vigBlur:1,dist:1,ca:1,grain:1,grainSize:1,grainSoft:1,grainCol:1,grainRate:1,lookMix:1,look:1,focusRange:1};
 function setK(k,v){
   S[k]=v;
   if(k==="look")applyLook();
@@ -2308,23 +2558,59 @@ $("popB").addEventListener("input",function(e){
   if(el.dataset.sx){SX[el.dataset.sx]=+el.value;syncSel();dirty=true;return}
   if(el.dataset.tl==="time"){tlSetTime(+el.value);var tt=$("tlTime");if(tt)tt.textContent=TL.t.toFixed(2);if(curTool==="camera"&&SEL)syncObjFields();return}
   if(!k)return;
-  if(el.type==="range"){setK(k,+el.value);var o=$("o-"+k);if(o)o.textContent=FMT[k]?FMT[k](+el.value):el.value}
+  if(el.type==="range"){setK(k,+el.value);var o=$("o-"+k);if(o&&document.activeElement!==o)setOut(o,FMT[k]?FMT[k](+el.value):el.value)}
   else if(el.type==="checkbox")setK(k,el.checked);
   else if(el.type==="color"){setK(k,el.value);syncControls()}
 });
+/* number boxes: type any value, up to the hard limit (the slider only shows the everyday range) */
+function nbParse(k,str,isO){
+  var t=String(str).trim(),n;
+  if((k==="fov"||k==="cfov")&&/mm\s*$/i.test(t)){var mm=parseFloat(t);if(!(mm>0))return NaN;return 2*Math.atan(12/mm)*180/Math.PI}
+  n=parseFloat(t.replace(/[^0-9eE.+\-]/g,""));if(!isFinite(n))return NaN;
+  if(!isO&&FMT[k]&&FMT[k](1)==="100%")n/=100;
+  return n;
+}
+document.addEventListener("focusin",function(e){var el=e.target;if(el.dataset&&el.dataset.nb){var k=el.dataset.nb,isO=el.id.indexOf("oov-")===0,v=isO?(k==="cfov"?(SEL&&SEL.fov||50):(SEL&&SEL.inten!=null?SEL.inten:1)):S[k];el.value=String(+(+v).toFixed(3)*((!isO&&FMT[k]&&FMT[k](1)==="100%")?100:1));el.select()}});
+document.addEventListener("keydown",function(e){var el=e.target;if(el.dataset&&el.dataset.nb){if(e.key==="Enter"){e.preventDefault();el.blur()}else if(e.key==="Escape"){el.dataset.esc="1";el.blur()}}});
+document.addEventListener("focusout",function(e){
+  var el=e.target;if(!el.dataset||!el.dataset.nb)return;var k=el.dataset.nb,isO=el.id.indexOf("oov-")===0;
+  if(el.dataset.esc){delete el.dataset.esc}
+  else{
+    var n=nbParse(k,el.value,isO),h=HARD[k];
+    if(isFinite(n)){
+      if(h)n=clamp(n,h[0],h[1]);
+      if(isO){if(SEL){if(k==="cfov"){SEL.fov=n;if(THRU&&SEL===ACAM&&isCam(SEL))viewFromCam(SEL)}else SEL.inten=n;dirty=true;clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);var rg=$("oo-"+k);if(rg)rg.value=n}}
+      else{setK(k,n);var r2=$("c-"+k);if(r2)r2.value=n}
+    }
+  }
+  if(isO){if(SEL){var vv=k==="cfov"?(SEL.fov||50):(SEL.inten==null?1:SEL.inten);setOut(el,k==="cfov"?fovTxt(vv):(+vv).toFixed(2))}}
+  else setOut(el,FMT[k]?FMT[k](S[k]):S[k]);
+});
+/* double-click a slider to put it back to its default; hold Shift while dragging for fine steps */
+$("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.k&&DEF[el.dataset.k]!==undefined){var k=el.dataset.k;setK(k,DEF[k]);syncControls()}});
+var FINE=null;
+$("popB").addEventListener("pointerdown",function(e){var el=e.target;if(el.type==="range"&&el.dataset.k)FINE={el:el,v0:+el.value}},true);
+document.addEventListener("pointerup",function(){FINE=null});
+$("popB").addEventListener("input",function(e){
+  var el=e.target;if(FINE&&FINE.el===el&&window.__shift){var f=FINE.v0+(+el.value-FINE.v0)*0.1,st=+el.step||0.01;el.value=f}
+},true);
+window.addEventListener("keydown",function(e){if(e.key==="Shift")window.__shift=true});window.addEventListener("keyup",function(e){if(e.key==="Shift")window.__shift=false});
+window.addEventListener("blur",function(){window.__shift=false});
 $("popB").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;
   if(b.dataset.k){var v=b.dataset.v;setK(b.dataset.k,b.dataset.k==="shape"?+v:v);syncControls();return}
   var a=b.dataset.act;
   if(a&&a.indexOf("sx-")===0){sxAct(a,b);return}
   if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
-  else if(a==="resetFx"){["fog","defocus","focus","focusRange","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="pickFocus"){setFocusPick(!FOCUSPICK);if(FOCUSPICK)setStatus("Click on the splat to focus on it.","ok")}
+  else if(a==="resetFx"){["fog","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="resetDof"){["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="rFrames")renderSeq();
   else if(a==="tdExport")tdExport();
   else if(a==="cube")$("cubeIn").click();
-  else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="resetLens"){["vig","vigSoft","vigBlur","dist","ca","grain","grainSize","grainSoft","grainCol","grainRate"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
   else if(a==="level"){levelHorizon()}
   else if(a==="frame"){frameAll()}
   else if(a==="ply")exportScenePLY();
@@ -2349,14 +2635,94 @@ $("popB").addEventListener("click",function(e){
    The mask is saved with the project as run lengths, skipped when drawing, picking and exporting, and every change can be undone. */
 var UNDO={done:[],undone:[],bytes:0};
 function undoPush(c){
+  c.t=Date.now();if(!c.hist)histRebase();
   UNDO.done.push(c);UNDO.undone=[];UNDO.bytes+=c.bytes||0;
   while(UNDO.done.length>60||UNDO.bytes>240e6){var x=UNDO.done.shift();UNDO.bytes-=x.bytes||0}
   undoUI();
 }
-function undoDo(){if(typeof tlAutoFlush==="function")tlAutoFlush();var c=UNDO.done.pop();if(!c)return;UNDO.bytes-=c.bytes||0;c.undo();UNDO.undone.push(c);undoUI();setStatus("Undid: "+c.label,"ok")}
-function redoDo(){var c=UNDO.undone.pop();if(!c)return;c.redo();UNDO.done.push(c);UNDO.bytes+=c.bytes||0;undoUI();setStatus("Redid: "+c.label,"ok")}
-function undoClear(){UNDO.done=[];UNDO.undone=[];UNDO.bytes=0;undoUI()}
-function undoUI(){var u=$("sxUndo"),r=$("sxRedo");if(u)u.disabled=!UNDO.done.length;if(r)r.disabled=!UNDO.undone.length}
+function undoDo(){if(typeof tlAutoFlush==="function")tlAutoFlush();histFlush();var c=UNDO.done.pop();if(!c)return;UNDO.bytes-=c.bytes||0;c.undo();UNDO.undone.push(c);histRebase();undoUI();setStatus("Undid: "+c.label,"ok")}
+function redoDo(){histFlush();var c=UNDO.undone.pop();if(!c)return;c.redo();UNDO.done.push(c);UNDO.bytes+=c.bytes||0;histRebase();undoUI();setStatus("Redid: "+c.label,"ok")}
+function undoClear(){UNDO.done=[];UNDO.undone=[];UNDO.bytes=0;HLAST=null;HCO=null;undoUI()}
+function undoUI(){var u=$("sxUndo"),r=$("sxRedo");if(u)u.disabled=!UNDO.done.length;if(r)r.disabled=!UNDO.undone.length;
+  var hb=$("hUndo"),hr=$("hRedo");if(hb)hb.disabled=!UNDO.done.length;if(hr)hr.disabled=!UNDO.undone.length;if(curTool==="hist")histDraw()}
+/* V040 history. Anything you change with a slider, box, gizmo or key is noticed after the gesture ends, compared with how it was before,
+   and stored as one undo step. Steps with their own undo (delete, merge, selection, keyframes) are left to that code. */
+var HLOAD=0,HLAST=null,HREBASE=false,HCO=null,PDOWN=false,HOBJK=["name","pos","R","scl","vis","locked","crop","color","inten","fov","fdist"];
+function histSnap(){
+  var r={s:{},o:{},n:{},k:{}},k,i,v;
+  for(k in S){try{v=JSON.stringify(S[k])}catch(_){continue}if(v!==undefined&&v.length<1500)r.s[k]=v}
+  for(i=0;i<OBJS.length;i++){var o=OBJS[i],q={};HOBJK.forEach(function(f){if(o[f]!==undefined)q[f]=o[f]});r.o[o.id]=JSON.stringify(q);r.n[o.id]=o.name;r.k[o.id]=o.kind}
+  return r;
+}
+function histApply(sm,om){
+  var k,id,any=false;
+  for(k in sm){S[k]=JSON.parse(sm[k]);any=true}
+  if(any){if(sm.look!==undefined)applyLook();regradeSoon();setTimeout(buildHelpers,0);saveSoon()}
+  for(id in om){var o=findObj(id);if(!o)continue;var r=JSON.parse(om[id]);
+    HOBJK.forEach(function(f){if(r[f]!==undefined)o[f]=r[f];else if(f==="locked")delete o[f]});
+    if(THRU&&o===ACAM&&isCam(o))viewFromCam(o)}
+  regradeSoon();dirty=true;persistObjs();HREBASE=true;
+  if($("popB")&&curTool){try{syncControls()}catch(_){}try{syncObjFields()}catch(_){}if(curTool==="ofx"||curTool==="objects"||curTool==="crop")openTool(curTool,true)}
+  OUTL_SIG="";if(typeof renderOutl==="function")renderOutl(true);camUI();
+}
+function histLabel(ds,dobj,names){
+  if(dobj.length===1&&!ds.length)return "edit "+(names[dobj[0]]||"object");
+  if(dobj.length>1&&!ds.length)return "edit "+dobj.length+" objects";
+  if(ds.length===1&&!dobj.length)return "change "+ds[0];
+  return "change settings";
+}
+function histCheck(){
+  var now=histSnap(),was=HLAST;HLAST=now;if(!was)return;
+  var ds=[],dobj=[],added=[],k,id;
+  /* things that have timeline keys are undone by the timeline's own steps */
+  function animS(k){var t=TL&&TL.tracks&&TL.tracks["s:"+k];return !!(t&&t.k&&t.k.length)}
+  function animO(i){var t,q;if(!TL||!TL.tracks)return false;for(q in TL.tracks)if(q.indexOf("o:"+i+":")===0){t=TL.tracks[q];if(t&&t.k&&t.k.length)return true}return false}
+  for(k in now.s)if(was.s[k]!==now.s[k]&&!animS(k))ds.push(k);
+  for(id in now.o){if(was.o[id]===undefined)added.push(id);else if(was.o[id]!==now.o[id]&&!animO(id))dobj.push(id)}
+  var sb={},sa={},ob={},oa={};
+  ds.forEach(function(k){sb[k]=was.s[k];sa[k]=now.s[k]});dobj.forEach(function(i){ob[i]=was.o[i];oa[i]=now.o[i]});
+  if(added.length){
+    added.forEach(function(aid,ix){var o=findObj(aid);if(!o)return;var rec=objRec(o),first=ix===0;
+      undoPush({hist:1,label:"add "+(o.name||o.kind),bytes:o.blob?o.blob.size:0,
+        undo:function(){var x=findObj(aid);if(x)removeObj(x,true);if(first)histApply(sb,ob)},
+        redo:function(){if(first)histApply(sa,oa);loadObjs([rec])}});
+    });HCO=null;HREBASE=false;return;
+  }
+  if(!ds.length&&!dobj.length)return;
+  var lab=histLabel(ds,dobj,now.n);
+  var last=UNDO.done[UNDO.done.length-1];
+  if(HCO&&last===HCO&&Date.now()-HCO.t<2000&&HCO.label===lab){
+    for(k in sa){if(sb[k]!==undefined&&HCO.sb[k]===undefined)HCO.sb[k]=sb[k];HCO.sa[k]=sa[k]}
+    for(id in oa){if(HCO.ob[id]===undefined)HCO.ob[id]=ob[id];HCO.oa[id]=oa[id]}
+    HCO.t=Date.now();UNDO.undone=[];undoUI();return;
+  }
+  var c={hist:1,label:lab,bytes:0,sb:sb,sa:sa,ob:ob,oa:oa,undo:function(){histApply(c.sb,c.ob)},redo:function(){histApply(c.sa,c.oa)}};
+  undoPush(c);HCO=c;
+}
+function histRebase(){if(HLOAD>0){HREBASE=true;return}HLAST=histSnap();HREBASE=false}
+function histFlush(){if(!cur||HLOAD>0)return;if(HREBASE){histRebase();return}if(HLAST)histCheck()}
+function histTick(){
+  if(window.__noTick||PDOWN||HLOAD>0||!cur||$("editor").hidden||$("busy").classList.contains("on"))return;
+  if(HREBASE){HREBASE=false;HLAST=histSnap();return}
+  histCheck();
+}
+setInterval(histTick,300);
+window.addEventListener("pointerdown",function(){PDOWN=true},true);
+window.addEventListener("pointerup",function(){PDOWN=false},true);window.addEventListener("pointercancel",function(){PDOWN=false},true);window.addEventListener("blur",function(){PDOWN=false});
+/* the History panel: every step, newest on top. Click one to go back (or forward) to it. */
+function histDraw(){var b=$("popB");if(!b||curTool!=="hist")return;var h=histHTML(),w=$("histW");if(w)w.innerHTML=h}
+function histHTML(){
+  var d=UNDO.done,u=UNDO.undone,out="",i;
+  for(i=0;i<u.length;i++)out+='<button type="button" class="hrow fut" data-hj="u'+i+'">'+esc(u[i].label)+'</button>';
+  out+='<div class="hrow now" aria-current="true">Now</div>';
+  for(i=d.length-1;i>=0;i--)out+='<button type="button" class="hrow" data-hj="d'+i+'">'+esc(d[i].label)+'</button>';
+  return out||'<p class="note">Nothing yet.</p>';
+}
+function histGo(code){
+  var n=+code.slice(1),g=0;
+  if(code[0]==="d"){while(UNDO.done.length>n+1&&g++<200)undoDo()}
+  else{var target=UNDO.undone.length-n;while(UNDO.undone.length>n&&g++<200)redoDo()}
+}
 function maskRle(m){
   var out=[],cur=0,run=0,i,any=false;
   for(i=0;i<m.length;i++){var v=m[i]?1:0;if(v)any=true;if(v===cur)run++;else{out.push(run);cur=v;run=1}}
@@ -2581,7 +2947,7 @@ document.addEventListener("keydown",function(e){
 
 /* ---------- V025 timeline engine: every animatable value is a named property, keys live in cur.timeline, one clock drives them all ---------- */
 var TL={tracks:{},fps:30,t:0,markers:[],range:null,bounce:false};
-var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
+var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
 var TL_CROP=["x0","x1","y0","y1","z0","z1"];
 function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false;if(!Array.isArray(p.timeline.markers))p.timeline.markers=[];TL.markers=p.timeline.markers;TL.range=p.timeline.range&&p.timeline.range.b>p.timeline.range.a?p.timeline.range:null;TL.bounce=!!p.timeline.bounce}
 function tlHasKeys(){for(var k in TL.tracks)if(TL.tracks[k].k&&TL.tracks[k].k.length&&tlProp(k))return true;return false}
@@ -2612,16 +2978,17 @@ function tlProp(id){
   if(f==="rot")return {id:id,obj:o,label:nm+" rotation",group:nm,dim:4,quat:true,get:function(){return quatFromMat(o.R)},set:function(v){o.R=tlMatFromQ(v)}};
   if(f==="scl")return {id:id,obj:o,label:nm+" scale",group:nm,dim:1,get:function(){return [o.scl]},set:function(v){o.scl=Math.max(0.001,v[0])}};
   if(f==="vis")return {id:id,obj:o,label:nm+" visible",group:nm,dim:1,step:true,get:function(){return [o.vis?1:0]},set:function(v){o.vis=v[0]>=0.5}};
-  if(f==="fov"&&o.kind==="camera")return {id:id,obj:o,label:nm+" lens",group:nm,dim:1,get:function(){return [o.fov||50]},set:function(v){o.fov=clamp(v[0],15,110)}};
+  if(f==="fov"&&o.kind==="camera")return {id:id,obj:o,label:nm+" lens",group:nm,dim:1,get:function(){return [o.fov||50]},set:function(v){o.fov=clamp(v[0],4,170)}};
   if(f==="fdist"&&o.kind==="camera")return {id:id,obj:o,label:nm+" focus distance",group:nm,dim:1,get:function(){return [o.fdist||1.95]},set:function(v){o.fdist=Math.max(0.05,v[0])}};
   if(f==="inten"&&(o.kind==="sun"||o.kind==="point"))return {id:id,obj:o,label:nm+" intensity",group:nm,dim:1,get:function(){return [o.inten==null?1:o.inten]},set:function(v){o.inten=Math.max(0,v[0])}};
+  if(f==="st"&&o.kind==="splat"&&OLAB[a[3]]){var sk=a[3];return {id:id,obj:o,label:nm+" "+OLAB[sk],group:nm,dim:1,get:function(){return [+ovGet(o,sk)]},set:function(v){ovSet(o,sk,v[0]);if(OGRD[sk])regradeSoon()}}}
   if(f==="crop"&&o.crop)return {id:id,obj:o,label:nm+" crop box",group:nm,dim:6,get:function(){return TL_CROP.map(function(k){return o.crop[k]})},set:function(v){TL_CROP.forEach(function(k,i){o.crop[k]=clamp(v[i],0,1)})}};
   return null;
 }
 /* every property that exists right now, for the timeline panel to list */
 function tlAllProps(){
   var out=[];TL_S.forEach(function(k){out.push(tlProp("s:"+k))});
-  OBJS.forEach(function(o){["pos","rot","scl","vis","fov","fdist","inten","crop"].forEach(function(f){var d=tlProp("o:"+o.id+":"+f);if(d)out.push(d)})});
+  OBJS.forEach(function(o){["pos","rot","scl","vis","fov","fdist","inten","crop"].forEach(function(f){var d=tlProp("o:"+o.id+":"+f);if(d)out.push(d)});if(o.st)Object.keys(o.st).forEach(function(k){var d=tlProp("o:"+o.id+":st:"+k);if(d)out.push(d)})});
   return out;
 }
 function tlBez(c,u){
@@ -2646,7 +3013,7 @@ function tlSetTime(t){
   for(var id in TL.tracks){
     if(TL.tracks[id].mute)continue;
     var d=tlProp(id);if(!d)continue;var v=tlEval(TL.tracks[id],t,d);if(!v)continue;
-    d.set(v);if(d.obj&&d.obj===ACAM)cam=true;
+    d.set(v);HREBASE=true;if(d.obj&&d.obj===ACAM)cam=true;
   }
   if(cam&&THRU&&ACAM)viewFromCam(ACAM);
   dirty=true;if(TLU.open)tlDockDraw();tlKdRefresh();
@@ -2972,7 +3339,7 @@ function tlSetMode(m){
   TLU.mode=m;var a=document.querySelectorAll("[data-tla=mode]"),i;for(i=0;i<a.length;i++)a[i].setAttribute("aria-pressed",String(a[i].dataset.m===m));tlDockDraw();
 }
 function tlDockOpen(on){
-  TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
+  TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("spTl").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
   if(TLU.open){tlFit();tlLoopUI();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
 }
 function tlAddOpts(){
@@ -3025,12 +3392,11 @@ function tlToolFor(d){
   var a=d.id.split(":"),i,h;
   if(a[0]==="s"){for(i=0;i<TOOLS.length;i++){h="";try{h=PANES[TOOLS[i][0]]()}catch(_){}if(h.indexOf('data-kd="s:'+a[1]+'"')>=0)return TOOLS[i][0]}return null}
   var o=d.obj;if(!o)return null;
-  if(o.kind==="camera")return "camera";if(isLight(o))return "light";if(a[2]==="crop")return "crop";return "objects";
+  if(o.kind==="camera")return "camera";if(isLight(o))return "light";if(a[2]==="crop")return "crop";if(a[2]==="st")return "ofx";return "objects";
 }
 function tlOpenMenu(row){
   var tool=tlToolFor(row.d);if(!tool){setStatus("There's no menu for that one.","warn");return}
   TLU.row=row.id;if(row.d.obj){SEL=row.d.obj;if(isCam(SEL))ACAM=SEL}
-  if(EDIT_T[tool]){if(MODE!=="edit")setMode("edit")}else if(MODE!=="render")setMode("render");
   openTool(tool,true);if(row.d.obj)camUI();dirty=true;tlDockDraw();
 }
 (function(){
@@ -3259,13 +3625,13 @@ function renderSeq(o){
   return new Promise(function(res){
     function done(blob){
       if(vid&&eid&&!blob)D.encode.cancel(eid)["catch"](function(){});
-      rEnd();RJ=null;rjUI(false);tlSetTime(saveT);dirty=true;res(blob);
+      GFIX=-1;rEnd();RJ=null;rjUI(false);tlSetTime(saveT);dirty=true;res(blob);
     }
     function step(i){
       if(RJ.cancel){setStatus("Render cancelled.","warn");return done(null)}
       if(i>=n&&vid){rjUI(true,"Finishing "+RFMT_L[fmt]+"…",1);D.encode.finish(eid).then(function(r){eid=0;setStatus("Saved "+r.name+" ("+(r.bytes/1e6).toFixed(1)+" MB).","ok");done(r)},function(e){eid=0;setStatus("Encoding failed: "+(e.message||e),"bad");done(null)});return}
       if(i>=n){var blob=zipEnd(z);saveBlob(blob,"splatbox-"+base+"-frames-"+w+"x"+h+(transp?"-alpha":"")+".zip");setStatus("Rendered "+n+" frames ("+(blob.size/1e6).toFixed(1)+" MB).","ok");return done(blob)}
-      var t=i/fps,ao=null;
+      var t=i/fps,ao=null;GFIX=i;
       if(useTl)tlSetTime(t);else ao=camOff(S.cam,t/dur);
       var p;try{p=rGrab(w,h,ao)}catch(e){setStatus("The render stopped: "+(e.message||e),"bad");return done(null)}
       p.then(function(b){return b?b.arrayBuffer():null}).then(function(buf){
@@ -4584,6 +4950,140 @@ function ibAction(a){
   if(a==="scan")IB.scan().then(function(s){IBS=s;renderInbox()},function(){});
 }
 
+
+/* ---------- V040: the Objects window (outliner) and drag-to-resize panels ---------- */
+var OUTL_SIG="",OUTL_T=0,OUTL_DRAG=null,MSEL=[];
+var OKIND={splat:"Splat",mesh:"Model",camera:"Camera",sun:"Sun",point:"Light"};
+var EYE_I='<svg class="i" viewBox="0 0 24 24" width="18" height="18"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEX_I='<svg class="i" viewBox="0 0 24 24" width="18" height="18"><path d="M3 3l18 18M10.6 6.2A9.5 9.5 0 0112 6c6.4 0 10 6 10 6a17 17 0 01-3.3 3.9M6.6 7.6C3.9 9.3 2 12 2 12s3.6 7 10 7a9.8 9.8 0 004.2-.9"/></svg>',LOCK_I='<svg class="i" viewBox="0 0 24 24" width="17" height="17"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>',CAM_I='<svg class="i" viewBox="0 0 24 24" width="17" height="17"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/></svg>';
+function outlSig(){return OBJS.map(function(o){return o.id+"|"+o.name+"|"+(o.vis?1:0)+(o.locked?"L":"")+"|"+o.kind}).join(",")+"#"+(SEL?SEL.id:"")+(THRU&&ACAM?"T"+ACAM.id:"")+"M"+(MSEL||[]).map(function(o){return o.id}).join(".")}
+function renderOutl(force){
+  var el=$("outlB");if(!el||$("editor").hidden)return;var sg=outlSig();if(!force&&sg===OUTL_SIG)return;
+  if(el.querySelector("input"))return;OUTL_SIG=sg;
+  $("outlN").textContent=OBJS.length+(OBJS.length===1?" object":" objects");
+  el.innerHTML=OBJS.length?OBJS.map(function(o){
+    return '<div class="orw'+(o===SEL?' sel':'')+(MSEL.indexOf(o)>=0?' msel':'')+(o.vis?'':' hid')+'" draggable="true" data-oid="'+o.id+'"><button type="button" data-oa="vis" aria-pressed="'+(!o.vis)+'" aria-label="'+(o.vis?'Hide':'Show')+' '+esc(o.name)+'" title="'+(o.vis?'Hide':'Show')+'">'+(o.vis?EYE_I:EYEX_I)+'</button><button type="button" data-oa="lock" aria-pressed="'+(!!o.locked)+'" aria-label="'+(o.locked?'Unlock':'Lock')+' '+esc(o.name)+'" title="Lock so it can\'t be picked or moved">'+LOCK_I+'</button><span class="on" title="Double-click to rename">'+esc(o.name)+'</span><span class="ok">'+(OKIND[o.kind]||o.kind)+'</span>'+(o.kind==="camera"?'<button type="button" data-oa="thru" aria-pressed="'+(THRU&&ACAM===o)+'" aria-label="Look through '+esc(o.name)+'" title="Look through this camera">'+CAM_I+'</button>':'')+'</div>';
+  }).join(""):'<p class="note" style="padding:8px 10px">Nothing here yet. Add a splat, model, light or camera.</p>';
+  mergeBtn();
+}
+function mergeBtn(){var b=$("outlMerge");if(!b)return;var n=MSEL.length;b.hidden=n<2;b.textContent="Merge "+n}
+function outlSelect(o){
+  SEL=o;if(isCam(o))ACAM=o;if(GM==="scale"&&!isGeo(o))GM="move";dirty=true;
+  if(isCam(o)&&curTool!=="camera"&&curGroup)openTool("camera",true);else if(isLight(o)&&curTool!=="light"&&curGroup)openTool("light",true);else if(OBJTOOL[curTool])openTool(curTool,true);
+  Array.prototype.forEach.call($("outlB").querySelectorAll(".orw"),function(r){r.classList.toggle("sel",r.dataset.oid===o.id)});OUTL_SIG=outlSig();
+}
+$("outlB").addEventListener("click",function(e){
+  var row=e.target.closest(".orw");if(!row)return;var o=findObj(row.dataset.oid);if(!o)return;
+  var b=e.target.closest("button");
+  if(b&&b.dataset.oa==="vis"){o.vis=!o.vis;if(!o.vis&&SEL===o&&isGeo(o))SEL=null;persistObjs();dirty=true;buildHelpers();renderOutl(true);return}
+  if(b&&b.dataset.oa==="lock"){o.locked=!o.locked;persistObjs();dirty=true;renderOutl(true);return}
+  if(b&&b.dataset.oa==="thru"){if(THRU&&ACAM===o)leaveThru();else{SEL=o;enterThru(o)}renderOutl(true);dirty=true;return}
+  if((e.ctrlKey||e.metaKey||e.shiftKey)&&o.kind==="splat"){
+    if(!MSEL.length&&SEL&&SEL.kind==="splat"&&SEL!==o)MSEL=[SEL];
+    var ix=MSEL.indexOf(o);if(ix>=0)MSEL.splice(ix,1);else MSEL.push(o);
+    OUTL_SIG="";renderOutl(true);return;
+  }
+  if(MSEL.length){MSEL=[];OUTL_SIG="";renderOutl(true)}
+  outlSelect(o);
+});
+$("outlMerge").addEventListener("click",function(){mergeObjects(MSEL.slice())});
+$("outlB").addEventListener("dblclick",function(e){
+  var nm=e.target.closest(".on");if(!nm)return;var row=nm.closest(".orw"),o=findObj(row.dataset.oid);if(!o)return;
+  nm.innerHTML='<input type="text" maxlength="40" value="'+esc(o.name)+'" aria-label="Rename">';var inp=nm.firstChild;inp.focus();inp.select();
+  function done(ok){inp.removeEventListener("blur",onb);if(ok){var v=inp.value.trim().slice(0,40);if(v&&v!==o.name){var old=o.name;o.name=v;persistObjs()}}OUTL_SIG="";renderOutl(true);if(OBJTOOL[curTool])openTool(curTool,true)}
+  function onb(){done(true)}
+  inp.addEventListener("blur",onb);inp.addEventListener("keydown",function(ev){if(ev.key==="Enter"){ev.preventDefault();done(true)}else if(ev.key==="Escape"){done(false)}});
+});
+/* drag a row to reorder */
+$("outlB").addEventListener("dragstart",function(e){var row=e.target.closest(".orw");if(!row)return;OUTL_DRAG=row.dataset.oid;try{e.dataTransfer.setData("text/plain",OUTL_DRAG);e.dataTransfer.effectAllowed="move"}catch(_){}});
+$("outlB").addEventListener("dragover",function(e){if(!OUTL_DRAG)return;e.preventDefault();var row=e.target.closest(".orw");Array.prototype.forEach.call($("outlB").querySelectorAll(".dragover"),function(x){x.classList.remove("dragover")});if(row)row.classList.add("dragover")});
+$("outlB").addEventListener("drop",function(e){
+  if(!OUTL_DRAG)return;e.preventDefault();var row=e.target.closest(".orw"),a=findObj(OUTL_DRAG);OUTL_DRAG=null;if(!a)return;
+  var arr=OBJS.filter(function(x){return x!==a}),i=row?arr.indexOf(findObj(row.dataset.oid)):arr.length;if(i<0)i=arr.length;arr.splice(i,0,a);
+  if(arr.some(function(x,k){return x!==OBJS[k]})){undoPush(orderCmd(OBJS.slice(),arr.slice()));OBJS=arr;persistObjs();dirty=true}
+  OUTL_SIG="";renderOutl(true);
+});
+$("outlB").addEventListener("dragend",function(){OUTL_DRAG=null;OUTL_SIG="";renderOutl(true)});
+function orderCmd(before,after){var ids0=before.map(function(o){return o.id}),ids1=after.map(function(o){return o.id});
+  function set(ids){OBJS=ids.map(findObj).filter(Boolean);persistObjs();dirty=true;OUTL_SIG="";renderOutl(true)}
+  return {label:"Reorder objects",bytes:1,undo:function(){set(ids0)},redo:function(){set(ids1)}}}
+/* right-click: duplicate, merge, rename, delete */
+$("outlB").addEventListener("contextmenu",function(e){
+  var row=e.target.closest(".orw");if(!row)return;e.preventDefault();var o=findObj(row.dataset.oid);if(!o)return;outlSelect(o);
+  var m=$("octx");if(m)m.remove();m=document.createElement("div");m.id="octx";
+  m.innerHTML=(MSEL.length>=2&&MSEL.indexOf(o)>=0?'<button type="button" data-oc="mrg">Merge '+MSEL.length+' splats</button>':'')+(o.kind==="splat"?'<button type="button" data-oc="dup">Duplicate</button>':'')+'<button type="button" data-oc="ren">Rename</button><button type="button" data-oc="del">Delete</button>';
+  m.style.left=Math.min(e.clientX,innerWidth-170)+"px";m.style.top=Math.min(e.clientY,innerHeight-130)+"px";document.body.appendChild(m);
+  m.addEventListener("click",function(ev){var b=ev.target.closest("button");if(!b)return;m.remove();
+    if(b.dataset.oc==="del")removeObj(o);else if(b.dataset.oc==="ren"){var nm=row.querySelector(".on");if(nm)nm.dispatchEvent(new MouseEvent("dblclick",{bubbles:true}))}else if(b.dataset.oc==="dup")dupObj(o);else if(b.dataset.oc==="mrg")mergeObjects(MSEL.slice())});
+});
+document.addEventListener("pointerdown",function(e){var m=$("octx");if(m&&!m.contains(e.target))m.remove()});
+function orderBy(ids){OBJS=ids.map(findObj).filter(Boolean).concat(OBJS.filter(function(x){return ids.indexOf(x.id)<0}));persistObjs();dirty=true;OUTL_SIG="";renderOutl(true)}
+/* duplicate a splat: same file, same look, nudged to the side, placed just above the original */
+function dupObj(o){
+  if(!o||o.kind!=="splat"||!o.blob)return;
+  var ids0=OBJS.map(function(x){return x.id}),rec=objRec(o);delete rec.id;rec.name=(o.name||"Splat").slice(0,34)+" copy";rec.pos=[o.pos[0]+0.4*o.scl,o.pos[1],o.pos[2]];
+  var before=OBJS.length;busy(true,"Duplicating…");
+  loadObjs([rec]).then(function(){
+    busy(false);var n=OBJS.length>before?OBJS[OBJS.length-1]:null;if(!n)return;
+    var i=ids0.indexOf(o.id);var ids=ids0.slice();ids.splice(i+1,0,n.id);orderBy(ids);
+    var nid=n.id,nrec=objRec(n);SEL=n;refreshObjs();regrade();
+    undoPush({label:"duplicate "+(o.name||"splat"),bytes:n.blob?n.blob.size:0,
+      undo:function(){var x=findObj(nid);if(x)removeObj(x,true)},
+      redo:function(){loadObjs([nrec]).then(function(){orderBy(ids);var y=findObj(nid);if(y)SEL=y;refreshObjs()})}});
+    setStatus("Duplicated "+o.name+".","ok");
+  });
+}
+/* merge several splats into one object. Moves, rotation, scale, crop, mask and each splat's own colour changes are baked in; the scene look then applies to the merged splat as it did to the parts. */
+function mergeObjects(list){
+  list=(list||[]).filter(function(o){return o&&o.kind==="splat"&&o.blob&&o.gs});
+  if(list.length<2){setStatus("Pick at least two splats (Ctrl or Shift click in the list).","warn");return Promise.resolve()}
+  var ids0=OBJS.map(function(x){return x.id}),recs=list.map(objRec),idsL=list.map(function(o){return o.id});
+  var first=Math.min.apply(null,list.map(function(o){return OBJS.indexOf(o)}));
+  busy(true,"Merging "+list.length+" splats…");
+  return collectScene({only:list,own:true}).then(function(r){
+    if(!r.total)throw new Error("Nothing left to merge. The crops or masks removed everything.");
+    var props=["x","y","z","nx","ny","nz","f_dc_0","f_dc_1","f_dc_2","opacity","scale_0","scale_1","scale_2","rot_0","rot_1","rot_2","rot_3"];
+    var head="ply\nformat binary_little_endian 1.0\nelement vertex "+r.total+"\n"+props.map(function(p){return "property float "+p+"\n"}).join("")+"end_header\n";
+    var blob=new Blob([head].concat(r.parts),{type:"application/octet-stream"});
+    return blob.arrayBuffer().then(function(ab){
+      var raw=parsePly(ab);if(!raw)throw new Error("Couldn't build the merged splat.");
+      var st={},dropped=0;
+      OKEYS.forEach(function(k){if(OGRD[k])return;var has=list.filter(function(o){return ovHas(o,k)});if(!has.length)return;
+        var v=has[0].st[k],same=has.length===list.length&&has.every(function(o){return o.st[k]===v});if(same)st[k]=v;else dropped++});
+      var nm=("Merged "+list.map(function(o){return o.name}).join(" + ")).slice(0,40);
+      var m=addSplatObj(raw,nm,blob,{name:nm,st:Object.keys(st).length?st:undefined});
+      list.forEach(function(o){removeObj(o,true)});
+      var ids=ids0.filter(function(i){return idsL.indexOf(i)<0});ids.splice(Math.min(first,ids.length),0,m.id);orderBy(ids);
+      MSEL=[];SEL=m;var mid=m.id,mrec=objRec(m);regrade();refreshObjs();dirty=true;
+      undoPush({label:"merge "+list.length+" splats",bytes:blob.size+recs.reduce(function(a,x){return a+(x.blob?x.blob.size:0)},0),
+        undo:function(){var x=findObj(mid);if(x)removeObj(x,true);loadObjs(recs).then(function(){orderBy(ids0);regrade();refreshObjs()})},
+        redo:function(){idsL.forEach(function(i){var x=findObj(i);if(x)removeObj(x,true)});loadObjs([mrec]).then(function(){orderBy(ids);var y=findObj(mid);if(y)SEL=y;regrade();refreshObjs()})}});
+      busy(false);setStatus("Merged "+list.length+" splats into one"+(dropped?". Effects that differed between them were dropped.":"."),"ok");
+    });
+  }).catch(function(err){busy(false);setStatus(err&&err.message||"The merge didn't work.","bad")});
+}
+/* resize handles: the side panel, the timeline and the Objects window (sizes are remembered) */
+(function(){
+  var ed=$("editor");
+  function ld(k,d){try{var v=+localStorage.getItem("sb."+k);return v>0?v:d}catch(_){return d}}
+  function sv(k,v){try{localStorage.setItem("sb."+k,String(Math.round(v)))}catch(_){}}
+  ed.style.setProperty("--dockW",ld("dockW",340)+"px");ed.style.setProperty("--tlH",ld("tlH",260)+"px");ed.style.setProperty("--olH",ld("olH",230)+"px");
+  function grab(id,fn,key){
+    var h=$(id);h.addEventListener("pointerdown",function(e){
+      e.preventDefault();h.setPointerCapture(e.pointerId);h.classList.add("drag");
+      function mv(ev){fn(ev);dirty=true;if(TLU&&TLU.open){tlDockSize();tlDockDraw()}}
+      function up(){h.classList.remove("drag");h.removeEventListener("pointermove",mv);h.removeEventListener("pointerup",up);h.removeEventListener("pointercancel",up);sv(key,parseFloat(ed.style.getPropertyValue("--"+key))||0)}
+      h.addEventListener("pointermove",mv);h.addEventListener("pointerup",up);h.addEventListener("pointercancel",up);
+    });
+    h.addEventListener("dblclick",function(){var d={dockW:340,tlH:260,olH:230}[key];ed.style.setProperty("--"+key,d+"px");sv(key,d);dirty=true;if(TLU&&TLU.open){tlDockSize();tlDockDraw()}});
+  }
+  grab("spDock",function(e){var w=Math.max(260,Math.min(Math.min(720,innerWidth-420),innerWidth-e.clientX));ed.style.setProperty("--dockW",w+"px")},"dockW");
+  grab("spTl",function(e){var r=$("stagecol").getBoundingClientRect(),h=Math.max(130,Math.min(r.height-160,r.bottom-e.clientY));ed.style.setProperty("--tlH",h+"px")},"tlH");
+  grab("spOl",function(e){var r=$("rdock").getBoundingClientRect(),h=Math.max(70,Math.min(r.height-150,r.bottom-e.clientY));ed.style.setProperty("--olH",h+"px")},"olH");
+  if(window.ResizeObserver){
+    new ResizeObserver(function(){dirty=true}).observe($("stage"));
+    new ResizeObserver(function(){if(TLU&&TLU.open){tlDockSize();tlDockDraw()}}).observe($("tlw"));
+  }
+})();
 /* ---------- start ---------- */
 if(!gl||!GL2){
   document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';

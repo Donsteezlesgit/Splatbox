@@ -1,6 +1,18 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 040
+- Film grain is rebuilt: it moves every frame, stays the same size when you resize, and has Softness, Colour and Rate sliders. Exports get new grain on each frame.
+- Sliders now go much further. Click the number beside any slider and type a value (exposure, grain, fog, field of view and more accept far more than the slider shows). Double-click a slider to reset it. Hold Shift while dragging for fine steps. Field of view goes from 4 to 170 degrees and shows the lens in mm.
+- Depth of field has its own menu: near and far blur, falloff softness, a tilt-shift band with angle, position and blur, a Show focus zone tint, and a Pick focus tool: click the splat in the view to focus there.
+- Edit and Render are one workspace now. Depth blur, fog, light, effects and grain show while you work. Fast preview strips the heavy ones when you want smooth movement, and Clean view hides gizmos and grids.
+- Five menu groups (Object, Scene, Camera, Image, Output) with fold-open sections, a search box, number keys 1 to 5, and a per-section reset. The side panel and timeline can be resized, and the viewport makes room instead of being covered.
+- New Objects window under the view: eye, lock, rename (double-click), reorder (drag), right-click for Duplicate, Rename and Delete.
+- Each splat can have its own look (Object > Object look): colour, splat size, opacity, light response, fog, slice, dissolve, scatter, pulse and blur. Anything you don't change follows the scene, so old projects look the same. All of it can be keyframed.
+- Merge: Ctrl or Shift click splats in the Objects window, then Merge. Moves, crops, masks and each splat's own colour are baked into one splat. Duplicate copies a splat with its look.
+- Undo and redo now cover almost everything: settings, moves, scale, visibility, lights, cameras, adds, deletes, merges and effects. There is a History panel (Output > History) where you can click any step to go back to it. Ctrl+Z and Ctrl+Shift+Z work anywhere in the editor.
+- Saved projects keep working. Splat DOF is a soft Gaussian blur, so there are no bokeh shapes.
+
 ## Version 039
 - Inbox (Windows app): choose a watch folder, for example inside Dropbox, and every sub-folder of photos you drop in becomes a splat project. Scans run one at a time, in the order they arrived.
 - Each finished scan is saved as a new project in your project folder (the splat only: your photos are never copied, moved or changed). A repeated name becomes "name 2", never an overwrite.

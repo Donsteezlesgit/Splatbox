@@ -24,6 +24,8 @@ async def run(br,site,fx):
     ok("a setting with no keys is left alone",True and not await t.ev("!!TL.tracks['s:con']") ) 
     await t.ev("setK('con',30)"); await t.wait(300); ok("changing an un-keyed setting makes no track",not await t.ev("!!TL.tracks['s:con']"))
     await t.wait(600); await t.pg.keyboard.press("Control+z"); await t.wait(300)
+    ok("Ctrl+Z first undoes the newest change (the un-keyed setting)",(await t.ev("S.con"))==0)
+    await t.pg.keyboard.press("Control+z"); await t.wait(300)
     ok("Ctrl+Z undoes the auto key",(await t.ev("TL.tracks['s:exp'].k.length"))==2 and abs(await t.ev("S.exp")-0.5)<0.02,[await t.ev("TL.tracks['s:exp'].k.length"),await t.ev("S.exp")])
     # --- auto key on an object (as the gizmo / number fields do)
     await t.ev("SEL=findObj('%s')"%cid); await t.ev("SEL.pos=[5,1,0];dirty=true"); await t.wait(300)

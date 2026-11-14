@@ -4,7 +4,7 @@ or forget to list it here, this test fails."""
 import json
 from harness import *
 # one non-default value for EVERY setting in DEF. A new setting that is not listed here fails the test on purpose.
-PERTURB={"fxDis":0.3,"fxScat":0.2,"fxPulse":0.4,"fxPhase":0.6,"range":1.2,"smooth":2,"cut":0.3,"invert":True,"fill":0.5,"size":1.5,"detail":384,"shape":1,"bg":"#123456",
+PERTURB={"dofNear":0.7,"dofFar":0.6,"dofSoft":0.2,"dofTilt":0.5,"dofTiltA":20,"dofTiltP":0.3,"dofTiltB":0.4,"dofVis":True,"fast":True,"grainSoft":0.8,"grainCol":0.6,"grainRate":3,"fxDis":0.3,"fxScat":0.2,"fxPulse":0.4,"fxPhase":0.6,"range":1.2,"smooth":2,"cut":0.3,"invert":True,"fill":0.5,"size":1.5,"detail":384,"shape":1,"bg":"#123456",
  "exp":10,"con":11,"sat":12,"hue":13,"warm":14,"fog":0.4,"defocus":0.3,"focus":0.7,"sliceA":0.1,"sliceB":0.9,
  "cam":"sway","dur":9,"loop":True,"turn":1,"render":"solid","ctrl":"orbit","ctrlV":16,"fov":65,"sens":1.7,"tiltX":3,"tiltZ":4,"spin":5,"flip":True,
  "vig":0.3,"vigSoft":0.5,"vigBlur":0.2,"dist":9,"ca":0.1,"grain":0.2,"grainSize":2,"look":"cube","lookMix":0.6,"focusRange":0.2,

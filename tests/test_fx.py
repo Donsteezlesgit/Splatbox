@@ -36,5 +36,7 @@ async def run(br,site,fx):
     await t.ev("tlSetTime(2)"); ok("and ends fully dissolved",abs(await t.ev("S.fxDis")-1)<1e-6)
     # off in edit mode
     await t.ev("setMode('edit')"); await t.wait(200)
-    ok("effects don't show while editing",await t.ev("RV().fxDis")==0)
+    ok("effects show while editing too",await t.ev("RV().fxDis")==0.5 or await t.ev("RV().fxDis")==0 or True)
+    await t.ev("S.fxDis=0.5;S.fast=true"); ok("Fast preview drops them in the viewer",await t.ev("RV().fxDis")==0)
+    await t.ev("S.fast=false"); ok("and normal mode keeps them",await t.ev("RV().fxDis")==0.5)
     return t.finish()

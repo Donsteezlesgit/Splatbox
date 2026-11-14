@@ -16,7 +16,7 @@ async def run(br,site,fx):
     await t.ev("openTool('select')"); await t.wait(500)
     ok("select tool opens on the splat",(await t.ev("!!selObj()")) and await t.pg.locator("#sxInfo").count()==1)
     n=await t.ev("SEL.gs.n"); bb=await t.pg.locator("#gl").bounding_box(); W,H=bb["width"],bb["height"]
-    pb=await t.pg.locator("#pop").bounding_box(); X0=(pb["x"]+pb["width"]-bb["x"])+16 if pb else 20   # drag only where the panel isn't covering the view
+    pb=await t.pg.locator("#pop").bounding_box(); X0=20   # the panel is docked now, so the whole view is free
     # box select covering everything
     await t.pg.click("#sxTool [data-v=rect]")
     await drag(t,[(5,5),(W-5,H-5)])
