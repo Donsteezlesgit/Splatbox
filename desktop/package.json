@@ -28,6 +28,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "inbox.js",
       "www/**"
     ],
     "artifactName": "Splatbox-Setup-${version}.exe",
