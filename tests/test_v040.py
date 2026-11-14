@@ -123,7 +123,7 @@ async def layout(br,site,fx):
     await pg.click("#sres button >> nth=0"); await t.wait(300)
     ok("clicking a result jumps to it",await t.ev("curGroup")=="camera" and await t.ev("curTool")=="dof")
     await pg.click("[data-tool=camera]"); await t.wait(150)
-    ok("the group button closes the panel",not await pg.is_visible("#pop"))
+    ok("the group button closes the menu and the dock falls back to Scene (always split)",await t.ev("curGroup")=="scene" and await pg.is_visible("#pop") and await pg.is_visible("#outl"))
     # keys
     await pg.keyboard.press("Digit2"); await t.wait(150)
     ok("number keys open groups",await t.ev("curGroup")=="scene")

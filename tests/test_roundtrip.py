@@ -35,7 +35,7 @@ async def run(br,site,fx):
     await t.new_project()
     await t.add_ply(fx["tilt"]); await t.add_ply(fx["blob"]); await t.add_mesh(fx["cube"])
     await t.ev("closeTool()")
-    await t.ev("addLight('sun');addLight('point')")
+    await t.ev("addLight('sun');addLight('point');addLight('spot')")
     await t.ev("addCamera();addCamera()")
     await t.ev("OBJS.filter(o=>o.kind==='splat')[1].pos=[1.2,0.3,0.1];OBJS.filter(o=>o.kind==='splat')[1].scl=0.8;OBJS[0].crop={on:true,inv:false,x0:0.1,x1:0.9,y0:0,y1:1,z0:0,z1:1}")
     await t.ev("cur.lut="+json.dumps(LUT)+";cur.lutName='Test LUT'")

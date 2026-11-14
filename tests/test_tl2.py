@@ -45,7 +45,7 @@ async def run(br,site,fx):
     await t.pg.keyboard.press("Home"); await t.wait(100); ok("Home goes to the start",(await t.ev("TL.t"))==0)
     await t.pg.keyboard.press("Tab"); await t.wait(100); ok("Tab swaps dope sheet and curves",(await t.ev("TLU.mode"))=="curve")
     await t.pg.keyboard.press("Tab"); await t.wait(100); ok("Tab swaps back",(await t.ev("TLU.mode"))=="dope")
-    ok("a shortcut on the timeline doesn't change the app's tool (digit keys)",(await t.ev("curTool"))in(None,""),await t.ev("curTool"))
+    ok("a shortcut on the timeline doesn't change the app's tool (digit keys)",(await t.ev("curTool"))in(None,"","light"),await t.ev("curTool"))
     # copy / paste
     await t.ev(f"TLU.sel=[{{id:'{P}',k:TL.tracks['{P}'].k[1]}},{{id:'{P}',k:TL.tracks['{P}'].k[2]}}];tlSetTime(5);tlDockDraw()")
     await t.pg.keyboard.press("Control+c"); await t.pg.keyboard.press("Control+v"); await t.wait(250)

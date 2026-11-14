@@ -1,6 +1,18 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 046
+- The right side is always split: settings on top, the Objects window permanently below. Object lists and cards are gone from the menus. Each Objects row has a delete cross and a diamond that keys every animatable setting of that object (click again when filled to remove them).
+- Lighting: spot lights (cone angle, edge softness), range and falloff for point and spot lights, up to 8 lights, a distinct shape for each type in the view (sun rays and arrow, point light reach sphere, spot cone), and a per-light Side shading mode: Surface, or Gradient (darkens the side of the object away from the light, with strength and softness).
+- Look through camera: a button at the top of the view whenever there is a camera. It uses the camera you used last.
+- Reopening a project puts the free view where the camera is.
+- Space plays and pauses from the timeline too (it was toggling twice).
+- New Auto button in the timeline: one flowing curve through the keys, so motion carries through keyframes without pausing. Works on the selected keys, or all keys if none are selected.
+- Fixed: "Show the focus zone in green" works again (and in Fast preview). It is hidden in final renders.
+- G now hides grids and axes too.
+- Compact menus: one line per slider with a typed value box, smaller buttons. Every number box can be dragged like a slider (Shift for fine steps). Camera focus distance is now a slider.
+- Hover tips: the help text under settings and a short tip on every button now show when you hover.
+
 ## Version 045
 - Fixed: the project folder no longer disconnects over a passing hiccup. Failed folder writes are retried, and the folder only locks when access is genuinely gone. When it does lock, Splatbox reconnects in the background by itself.
 - Inbox: a finished photo scan is kept in memory while the save retries (about 5 minutes), so a folder blip never makes it train again. The inbox ignores a folder drop-out shorter than a minute, and if the folder stays down it waits and finishes the save by itself when the folder is back.
