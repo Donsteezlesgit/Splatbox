@@ -55,10 +55,20 @@ async def run(br,site,fx):
     ok("an unreadable project shows a clear card",await t.pg.locator("#grid .card:has-text('Couldn')").count()==1)
     await t.pg.locator("#grid .card:has-text('Couldn')").click(); await t.wait(500)
     ok("opening it is refused politely",("read this" in await t.pg.inner_text("#toast")) and await t.pg.locator("#editor").is_hidden(),await t.pg.inner_text("#toast"))
-    # folder lost mid-session: mirror keeps the work, no crash
-    await t.ev("FOLD.h.getDirectoryHandle=function(){return Promise.reject(new Error('gone'))};0"); 
-    await t.ev("dbPut(Object.assign({},{v:FORMAT,id:'zz1',name:'After loss',kind:'space',created:1,updated:Date.now(),settings:{},objs:[]}))"); await t.wait(500)
-    ok("folder write failure drops back to the mirror",(await t.ev("FOLD.ok"))==False and (await t.ev("FOLD.lapsed"))==True)
+    # a passing hiccup (one failed write) must NOT lock the folder
+    await t.ev("window._ogd=FOLD.h.getDirectoryHandle;var _n=0;FOLD.h.getDirectoryHandle=function(){if(_n++<2)return Promise.reject(new Error('blip'));return window._ogd.apply(FOLD.h,arguments)};0")
+    await t.ev("dbPut(Object.assign({},{v:FORMAT,id:'zz0',name:'Blip',kind:'space',created:1,updated:Date.now(),settings:{},objs:[]}))"); await t.wait(6000)
+    ok("a short folder blip is retried and the folder stays connected",(await t.ev("FOLD.ok"))==True and (await t.ev("FOLD.lapsed"))==False)
+    ok("the blipped project reached the folder",(await t.ev("folderAll().then(function(l){return l.some(function(r){return r.id==='zz0'})})")))
+    await t.ev("FOLD.h.getDirectoryHandle=window._ogd;0")
+    # folder genuinely lost mid-session: mirror keeps the work, no crash
+    await t.ev("FOLD.h.queryPermission=function(){return Promise.resolve('prompt')};FOLD.h.requestPermission=function(){return Promise.resolve('denied')};FOLD.h.getDirectoryHandle=function(){return Promise.reject(new Error('gone'))};FOLD.h.values=function(){throw new Error('gone')};0")
+    await t.ev("dbPut(Object.assign({},{v:FORMAT,id:'zz1',name:'After loss',kind:'space',created:1,updated:Date.now(),settings:{},objs:[]}))"); await t.wait(7000)
+    ok("a genuinely lost folder drops back to the mirror",(await t.ev("FOLD.ok"))==False and (await t.ev("FOLD.lapsed"))==True)
     ok("the mirror still has the work",(await t.ev("idbAll().then(function(l){return l.some(function(r){return r.id==='zz1'})})")))
-    t.errs=[e for e in t.errs if "gone" in e or "Failed" in e]
+    # it reconnects by itself once the permission is back
+    await t.ev("delete FOLD.h.queryPermission;delete FOLD.h.requestPermission;FOLD.h.getDirectoryHandle=window._ogd;delete FOLD.h.values;0")
+    await t.wait(9000)
+    ok("the folder reconnects by itself when it's reachable again",(await t.ev("FOLD.ok"))==True and (await t.ev("FOLD.lapsed"))==False)
+    t.errs=[e for e in t.errs if "gone" in e or "Failed" in e or "blip" in e]
     return t.finish()

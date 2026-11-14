@@ -377,7 +377,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 044";
+var VERSION="Version 045";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -3858,7 +3858,7 @@ var idbKeys=function(){return dbTx("readonly",function(st){return st.getAllKeys(
    On PC/Mac Chromium a project can live in a real folder: <your folder>/<project>/project.json, assets/*, thumb.jpg.
    The browser's own storage stays as a mirror. When the folder is connected and readable, the folder always wins:
    the mirror is written but never read. Writes go through createWritable(), which the browser swaps in atomically. */
-var FOLD={h:null,ok:false,lapsed:false,name:"",dirs:{},written:new Map(),lockT:0};
+var FOLD={h:null,ok:false,lapsed:false,lapsedAt:0,name:"",dirs:{},written:new Map(),lockT:0};
 var CAN_FS=typeof window.showDirectoryPicker==="function";
 function metaTx(mode,fn){return db().then(function(d){return new Promise(function(res,rej){
   var t=d.transaction("meta",mode),r=fn(t.objectStore("meta"));
@@ -3876,10 +3876,22 @@ function fsGetFile(dh,name){
   var parts=name.split("/"),fn=parts.pop();
   return fsDirHandle(dh,parts.join("/"),false).then(function(d){return d.getFileHandle(fn)}).then(function(fh){return fh.getFile()});
 }
+/* a write that fails for a passing reason (Dropbox holding the file for a moment, an antivirus scan) is tried again a few times.
+   Errors that mean "this will not work" (no permission, folder gone, disk full) are passed on straight away. */
+function fsTransient(e){var n=e&&e.name;return !(n==="NotAllowedError"||n==="SecurityError"||n==="NotFoundError"||n==="QuotaExceededError"||n==="TypeMismatchError")}
+function fsRetry(fn){
+  var waits=[0,350,1200,3000];
+  return (function go(i){return fn().catch(function(e){
+    if(i+1>=waits.length||!fsTransient(e))throw e;
+    return new Promise(function(r){setTimeout(r,waits[i+1])}).then(function(){return go(i+1)});
+  })})(0);
+}
 function fsWriteFile(dh,name,blob){
-  var parts=name.split("/"),fn=parts.pop();
-  return fsDirHandle(dh,parts.join("/"),true).then(function(d){return d.getFileHandle(fn,{create:true})}).then(function(fh){return fh.createWritable()}).then(function(w){
-    return w.write(blob).then(function(){return w.close()},function(e){return w.abort().then(function(){throw e},function(){throw e})});
+  return fsRetry(function(){
+    var parts=name.split("/"),fn=parts.pop();
+    return fsDirHandle(dh,parts.join("/"),true).then(function(d){return d.getFileHandle(fn,{create:true})}).then(function(fh){return fh.createWritable()}).then(function(w){
+      return w.write(blob).then(function(){return w.close()},function(e){return w.abort().then(function(){throw e},function(){throw e})});
+    });
   });
 }
 function fsExt(b,hint){
@@ -3945,7 +3957,7 @@ function folderPut(p){
   if(!(old&&p.dirFor&&p.dirFor!==want&&typing))p.dirFor=want;
   p.dir=dname;FOLD.dirs[dname.toLowerCase()]=p.id;
   var files=[],json=fsEnc(p,"",files),key=dname.toLowerCase();
-  return FOLD.h.getDirectoryHandle(dname,{create:true}).then(function(dh){
+  return fsRetry(function(){return FOLD.h.getDirectoryHandle(dname,{create:true})}).then(function(dh){
     var todo=files.filter(function(f){return FOLD.written.get(key+"/"+f.n)!==f.key});
     return todo.reduce(function(pr,f){return pr.then(function(){return fsWriteFile(dh,f.n,f.b).then(function(){FOLD.written.set(key+"/"+f.n,f.key)})})},Promise.resolve())
       .then(function(){return fsWriteFile(dh,"project.json",new Blob([JSON.stringify(json)],{type:"application/json"}))})
@@ -4011,20 +4023,59 @@ function fsUnlock(){
 /* connect / restore / lapse */
 function fsUse(h,remember){
   FOLD.h=h;FOLD.name=h.name;
-  return folderAll().then(function(){FOLD.ok=true;FOLD.lapsed=false;return remember?metaTx("readwrite",function(st){return st.put(h,"folder")}):0});
+  return folderAll().then(function(){FOLD.ok=true;FOLD.lapsed=false;FOLD.lapsedAt=0;return remember?metaTx("readwrite",function(st){return st.put(h,"folder")}):0});
 }
 function fsConnect(){return window.showDirectoryPicker({id:"splatbox",mode:"readwrite"}).then(function(h){return fsUse(h,true)})}
 function fsRestore(){
   if(!CAN_FS||FOLD.ok||FOLD.h)return Promise.resolve();
   return metaTx("readonly",function(st){return st.get("folder")}).then(function(h){
     if(!h)return;FOLD.h=h;FOLD.name=h.name;
-    return h.queryPermission({mode:"readwrite"}).then(function(pm){if(pm==="granted")return fsUse(h,false);FOLD.lapsed=true});
+    return h.queryPermission({mode:"readwrite"}).then(function(pm){if(pm==="granted")return fsUse(h,false);FOLD.lapsed=true;FOLD.lapsedAt=Date.now();fsHealStart()});
   }).catch(function(){});
 }
 function fsReconnect(){return FOLD.h.requestPermission({mode:"readwrite"}).then(function(pm){if(pm!=="granted")throw new Error("no permission");return fsUse(FOLD.h,false)})}
+/* Is the folder really still there? Permission still granted and its top level can be listed.
+   One failed write is not proof it isn't (Dropbox can hold a file for a moment), so a failure only locks the folder when this says no. */
+function fsProbe(){
+  if(!FOLD.h)return Promise.resolve(false);
+  return FOLD.h.queryPermission({mode:"readwrite"}).then(function(pm){
+    if(pm!=="granted")return false;
+    return fsList(FOLD.h).then(function(){return true},function(){return false});
+  },function(){return false});
+}
+var FHEAL=0;
+function fsHealStart(){if(!FHEAL&&FOLD.h)FHEAL=setInterval(function(){fsHeal()},6000)}
+/* quietly take the folder back once it can be reached again: no click needed when the browser still allows it (the desktop app does) */
+function fsHeal(){
+  if(FOLD.ok||!FOLD.h){if(FHEAL){clearInterval(FHEAL);FHEAL=0}return Promise.resolve(!!FOLD.ok)}
+  return FOLD.h.queryPermission({mode:"readwrite"}).then(function(pm){
+    return pm==="granted"?pm:FOLD.h.requestPermission({mode:"readwrite"})["catch"](function(){return "prompt"});
+  }).then(function(pm){
+    if(pm!=="granted")return false;
+    return fsUse(FOLD.h,false).then(function(){
+      if(FHEAL){clearInterval(FHEAL);FHEAL=0}
+      setStatus("Project folder reconnected.","ok");
+      if(FOLD.dirtyCur&&cur){FOLD.dirtyCur=false;saveNow()}
+      var hm=$("home");if(hm&&!hm.hidden)renderHome();
+      return true;
+    },function(){return false});
+  },function(){return false});
+}
 function fsLapse(){
-  if(!FOLD.ok)return;FOLD.ok=false;FOLD.lapsed=true;
-  setStatus("Couldn't reach your project folder. Changes are kept in this browser until you reconnect it on the home screen.","warn");
+  if(!FOLD.ok||FOLD.probing)return;
+  FOLD.probing=true;
+  fsProbe().then(function(alive){
+    FOLD.probing=false;if(!FOLD.ok)return;
+    if(alive){
+      /* a passing hiccup: stay connected. The browser copy has the work, and the next save writes the folder again */
+      setStatus("Couldn't write to your project folder just now. Changes are kept in this browser and will be written again on the next save.","warn");
+      if(FOLD.dirtyCur)setTimeout(function(){if(FOLD.ok&&FOLD.dirtyCur&&cur){FOLD.dirtyCur=false;saveNow()}},15000);
+      return;
+    }
+    FOLD.ok=false;FOLD.lapsed=true;FOLD.lapsedAt=Date.now();
+    setStatus("Couldn't reach your project folder. Changes are kept in this browser, and Splatbox will reconnect by itself when it can.","warn");
+    fsHealStart();
+  });
 }
 /* projects that only exist in the browser's storage can be copied into the folder; nothing is removed from the browser */
 function fsMigrate(){
@@ -4053,8 +4104,9 @@ function renderFolderBar(){
 }
 var dbAll=function(){return FOLD.ok?folderAll().catch(function(){fsLapse();return idbAll()}):idbAll()};
 var dbPut=function(p){
-  var m=idbPut(p);if(!FOLD.ok)return m;
-  return m.catch(function(){}).then(function(){return folderPut(p)}).catch(function(){fsLapse()});
+  var m=idbPut(p);
+  if(!FOLD.ok){if(FOLD.lapsed&&cur&&p.id===cur.id)FOLD.dirtyCur=true;return m}
+  return m.catch(function(){}).then(function(){return folderPut(p)}).catch(function(){if(cur&&p.id===cur.id)FOLD.dirtyCur=true;fsLapse()});
 };
 var dbDel=function(id){
   var m=idbDel(id);if(!FOLD.ok)return m;
@@ -4781,10 +4833,13 @@ $("upd").addEventListener("click",function(){
    The desktop shell watches a folder (Dropbox is ideal) where each sub-folder of photos is one scan, keeps the queue, and hands this window one set at a time.
    Here each set is run without touching the screen you're working in: read the photos, drop blurry ones, solve cameras, train, clean floaters,
    then write a NEW project (the splat only, never a copy of the photos) into your project folder and check it landed. */
-var IB=(window.splatboxDesktop&&window.splatboxDesktop.inbox)||null,IBS=null,IBRUN=null,ibLast="";
+var IB=(window.splatboxDesktop&&window.splatboxDesktop.inbox)||null,IBS=null,IBRUN=null,ibLast="",IBHOLD=null;
 function ibStatus(){
   if(!navigator.gpu)return {ready:false,reason:"this computer's browser engine has no WebGPU, so photo scans can't train"};
-  if(!CAN_FS||!FOLD.ok)return {ready:false,reason:"your project folder isn't connected. Open Splatbox, then choose or reconnect the project folder on the home screen"};
+  /* a folder that dropped out less than a minute ago doesn't pause the inbox: it usually comes straight back */
+  var up=FOLD.ok||(FOLD.lapsed&&FOLD.h&&FOLD.lapsedAt&&Date.now()-FOLD.lapsedAt<60000);
+  if(IBHOLD&&!FOLD.ok)return {ready:false,reason:"finishing the save of “"+IBHOLD.project+"”. It carries on by itself when your project folder is back"};
+  if(!CAN_FS||!up)return {ready:false,reason:"your project folder isn't connected. Splatbox is trying to reconnect it. If it doesn't, open Splatbox and reconnect the project folder on the home screen"};
   if(TR&&!IBRUN)return {ready:false,reason:"a photo scan you started by hand is training. The inbox carries on when it finishes"};
   return {ready:true,reason:""};
 }
@@ -4849,6 +4904,8 @@ function ibRun(job){
     clearInterval(run.timer);if(IBRUN===run)IBRUN=null;
     try{if(run.s)run.s.dispose()}catch(_){}
     if(err&&err.aborted)return;
+    /* the scan finished but the folder never came back in time: the result is kept in memory and the inbox waits, it doesn't train again */
+    if(err&&err.hold){rep({kind:"blocked",reason:"your project folder isn't reachable, so “"+err.hold+"” couldn't be saved yet. It will finish by itself when the folder is back"});return}
     var msg=(err&&err.message)||String(err)||"Something went wrong.";
     if(/GPUDevice|device.*lost|out of memory|OOM/i.test(msg)&&!err.hard)err.retry=true;
     rep({kind:"failed",error:msg,retry:!!(err&&err.retry),notes:run.notes});
@@ -4857,8 +4914,34 @@ function ibRun(job){
 var ibLoadTrainer=function(){return import((BETA?"../":"./")+"lib/splatjs/index.js")};
 function ibChk(run){if(run.abort){var e=new Error("stopped");e.aborted=true;throw e}}
 function ibFail(msg,retry){var e=new Error(msg);e.retry=!!retry;e.hard=!retry;return e}
+/* Write the finished project into the folder and read it back to check. If the folder isn't there right now, wait and try again (about 5 minutes in all),
+   asking for a quiet reconnect each time. The trained splat stays in memory the whole time, so a folder hiccup never costs a re-train. */
+function ibSave(p,blob,run,say){
+  var waits=window.__ibSaveWaits||[0,4000,8000,15000,30000,30000,60000,60000,60000],i=0;
+  function attempt(){
+    ibChk(run);
+    return (FOLD.ok?Promise.resolve(true):fsHeal()).then(function(){
+      if(!FOLD.ok)throw new Error("The project folder isn't reachable.");
+      return dbPut(p);
+    }).then(function(){return ibVerify(p,blob)})["catch"](function(err){
+      if(err&&err.aborted)throw err;
+      if(++i>=waits.length)throw err;
+      say("Saving the project (waiting for the folder, try "+(i+1)+" of "+waits.length+")");
+      return new Promise(function(res){setTimeout(res,waits[i])}).then(attempt);
+    });
+  }
+  return attempt();
+}
+function ibSaveHeld(h,run,say){
+  return ibSave(h.p,h.blob,run,say).then(function(){IBHOLD=null;return {name:h.project}},function(err){
+    if(err&&err.aborted)throw err;
+    var e=new Error("Couldn't save the project to your project folder: "+((err&&err.message)||err));e.hold=h.project;throw e;
+  });
+}
 function ibExecute(job,run,say){
   var projId="ib"+ibHash(job.key||job.name),qk=job.quality||"";
+  /* a scan that finished earlier but couldn't be saved yet: just finish saving it */
+  if(IBHOLD&&IBHOLD.job===job.name){say("Saving the project");return ibSaveHeld(IBHOLD,run,say)}
   if(!QUAL[qk]){qk="balanced";try{qk=localStorage.getItem("sbq")||"balanced"}catch(_){}if(!QUAL[qk])qk="balanced"}
   var q=QUAL[qk];
   /* if an earlier try already saved this exact set (the app was closed just before it reported back), don't make a second copy */
@@ -4941,9 +5024,8 @@ function ibExecute(job,run,say){
     var rec=objRec(o);if(r.rle)rec.mask=r.rle;
     p.objs=[rec];p.thumb=r.thumb;
     p.source={inbox:job.name,photos:run.use.length,quality:qk};
-    return dbPut(p).then(function(){return ibVerify(p,r.blob)}).then(function(){return {name:name}},function(err){
-      throw ibFail("Couldn't save the project to your project folder: "+((err&&err.message)||err),true);
-    });
+    IBHOLD={job:job.name,project:name,p:p,blob:r.blob};
+    return ibSaveHeld(IBHOLD,run,say);
   });
 }
 /* the Inbox panel on the home screen */

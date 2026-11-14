@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 045
+- Fixed: the project folder no longer disconnects over a passing hiccup. Failed folder writes are retried, and the folder only locks when access is genuinely gone. When it does lock, Splatbox reconnects in the background by itself.
+- Inbox: a finished photo scan is kept in memory while the save retries (about 5 minutes), so a folder blip never makes it train again. The inbox ignores a folder drop-out shorter than a minute, and if the folder stays down it waits and finishes the save by itself when the folder is back.
+
 ## Version 044
 - G now hides everything you would not want in a render: gizmos, selection boxes, camera markers and light markers.
 
