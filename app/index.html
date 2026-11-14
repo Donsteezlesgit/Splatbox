@@ -377,7 +377,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 043";
+var VERSION="Version 044";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1608,7 +1608,7 @@ function drawOverlay(){
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,cw,ch);
   if(!GUIHID&&MODE==="edit"&&curTool==="select")drawSelOverlay(c);
   if(GUIHID||!LASTM)return;
-  if(VO.markers){drawCamMarks(c);drawLightMarks(c)}
+  if(VO.markers&&VO.gizmos){drawCamMarks(c);drawLightMarks(c)}
   if(!VO.gizmos)return;
   if(MODE==="render"){if(!(SEL&&isCam(SEL)&&!THRU))return}
   else if(MODE!=="edit")return;
@@ -2504,7 +2504,7 @@ function setMode(m){
 }
 function setVO(k,v){VO[k]=!!v;try{localStorage.setItem("sb.vo",JSON.stringify({grids:VO.grids,markers:VO.markers}))}catch(_){}if(k==="gizmos"){GH=null;GD=null;setStatus(VO.gizmos?"Gizmos shown.":"Gizmos hidden. Press G to bring them back.","ok")}dirty=true;vwDraw()}
 function vwItems(){return [
-  ["gizmos","Gizmos and selection boxes","G",VO.gizmos,function(){setVO("gizmos",!VO.gizmos)}],
+  ["gizmos","Gizmos, boxes, cameras and lights","G",VO.gizmos,function(){setVO("gizmos",!VO.gizmos)}],
   ["grids","Grids and axes","",VO.grids,function(){setVO("grids",!VO.grids)}],
   ["markers","Camera and light markers","",VO.markers,function(){setVO("markers",!VO.markers)}],
   ["fast","Fast preview (skips the heavy effects)","",!!S.fast,function(){setK("fast",!S.fast);syncControls()}],

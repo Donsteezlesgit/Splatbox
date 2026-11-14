@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 044
+- G now hides everything you would not want in a render: gizmos, selection boxes, camera markers and light markers.
+
 ## Version 043
 - Fixed: projects saved in the old Clean view reopened stuck there, with no gizmos, no boxes, no moving splats and G doing nothing. Projects now always open in the workspace.
 - G now works from anywhere: it switches back to the workspace and toggles gizmos.

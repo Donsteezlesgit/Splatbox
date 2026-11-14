@@ -1,5 +1,5 @@
 /* Splatbox service worker. App shell is versioned; the AI runtime and model live in their own cache so updates don't re-download 40 MB. */
-const VERSION='Version 043';
+const VERSION='Version 044';
 const BETA=/\/beta\//.test(self.registration.scope);
 const CACHE=(BETA?'splatbox-beta-':'splatbox-')+VERSION;
 const AI='splatbox-ai';
