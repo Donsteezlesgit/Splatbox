@@ -5,7 +5,7 @@ async def run(br,site,fx):
     t=await open_page(br,site,"backup")
     await t.new_project()
     await t.add_ply(fx["tilt"]); await t.add_mesh(fx["cube"]); await t.ev("closeTool()")
-    await t.ev("setMode('render');addCamera();S.vig=0.4;cur.lut='LUT_3D_SIZE 2\\n0 0 0\\n1 0 0\\n0 1 0\\n1 1 0\\n0 0 1\\n1 0 1\\n0 1 1\\n1 1 1\\n';cur.lutName='x';cur.extra=new Float32Array([1.5,2.5,3.5])")
+    await t.ev("addCamera();S.vig=0.4;cur.lut='LUT_3D_SIZE 2\\n0 0 0\\n1 0 0\\n0 1 0\\n1 1 0\\n0 0 1\\n1 0 1\\n0 1 1\\n1 1 1\\n';cur.lutName='x';cur.extra=new Float32Array([1.5,2.5,3.5])")
     await t.pg.click("#saveBtn"); await t.wait(1200)
     # round trip in memory, byte for byte
     res=await t.ev("""(function(){var rec=cur;var f=new File([packProjects([rec])],'x.splatbox');

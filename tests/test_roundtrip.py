@@ -20,6 +20,12 @@ def diff(a,b,p=None):
         for i,(x,y) in enumerate(zip(a,b)): out+=diff(x,y,f"{p}[{i}]")
     elif a!=b: out.append(f"{p}: {str(a)[:70]} != {str(b)[:70]}")
     return out
+async def waitthru(t,want):
+    for _ in range(60):
+        try:
+            if await t.ev("THRU&&ACAM&&ACAM.id")==want: return
+        except Exception: pass
+        await t.wait(500)
 async def run(br,site,fx):
     t=await open_page(br,site,"roundtrip")
     defs=json.loads(await t.ev("JSON.stringify(DEF)"))
@@ -30,7 +36,6 @@ async def run(br,site,fx):
     await t.add_ply(fx["tilt"]); await t.add_ply(fx["blob"]); await t.add_mesh(fx["cube"])
     await t.ev("closeTool()")
     await t.ev("addLight('sun');addLight('point')")
-    await t.ev("setMode('render')")
     await t.ev("addCamera();addCamera()")
     await t.ev("OBJS.filter(o=>o.kind==='splat')[1].pos=[1.2,0.3,0.1];OBJS.filter(o=>o.kind==='splat')[1].scl=0.8;OBJS[0].crop={on:true,inv:false,x0:0.1,x1:0.9,y0:0,y1:1,z0:0,z1:1}")
     await t.ev("cur.lut="+json.dumps(LUT)+";cur.lutName='Test LUT'")
@@ -41,9 +46,10 @@ async def run(br,site,fx):
     have=set(json.loads(await t.ev("JSON.stringify(OBJS.map(o=>o.kind))")))
     t.ok("test scene contains every object kind",set(kinds)<=have,sorted(set(kinds)-have))
     snapA=await t.ev("snapshotState()")
+    want=await t.ev("ACAM.id")
     await t.pg.click("#saveBtn"); await t.wait(1500)
     # 1. reopen straight from storage
-    await t.ev("dbAll().then(function(l){return openSpace(l.find(function(x){return x.id===cur.id}))})"); await t.wait(3000)
+    await t.ev("dbAll().then(function(l){return openSpace(l.find(function(x){return x.id===cur.id}))})"); await waitthru(t,want); await t.wait(500)
     snapB=await t.ev("snapshotState()")
     t.ok("reopen from storage: everything identical",not diff(snapA,snapB),diff(snapA,snapB))
     # 2. every live object field is in the stored record
@@ -58,10 +64,10 @@ async def run(br,site,fx):
     # 3. the real way: full page reload, then open from the project list
     name=await t.ev("cur.name")
     await t.pg.reload(); await t.wait(1200)
-    await t.pg.click(f"#grid .card:has-text('{name}')"); await t.wait(3500)
+    await t.pg.click(f"#grid .card:has-text('{name}')"); await waitthru(t,want); await t.wait(500)
     snapC=await t.ev("snapshotState()")
     t.ok("after a full page reload and opening from the list: identical",not diff(snapA,snapC),diff(snapA,snapC))
-    t.ok("opens in the same mode and camera",(await t.ev("MODE"))=="render" and (await t.ev("THRU"))==True)
+    t.ok("opens in the workspace with the same camera",(await t.ev("MODE"))=="edit" and (await t.ev("THRU"))==True)
     # 4. a project from a newer app version is refused, not opened
     await t.ev("goHome()"); await t.wait(1500)
     await t.pg.evaluate("""async()=>{const db=await new Promise(r=>{const q=indexedDB.open('splatbox');q.onsuccess=()=>r(q.result)});

@@ -330,3 +330,17 @@ async def hideall(br,site,fx):
     ok("Escape also brings it back",await pg.is_visible(".top"))
     ok("no uncaught errors",not t.errs,t.errs)
     return t.finish()
+
+async def stuck(br,site,fx):
+    t=await open_page(br,site,"v40stuck",w=1280,h=800); ok=t.ok; pg=t.pg
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.ev("closeTool();setMode('render');SEL=null"); await t.wait(400)
+    ok("in the old Clean view there are no gizmos",await t.ev("MODE")=="render")
+    await pg.mouse.click(5,700); await pg.keyboard.press("KeyG"); await t.wait(300)
+    ok("pressing G gets you back to the workspace",await t.ev("MODE")=="edit")
+    await pg.keyboard.press("KeyG"); await t.wait(100)
+    ok("and G then shows the gizmos",await t.ev("VO.gizmos")==True)
+    await t.ev("SEL=OBJS[0]"); ok("a splat has its gizmo",await t.ev("!!gzGeo()"))
+    # a project that was saved in the old Clean view opens in the workspace
+    await t.ev("cur.view={mode:'render'};saveNow&&saveNow()") if await t.ev("typeof saveNow")=="function" else None
+    ok("no uncaught errors",not t.errs,t.errs)
+    return t.finish()

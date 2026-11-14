@@ -1,6 +1,11 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 043
+- Fixed: projects saved in the old Clean view reopened stuck there, with no gizmos, no boxes, no moving splats and G doing nothing. Projects now always open in the workspace.
+- G now works from anywhere: it switches back to the workspace and toggles gizmos.
+- Fixed: an autosave while a project was still loading could wipe its saved camera view.
+
 ## Version 042
 - Hide all menus now hides the timeline too, and the "Show interface" button is gone. Press H or Esc to bring everything back.
 - Gizmos are always on when you open Splatbox. Pressing G hides them for that session only (it used to be remembered, which could leave them hidden with no sign of why). A message now tells you when they are hidden and that G brings them back.
