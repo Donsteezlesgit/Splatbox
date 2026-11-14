@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 042
+- Hide all menus now hides the timeline too, and the "Show interface" button is gone. Press H or Esc to bring everything back.
+- Gizmos are always on when you open Splatbox. Pressing G hides them for that session only (it used to be remembered, which could leave them hidden with no sign of why). A message now tells you when they are hidden and that G brings them back.
+
 ## Version 041
 - The Workspace / Clean view buttons are replaced by a View menu: Gizmos and selection boxes, Grids and axes, Camera and light markers, Fast preview, Look through the camera, Hide all menus. Your choices are remembered.
 - Press G to show or hide the gizmos. Move is now W (rotate V, scale B are unchanged).

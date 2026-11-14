@@ -267,7 +267,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .rdock .pop{pointer-events:auto;position:relative;margin:0 10px 8px;max-height:min(54dvh,460px)}
   #outl,#spOl,#spDock,#spTl{display:none!important}
 }
-#editor.nogui .rdock{display:none!important}#editor.nogui .stagecol{grid-column:1}
+#editor.nogui .rdock,#editor.nogui #tld,#editor.nogui #spTl,#editor.nogui #showGui{display:none!important}#editor.nogui .stagecol{grid-column:1}
 </style>
 </head>
 <body>
@@ -377,7 +377,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 041";
+var VERSION="Version 042";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1286,7 +1286,7 @@ function orthonorm(m){
 }
 /* V040 viewport options: what is drawn on top of the picture. Saved on this computer, not in projects. */
 var VO={gizmos:true,grids:true,markers:true};
-try{var _vo=JSON.parse(localStorage.getItem("sb.vo")||"{}");["gizmos","grids","markers"].forEach(function(k){if(typeof _vo[k]==="boolean")VO[k]=_vo[k]})}catch(_){}
+try{var _vo=JSON.parse(localStorage.getItem("sb.vo")||"{}");["grids","markers"].forEach(function(k){if(typeof _vo[k]==="boolean")VO[k]=_vo[k]})}catch(_){}
 var KEYS={},LASTM=null,focusA=null,oriT=0,GUIHID=false;
 function pitchOf(){return Math.asin(clamp(mv(Rm,[0,0,1])[1],-1,1))}
 function rawTurn(ay,ap){
@@ -1771,7 +1771,7 @@ function stepKeys(t){
 }
 function viewPreset(yaw,pitch){Rm=[1,0,0,0,1,0,0,0,1];rawTurnTo(yaw,pitch);dirty=true}
 function rawTurnTo(yaw,pitch){Rm=orthonorm(mm(rotAxis([0,1,0],yaw),Rm));Rm=orthonorm(mm(Rm,rotAxis([1,0,0],-pitch)))}
-function setGui(hide){GUIHID=!!hide;$("editor").classList.toggle("nogui",GUIHID);$("showGui").hidden=!GUIHID;dirty=true;setTimeout(function(){dirty=true},60)}
+function setGui(hide){GUIHID=!!hide;$("editor").classList.toggle("nogui",GUIHID);$("showGui").hidden=true;dirty=true;if(!GUIHID&&TLU&&TLU.open)setTimeout(function(){tlDockSize();tlDockDraw()},0);setTimeout(function(){dirty=true},60)}
 $("hideGui").addEventListener("click",function(){setGui(true)});$("showGui").addEventListener("click",function(){setGui(false)});
 document.addEventListener("keydown",function(e){
   var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
@@ -2501,7 +2501,7 @@ function setMode(m){
   if(SEL&&m==="render"&&isGeo(SEL))SEL=null;
   applyRail();syncModeUI();buildHelpers();regrade();dirty=true;
 }
-function setVO(k,v){VO[k]=!!v;try{localStorage.setItem("sb.vo",JSON.stringify(VO))}catch(_){}if(k==="gizmos"){GH=null;GD=null}dirty=true;vwDraw()}
+function setVO(k,v){VO[k]=!!v;try{localStorage.setItem("sb.vo",JSON.stringify({grids:VO.grids,markers:VO.markers}))}catch(_){}if(k==="gizmos"){GH=null;GD=null;setStatus(VO.gizmos?"Gizmos shown.":"Gizmos hidden. Press G to bring them back.","ok")}dirty=true;vwDraw()}
 function vwItems(){return [
   ["gizmos","Gizmos and selection boxes","G",VO.gizmos,function(){setVO("gizmos",!VO.gizmos)}],
   ["grids","Grids and axes","",VO.grids,function(){setVO("grids",!VO.grids)}],

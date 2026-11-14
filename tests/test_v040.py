@@ -314,3 +314,19 @@ async def viewmenu(br,site,fx):
     ok("DOF reference is stored with the view",await t.ev("typeof LASTM.dRef")=="number")
     ok("no uncaught errors",not t.errs,t.errs)
     return t.finish()
+
+async def hideall(br,site,fx):
+    t=await open_page(br,site,"v40hide",w=1280,h=800); ok=t.ok; pg=t.pg
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.ev("closeTool();SEL=OBJS[0];tlDockOpen(true)"); await t.wait(600)
+    ok("a selected splat has a gizmo",await t.ev("!!gzGeo()") and await t.ev("VO.gizmos"))
+    ok("the timeline is showing",await pg.is_visible("#tld"))
+    await t.ev("setGui(true)"); await t.wait(300)
+    ok("hide all menus hides the timeline",not await pg.is_visible("#tld"))
+    ok("and the top bar and panels",not await pg.is_visible(".top") and not await pg.is_visible("#outl"))
+    ok("no Show interface button",not await pg.is_visible("#showGui"))
+    await pg.keyboard.press("KeyH"); await t.wait(300)
+    ok("H brings everything back, timeline included",await pg.is_visible("#tld") and await pg.is_visible(".top"))
+    await t.ev("setGui(true)"); await pg.keyboard.press("Escape"); await t.wait(200)
+    ok("Escape also brings it back",await pg.is_visible(".top"))
+    ok("no uncaught errors",not t.errs,t.errs)
+    return t.finish()
