@@ -1,6 +1,14 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 047
+- New look. Warm graphite with a verdigris accent; amber is only for keyframes and lights. Inter for the interface, JetBrains Mono for numbers. Flat controls, no gradients or glow, tighter rows.
+- Desktop: a solid top bar, a slim icon rail (names show on hover), thin sliders with a filled track and a typed value box, and a flatter Objects window.
+- Light colour is a small swatch with its hex code instead of a full-width bar.
+- Timeline toolbar is two compact single rows instead of wrapping onto three; Close is a small cross at the top right.
+- Home: a clear "New project" button and a larger page title.
+- Phone: same colours, bottom sheet with rounded top corners and labelled tabs.
+
 ## Version 046
 - The right side is always split: settings on top, the Objects window permanently below. Object lists and cards are gone from the menus. Each Objects row has a delete cross and a diamond that keys every animatable setting of that object (click again when filled to remove them).
 - Lighting: spot lights (cone angle, edge softness), range and falloff for point and spot lights, up to 8 lights, a distinct shape for each type in the view (sun rays and arrow, point light reach sphere, spot cone), and a per-light Side shading mode: Surface, or Gradient (darkens the side of the object away from the light, with strength and softness).
