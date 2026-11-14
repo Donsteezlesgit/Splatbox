@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 041
+- The Workspace / Clean view buttons are replaced by a View menu: Gizmos and selection boxes, Grids and axes, Camera and light markers, Fast preview, Look through the camera, Hide all menus. Your choices are remembered.
+- Press G to show or hide the gizmos. Move is now W (rotate V, scale B are unchanged).
+- Fixed depth of field in the workspace: the focus reference now matches between the picture and the focus picker, and looking through a camera uses that camera's focus point.
+- Windows app: fixed a crash on launch ("Cannot find module './inbox'") caused by the installer leaving out the inbox file. If you were hit by it, reinstall once from the latest release.
+
 ## Version 040
 - Film grain is rebuilt: it moves every frame, stays the same size when you resize, and has Softness, Colour and Rate sliders. Exports get new grain on each frame.
 - Sliders now go much further. Click the number beside any slider and type a value (exposure, grain, fog, field of view and more accept far more than the slider shows). Double-click a slider to reset it. Hold Shift while dragging for fine steps. Field of view goes from 4 to 170 degrees and shows the lens in mm.

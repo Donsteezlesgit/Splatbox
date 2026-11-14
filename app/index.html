@@ -169,6 +169,12 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   .tool:hover,.btn:hover,.seg button:hover,.ico:hover{filter:brightness(1.15)}
   #train .tinfo,#train .trow{width:min(820px,100%);margin:0 auto}
 }
+.vwwrap{position:relative;pointer-events:auto}
+.vwbtn{display:flex;align-items:center;gap:6px;min-height:38px;padding:0 14px;border:1px solid #ffffff1f;background:#0b0d10b3;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px;color:var(--fg);font:600 13px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.vwmenu{position:absolute;top:44px;left:0;min-width:250px;padding:6px;border:1px solid var(--line);background:var(--raise,#15191d);border-radius:12px;box-shadow:0 12px 32px #0009;z-index:40}
+.vwmenu button{display:flex;width:100%;align-items:center;gap:10px;text-align:left;padding:9px 10px;border:0;border-radius:8px;background:transparent;color:var(--fg);font:500 13px var(--font-ui);cursor:pointer}
+.vwmenu button:hover{background:var(--raise2,#1d2329)}.vwmenu button:disabled{opacity:.4;cursor:default}
+.vwmenu .tick{width:16px;color:var(--accent)}.vwmenu .kbd{margin-left:auto;color:var(--mute);font:12px var(--font-mono)}
 .modeseg{pointer-events:auto;display:flex;gap:2px;padding:3px;border:1px solid #ffffff1f;background:#0b0d10b3;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:12px}
 .modeseg button{min-height:38px;padding:0 16px;border:0;border-radius:9px;background:transparent;color:var(--mute);font:600 13px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .modeseg button[aria-pressed="true"]{background:linear-gradient(135deg,var(--accent2),var(--accent));color:var(--accent-ink)}
@@ -288,7 +294,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <canvas id="gl" aria-label="Splat preview. Left-drag to look around, W A S D to fly, right-drag to slide, double-click to fly to a spot."></canvas>
     <div class="top">
       <button class="ico" id="back" type="button" aria-label="Back to projects"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <div class="modeseg" id="modeSeg" role="group" aria-label="Mode"><button type="button" data-mode="edit" aria-pressed="true" title="Work on the scene: gizmos, grids and cameras are shown">Workspace</button><button type="button" data-mode="render" aria-pressed="false" title="Clean view: looks through the camera with no gizmos, grids or markers">Clean view</button></div>
+      <div class="vwwrap"><button type="button" class="vwbtn" id="vwBtn" aria-haspopup="true" aria-expanded="false">View <svg class="i" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="vwmenu" id="vwMenu" role="menu" hidden></div></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
       <div class="pname" id="pname"></div>
       <button class="ico" id="tlBtn" type="button" aria-label="Timeline" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 4l2 2-2 2M15 10l2 2-2 2M11 16l2 2-2 2"/></svg></button>
@@ -370,7 +377,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 040";
+var VERSION="Version 041";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1277,6 +1284,9 @@ function orthonorm(m){
   var c2=[c0[1]*c1[2]-c0[2]*c1[1],c0[2]*c1[0]-c0[0]*c1[2],c0[0]*c1[1]-c0[1]*c1[0]];
   return [c0[0],c1[0],c2[0],c0[1],c1[1],c2[1],c0[2],c1[2],c2[2]];
 }
+/* V040 viewport options: what is drawn on top of the picture. Saved on this computer, not in projects. */
+var VO={gizmos:true,grids:true,markers:true};
+try{var _vo=JSON.parse(localStorage.getItem("sb.vo")||"{}");["gizmos","grids","markers"].forEach(function(k){if(typeof _vo[k]==="boolean")VO[k]=_vo[k]})}catch(_){}
 var KEYS={},LASTM=null,focusA=null,oriT=0,GUIHID=false;
 function pitchOf(){return Math.asin(clamp(mv(Rm,[0,0,1])[1],-1,1))}
 function rawTurn(ay,ap){
@@ -1411,10 +1421,11 @@ function drawScene(ao){
   var vs=viewNow(ao,w,h),vA=vs.vA,tyv=vs.tyv,dist=vs.dist,eye=vs.eye,Vm=vs.V,Pm=persp(2*Math.atan(tyv),vA,0.01,500);lastTyv=tyv;
   var kk=cv.width/Math.max(1,cv.clientWidth);
   LASTM={V:Vm,P:Pm,vx:vx,vy:vy,vw:w,vh:h,k:kk,tyv:tyv,vA:vA,dist:dist,eye:eye};
-  if(MODE==="edit")drawHelpers(Vm,Pm);
-  var fpt=null,cc=MODE==="render"?curCam():null;
+  if(MODE==="edit"&&VO.grids)drawHelpers(Vm,Pm);
+  var fpt=null,cc=(MODE==="render"||THRU)?curCam():null;
   if(cc)fpt=camFocusPt(cc);else if(scene.bb){var bb=scene.bb;fpt=[(bb.x0+bb.x1)/2,(bb.y0+bb.y1)/2,(bb.z0+bb.z1)/2]}
   var dRef=fpt?Math.max(0.15,-(Vm[2]*fpt[0]+Vm[6]*fpt[1]+Vm[10]*fpt[2]+Vm[14])):dist;
+  LASTM.dRef=dRef;
   if(GL2){if(!DEPTHP)drawMeshes(Vm,Pm,eye);drawSplats(Vm,Pm,w,h,tyv,dRef,bg,true,eye)}
   endPost();
 }
@@ -1523,7 +1534,7 @@ function setFocusPick(on){FOCUSPICK=!!on;cv.style.cursor=on?"crosshair":"";if(cu
 function focusFromDepth(d,dist){return clamp((d-(dist-1.1))/2.2,0,1)}
 function pickFocusAt(cx,cy){
   var pt=pickAt(cx,cy),L=LASTM;if(!pt||!L){setStatus("Nothing there to focus on. Click on the splat.","warn");return false}
-  var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=focusFromDepth(d,L.dist);
+  var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=focusFromDepth(d,L.dRef||L.dist);
   setK("focus",+f.toFixed(3));syncControls();return true;
 }
 cv.addEventListener("pointerdown",function(e){
@@ -1558,7 +1569,7 @@ function boxCorners(o){
 }
 function distSeg(px,py,ax,ay,bx,by){var dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l)):0;return Math.hypot(px-(ax+t*dx),py-(ay+t*dy))}
 function gzGeo(){
-  var o=SEL;if(!o||!o.vis||o.locked||!LASTM)return null;if(!(MODE==="edit"||(MODE==="render"&&isCam(o)&&!THRU)))return null;
+  var o=SEL;if(!o||!o.vis||o.locked||!LASTM||!VO.gizmos)return null;if(!(MODE==="edit"||(MODE==="render"&&isCam(o)&&!THRU)))return null;
   var wp=worldOf(o),pc=projW(wp);if(!pc)return null;
   var wpp=2*LASTM.tyv*pc[2]/Math.max(1,LASTM.vh/LASTM.k),g={c:pc,wp:wp,wpp:wpp,arm:ARM*wpp,ends:[],rings:[]},i,t;
   for(i=0;i<3;i++){g.ends.push(projW([wp[0]+AXV[i][0]*g.arm,wp[1]+AXV[i][1]*g.arm,wp[2]+AXV[i][2]*g.arm]))}
@@ -1597,7 +1608,8 @@ function drawOverlay(){
   c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,cw,ch);
   if(!GUIHID&&MODE==="edit"&&curTool==="select")drawSelOverlay(c);
   if(GUIHID||!LASTM)return;
-  drawCamMarks(c);drawLightMarks(c);
+  if(VO.markers){drawCamMarks(c);drawLightMarks(c)}
+  if(!VO.gizmos)return;
   if(MODE==="render"){if(!(SEL&&isCam(SEL)&&!THRU))return}
   else if(MODE!=="edit")return;
   var ACC="#ff7849";
@@ -1957,7 +1969,7 @@ var PANES={
         '<div class="row2"><button class="btn small" type="button" data-act="oFocus">Focus view</button><button class="btn small" type="button" data-act="oReset">Reset transform</button></div>'+
         '<button class="btn small" type="button" data-act="oDel">Delete this object</button>';
     }else if(geo.length)h+='<p class="note">Tap an object in the list, or in the view, to select it. Then drag the gizmo in the view, or type exact values.</p>';
-    h+='<p class="keys"><b>G</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
+    h+='<p class="keys"><b>G</b> show or hide gizmos · <b>W</b> move · <b>V</b> rotate · <b>B</b> scale · <b>Delete</b> remove · <b>O</b> open this panel</p>';
     return h;
   },
   ofx:function(){
@@ -2336,7 +2348,8 @@ document.addEventListener("keydown",function(e){
   var t=e.target&&e.target.tagName;if(t==="INPUT"||t==="TEXTAREA"||t==="SELECT")return;
   if($("editor").hidden||e.ctrlKey||e.metaKey||e.altKey||!cur||MODE!=="edit")return;
   var c=e.code;
-  if(c==="KeyG"){GM="move";syncObjFields();dirty=true}
+  if(c==="KeyG"){e.preventDefault();setVO("gizmos",!VO.gizmos)}
+  else if(c==="KeyW"){GM="move";syncObjFields();dirty=true}
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
   else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
@@ -2488,7 +2501,21 @@ function setMode(m){
   if(SEL&&m==="render"&&isGeo(SEL))SEL=null;
   applyRail();syncModeUI();buildHelpers();regrade();dirty=true;
 }
-$("modeSeg").addEventListener("click",function(e){var b=e.target.closest("button");if(b)setMode(b.dataset.mode)});
+function setVO(k,v){VO[k]=!!v;try{localStorage.setItem("sb.vo",JSON.stringify(VO))}catch(_){}if(k==="gizmos"){GH=null;GD=null}dirty=true;vwDraw()}
+function vwItems(){return [
+  ["gizmos","Gizmos and selection boxes","G",VO.gizmos,function(){setVO("gizmos",!VO.gizmos)}],
+  ["grids","Grids and axes","",VO.grids,function(){setVO("grids",!VO.grids)}],
+  ["markers","Camera and light markers","",VO.markers,function(){setVO("markers",!VO.markers)}],
+  ["fast","Fast preview (skips the heavy effects)","",!!S.fast,function(){setK("fast",!S.fast);syncControls()}],
+  ["thru","Look through the camera","",!!THRU,function(){if(THRU)leaveThru();else{var c=curCam();if(c)enterThru(c)}dirty=true;camUI()},!cams().length],
+  ["gui","Hide all menus","H",GUIHID,function(){setGui(!GUIHID)}]]}
+function vwDraw(){
+  var m=$("vwMenu");if(!m||m.hidden)return;
+  m.innerHTML=vwItems().map(function(it){return '<button type="button" role="menuitemcheckbox" aria-checked="'+it[3]+'" data-vw="'+it[0]+'"'+(it[5]?' disabled':'')+'><span class="tick">'+(it[3]?"\u2713":"")+'</span>'+it[1]+'<span class="kbd">'+it[2]+'</span></button>'}).join("");
+}
+$("vwBtn").addEventListener("click",function(e){e.stopPropagation();var m=$("vwMenu");m.hidden=!m.hidden;$("vwBtn").setAttribute("aria-expanded",String(!m.hidden));vwDraw()});
+$("vwMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-vw]");if(!b)return;vwItems().forEach(function(it){if(it[0]===b.dataset.vw&&!it[5])it[4]()});vwDraw()});
+document.addEventListener("click",function(){var m=$("vwMenu");if(m&&!m.hidden){m.hidden=true;$("vwBtn").setAttribute("aria-expanded","false")}});
 /* when a tool about objects opens, pick the object it is about if there is only one */
 function autoSel(id){
   var want=id==="light"?isLight:id==="camera"?isCam:(id==="crop"||id==="orient"||id==="select")?function(o){return o.kind==="splat"}:isGeo;
