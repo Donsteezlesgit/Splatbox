@@ -1,5 +1,7 @@
 # How Splatbox is released
 
+**Quick way: `./ship.sh`** (checks, bumps, tests, copies to root, commits, pushes, verifies the deploy and the live version). Header of that file has the usage; `./ship.sh --check 048` is a safe dry run. The steps below are what it automates.
+
 **Source of truth:** `app/index.html` and `app/sw.js`. Never edit the root or `beta/` copies by hand.
 - Root = stable (the normal link).
 - `beta/` = test copy at `/beta/`, with its own project storage.
