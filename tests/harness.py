@@ -63,11 +63,21 @@ async def run_all(tests,only=None):
     site=Site(); fx=make(); allres=[]
     async with async_playwright() as p:
         br=await p.chromium.launch(args=ARGS)
+        # Every page a suite opens is closed when that suite ends. Left open, hundreds of software-rendered pages pile up
+        # and make later suites several times slower (and flakier).
+        OPEN=[]; _nc=br.new_context
+        async def _tracked(*a,**k):
+            c=await _nc(*a,**k); OPEN.append(c); return c
+        br.new_context=_tracked
         for name,fn in tests:
             if only and only not in name: continue
             t0=time.time()
             try: res=await fn(br,site,fx)
             except Exception as e: res=[(name+": crashed",False,repr(e)[:300])]
+            while OPEN:
+                c=OPEN.pop()
+                try: await c.close()
+                except Exception: pass
             print(f"\n== {name} ({time.time()-t0:.0f}s)")
             for n,ok,d in res: print(("  PASS " if ok else "  FAIL ")+n+(("  -> "+d) if (d and not ok) or (d and len(d)<80) else ""))
             allres+=res
