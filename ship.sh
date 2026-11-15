@@ -2,7 +2,7 @@
 # Ship a Splatbox version in one go. Only run the real thing when Max says so.
 #
 #   ./ship.sh --check 048                                 dry run: checks everything, changes and pushes nothing
-#   ./ship.sh 048 "short message" --tests full           real release, full test run (about 25 min: run it with nohup)
+#   ./ship.sh 048 "short message" --tests full           real release, full test run (about 14 min: run it with nohup)
 #   ./ship.sh 048 "short message" --tests "dock tl2"      only suites whose names contain those words
 #   ./ship.sh 048 "short message" --tests area:timeline   suites for an area in tools/areas.txt
 #   ./ship.sh 048 "short message" --tests skip            no tests. Says so in the commit message. Use rarely.
@@ -56,6 +56,8 @@ case "$TESTS" in
   area:*) a="${TESTS#area:}"; SUITES=$(grep -E "^$a[[:space:]]" tools/areas.txt | sed -E "s/^[^[:space:]]+[[:space:]]+//"); [ -n "$SUITES" ] || die "no area '$a' in tools/areas.txt";;
   *) SUITES="$TESTS";;
 esac
+# the look check is cheap (about 15 s) and catches what the others can't: always run it unless the whole suite or nothing runs
+if [ "$FULL" = 0 ] && [ "$TESTS" != skip ] && [ -n "$TESTS" ]; then case " $SUITES " in *" visual "*) ;; *) SUITES="$SUITES visual";; esac; fi
 if [ -n "$SUITES" ]; then
   for s in $SUITES; do grep -q "(\"$s\"" tests/run.py || die "no test suite named '$s' (see TESTS in tests/run.py)"; done
   ok "suites: $SUITES"

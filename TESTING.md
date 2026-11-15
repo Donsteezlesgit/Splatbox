@@ -13,3 +13,6 @@ Open the beta link. You should see an amber BETA badge.
 10. Anything slow, glitchy or odd? Tell me what you did just before.
 
 All good? Say "promote".
+
+## Look check (tests/visual.py)
+Saved-image comparison + layout checks. `python3 tests/run.py visual`. A pass means "looks the same as the saved images", not "looks good": a new look still needs eyes on it, then `--update`. Baselines are only valid in this sandbox. Details in CLAUDE.md.

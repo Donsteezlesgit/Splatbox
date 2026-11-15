@@ -1,9 +1,9 @@
 # area -> test suites (names for: python3 tests/run.py <name>). Pick the areas you touched; run `full` before a release.
 # Every suite name is a substring match, so keep them exact.
-look-and-css      dock core viewmenu layout hideall
+look-and-css      dock core viewmenu layout hideall visual
 viewport-controls camera stuck select
-lighting-gizmos   v046 objfx camera
-timeline          timeline tl2 dock curves autokey
+lighting-gizmos   v046 objfx camera visual
+timeline          timeline tl2 dock curves autokey visual
 save-folder-inbox roundtrip folder backup inbox presets
 render-export     render td spz fx
 scan-photo        photo scan sortworker overlap

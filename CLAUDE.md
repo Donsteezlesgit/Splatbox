@@ -20,11 +20,12 @@ Splatbox is Max's Gaussian-splat viewer/editor. One file, `app/index.html` (abou
 - Adding anything new (settings, object kinds, saved state): follow the checklist in `RELEASING.md`. `tests/test_roundtrip.py` fails until you do.
 
 ## Testing
-- `python3 tests/run.py <name>` runs suites whose name contains `<name>`; no name = all (about 25 min, too long for one foreground call: run with `nohup ... > /tmp/full.log &` and poll). Node test: `node tests/inbox_queue.js`.
+- `python3 tests/run.py <name>` runs suites whose name contains `<name>`; no name = all (about 14 min, 628 checks; too long for one foreground call: run with `nohup ... > /tmp/full.log &` and poll). Node test: `node tests/inbox_queue.js`.
 - Pick suites by area from `tools/areas.txt` (e.g. look-and-css, timeline, save-folder-inbox). Run `full` before a release.
 - The harness serves a copy of `app/index.html` with a hook inserted before the **last** `})();`. Anything you append must stay INSIDE that final wrapper, or tests can't see app functions.
 - Tests run on a software GPU: no judgement on feel, touch or speed.
-- Known timing flakes under load (pass when run alone): overlap, backup, presets, sortworker, autokey, dof, Play-from-end, v046. Re-run alone before calling them real; say which you did.
+- Each suite's browser pages are now closed when it ends (harness.py). That cut the full run from 37 to 13 min and removed the load flakes (7 failures to 0). If a test fails only in the full run, re-run that suite alone before calling it real; say which you did.
+- **Look check:** `python3 tests/run.py visual` (about 15 s). Compares home, editor+light, editor+timeline and phone light sheet with saved images in `tests/baselines/`, and checks layout (toolbar rows not wrapped, buttons on screen, no sideways scroll). Renders here are identical run to run, so any change over 0.02% of pixels fails; diff images go to `/tmp/visual_fail/`. Changed the look on purpose? Look at the new screenshots first, then `python3 tests/run.py visual --update` and commit the PNGs. Baselines only hold in this sandbox (fonts, software GPU). `ship.sh` runs it on every release that runs tests.
 - Screenshots: `python3 tools/shot.py` (desktop) and `tools/shot_phone.py`; PNGs land in `/tmp/shots/`; view with Read. Do this for any visual change.
 
 ## Shipping (use `./ship.sh`, see its header)
