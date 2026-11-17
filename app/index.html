@@ -403,6 +403,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .busy{place-items:end start;padding:0 14px calc(34px + var(--safe-b))}
 .busy span{padding:6px 10px;border-radius:8px;font-size:12px}
 .busy.on ~ .toast{bottom:calc(72px + var(--safe-b))}
+#gmBtn kbd{margin-left:7px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font:500 10px var(--font-mono,monospace);color:var(--mute)}
+@media (max-width:759px){#gmBtn kbd{display:none}}
 @media (max-width:759px){.toast{top:56px;bottom:auto}.busy{place-items:start;padding:56px 14px 0}.busy.on ~ .toast{top:98px;bottom:auto}}
 </style>
 </head>
@@ -433,6 +435,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="vwwrap"><button type="button" class="vwbtn" id="vwBtn" aria-haspopup="true" aria-expanded="false">View <svg class="i" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="vwmenu" id="vwMenu" role="menu" hidden></div></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
+      <button class="vwbtn" id="gmBtn" type="button" hidden><span id="gmT">Move</span><kbd>T</kbd></button>
       <div class="pname" id="pname"></div>
       <button class="ico" id="tlBtn" type="button" aria-label="Timeline" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 4l2 2-2 2M15 10l2 2-2 2M11 16l2 2-2 2"/></svg></button>
       <button class="ico" id="saveBtn" type="button" aria-label="Save project (Ctrl+S)"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/></svg></button>
@@ -538,6 +541,20 @@ function setStatus(msg,kind){
   t.textContent=msg;t.className="toast "+(kind||"");t.hidden=false;
   var ms=Math.min(12000,(kind==="bad"?6000:3000)+Math.max(0,msg.length-60)*30);
   toastT=setTimeout(function(){t.classList.add("fade");toastF=setTimeout(function(){t.hidden=true},260)},ms);
+}
+/* V048: one button and one key (T) step the gizmo Move > Rotate > Scale. Scale is skipped for cameras and lights. */
+var GMN={move:"Move",rotate:"Rotate",ring:"Rotate",scale:"Scale"},gmSig="";
+function gmCycle(){
+  if(!SEL)return;
+  var order=isGeo(SEL)?["move","rotate","scale"]:["move","rotate"],i=order.indexOf(GM==="ring"?"rotate":GM);
+  GM=order[(i+1)%order.length];syncObjFields();dirty=true;gmSync();
+}
+function gmSync(){
+  var b=$("gmBtn");if(!b)return;
+  var show=!!SEL&&MODE==="edit",sig=(show?GM:"-");if(sig===gmSig)return;gmSig=sig;
+  b.hidden=!show;if(!show)return;
+  $("gmT").textContent=GMN[GM]||"Move";
+  b.setAttribute("aria-label","Gizmo: "+(GMN[GM]||"Move")+". Click for the next one (T)");
 }
 function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
 function busy(on,msg){$("busy").classList.toggle("on",!!on);if(msg)$("busyT").textContent=msg}
@@ -1618,6 +1635,7 @@ function loop(t){
   if(t-OUTL_T>180){OUTL_T=t;try{renderOutl()}catch(_){}}
   requestAnimationFrame(loop);
   if($("editor").hidden||RJ)return;
+  gmSync();
   stepKeys(t);
   if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
@@ -2544,7 +2562,7 @@ document.addEventListener("keydown",function(e){
   var c=e.code;
   if(c==="KeyG"){e.preventDefault();if(MODE!=="edit")setMode("edit");setVO("gizmos",!VO.gizmos);return}
   if(MODE!=="edit")return;
-  if(c==="KeyW"){GM="move";syncObjFields();dirty=true}
+  if(c==="KeyT"){gmCycle()}
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
   else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
@@ -5526,6 +5544,7 @@ var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the se
 })();
 /* ---------- start ---------- */
 $("toast").addEventListener("click",function(){setStatus("")});
+$("gmBtn").addEventListener("click",function(){gmCycle()});
 if(!gl||!GL2){
   document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';
 }else{
