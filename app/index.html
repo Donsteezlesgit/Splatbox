@@ -2142,6 +2142,17 @@ var rail=$("rail");
 /* V040: five groups. Each opens one panel with fold-open sections. */
 var GROUPS=[["object","Object",["add","objects","ofx","crop","select","orient"],ICON.objects],["scene","Scene",["light","fx","display"],ICON.light],["camera","Camera",["camera","dof"],ICON.camera],["image","Image",["colour","look","lens"],ICON.colour],["output","Output",["capture","file","hist"],ICON.capture]];
 var curGroup=null,LASTSEC={};
+/* V048: remember the open menu, which section is open in each menu, and whether the timeline is open, between visits (the panel and timeline sizes were already remembered). Phones only remember the section, so the sheet doesn't cover the view on launch. */
+var UI={quiet:0,done:false,g:null,tl:0};
+(function(){try{var u=JSON.parse(localStorage.getItem("sb.ui")||"{}");if(!u||typeof u!=="object")return;UI.g=typeof u.g==="string"?u.g:null;UI.tl=u.tl?1:0;
+  if(u.ls&&typeof u.ls==="object")GROUPS.forEach(function(g){var v=u.ls[g[0]];if(v===null||(typeof v==="string"&&g[2].indexOf(v)>=0))LASTSEC[g[0]]=v})}catch(_){}})();
+function uiSave(){if(UI.quiet)return;try{localStorage.setItem("sb.ui",JSON.stringify({g:curGroup,ls:LASTSEC,tl:(typeof TLU==="object"&&TLU.open)?1:0}))}catch(_){}}
+function uiRestore(){
+  if(UI.done)return;UI.done=true;
+  if(!wideDock())return;
+  if(UI.g&&UI.g!=="scene"&&groupOf(UI.g)){var ls=LASTSEC[UI.g];openTool(typeof ls==="string"?ls:UI.g)}
+  if(UI.tl&&typeof TLU==="object"&&!TLU.open)tlDockOpen(true);
+}
 GROUPS.forEach(function(g){
   var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=g[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",g[1]);b.title=g[1];
   b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+g[3]+'</svg><span>'+g[1]+'</span>';
@@ -2781,13 +2792,13 @@ function openTool(id,keep){
   if(q){$("psearch").value=q}
   syncControls();if(sec&&OBJTOOL[sec])syncObjFields();if(sec==="select")syncSel();
   if(keepScroll)$("popB").scrollTop=keepScroll;
-  dirty=true;
+  dirty=true;uiSave();
 }
 function closeTool(){
   if(FOCUSPICK){FOCUSPICK=false;cv.style.cursor=""}
   if(!curTool&&!curGroup)return;curTool=null;curGroup=null;$("pop").hidden=true;dirty=true;
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed","false")});
-  dockKeep();
+  uiSave();dockKeep();
 }
 /* on a wide screen the right side is always split: settings on top, Objects below. Closing a menu falls back to the Scene menu */
 function wideDock(){return !!(window.matchMedia&&matchMedia("(min-width:760px)").matches)}
@@ -3654,7 +3665,7 @@ function tlSetMode(m){
   TLU.mode=m;var a=document.querySelectorAll("[data-tla=mode]"),i;for(i=0;i<a.length;i++)a[i].setAttribute("aria-pressed",String(a[i].dataset.m===m));tlDockDraw();
 }
 function tlDockOpen(on){
-  TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("spTl").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
+  TLU.open=on===undefined?!TLU.open:!!on;uiSave();$("tld").hidden=!TLU.open;$("spTl").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
   if(TLU.open){tlFit();tlLoopUI();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
 }
 function tlAddOpts(){
@@ -4473,7 +4484,8 @@ function openSpace(p){
   $("pname").textContent=p.name;
   newScene();resetView();anim=null;PF.lutKey="";TLU.sel=[];if($("tlDur"))$("tlDur").value=S.dur||6;if(TLU.open)tlFit();
   if(p.view&&p.view.R&&p.view.TG){Rm=p.view.R.slice();TG=p.view.TG.slice();zoom=p.view.zoom||1}
-  showEditor();closeTool();dockKeep();applyRail();syncModeUI();applyLook();dirty=true;
+  UI.quiet=1;try{showEditor();closeTool();dockKeep();uiRestore()}finally{UI.quiet=0}
+  applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");
   return loadObjs(p.objs).then(function(){
     busy(false);refreshSpace();regrade();dirty=true;
