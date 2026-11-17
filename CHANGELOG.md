@@ -1,6 +1,16 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 048
+- Messages are small and sit in the bottom-left corner (top-left on a phone). They fade after a few seconds, click to dismiss. Messages now also show on the Home screen, where they never appeared before.
+- Gizmo: a Move / Rotate / Scale button next to the camera button, and the T key cycles the same way. V (rotate) and B (scale) still work. W is now only for flying the view.
+- Save indicator: a small dot on the save button shows waiting, saving, or a problem. If the project folder disconnects, a warning bar appears with a Reconnect button.
+- Deleting a project from Home now happens at once with an Undo button for a few seconds, instead of a confirm box.
+- Splatbox remembers the menu and section you had open, and the timeline, and opens them again next time.
+- Press / to jump to the settings search. Number boxes accept simple maths (2+3, 50x2, 10/4). Double-click an object slider (camera lens, focus distance, light, crop) to put it back to its default.
+- Tiny buttons have bigger invisible hit areas. Keyboard focus is always visible.
+- New Aa button on Home (and in the View menu): Calm motion (no animations or view glide), Larger text in menus, Easier-to-read font. Saved on this device.
+
 ## Version 047
 - New look. Warm graphite with a verdigris accent; amber is only for keyframes and lights. Inter for the interface, JetBrains Mono for numbers. Flat controls, no gradients or glow, tighter rows.
 - Desktop: a solid top bar, a slim icon rail (names show on hover), thin sliders with a filled track and a typed value box, and a flatter Objects window.
