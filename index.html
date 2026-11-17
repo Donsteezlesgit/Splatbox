@@ -397,13 +397,47 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 }
 #tip{background:var(--raise2);border-radius:6px}
 #dropHint{background:#0e0f10e6}
+/* V048: messages sit small in the bottom-left corner; the Working spinner joins them (the render box stays centred) */
+.toast{top:auto;left:14px;bottom:calc(34px + var(--safe-b));transform:none;max-width:min(340px,calc(100% - 28px));padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.35;text-align:left;pointer-events:auto;cursor:pointer;transition:opacity .25s}
+.toast.fade{opacity:0}
+#toastH{position:fixed;top:auto;left:14px;bottom:calc(14px + var(--safe-b));z-index:60}
+.toast .tact{margin-left:10px;padding:0 2px;border:0;background:none;color:var(--accent);font:600 12px var(--font-ui);text-decoration:underline;cursor:pointer}
+.busy{place-items:end start;padding:0 14px calc(34px + var(--safe-b))}
+.busy span{padding:6px 10px;border-radius:8px;font-size:12px}
+.busy.on ~ .toast{bottom:calc(72px + var(--safe-b))}
+.fwarn{position:absolute;top:calc(56px + var(--safe-t));left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:5px 6px 5px 12px;border-radius:8px;background:#0b0d10f2;border:1px solid var(--warn);color:var(--warn);font-size:12px;max-width:calc(100% - 28px);z-index:5}
+.fwarn[hidden]{display:none}
+#saveBtn{position:relative}
+#saveBtn::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;box-sizing:border-box;pointer-events:none}
+#saveBtn[data-sv=pending]::after{border:2px solid var(--warn)}
+#saveBtn[data-sv=saving]::after{background:var(--accent)}
+#saveBtn[data-sv=error]::after{background:var(--bad)}
+#saveBtn[data-sv=folder]::after{background:var(--bad);border-radius:2px}
+#gmBtn kbd{margin-left:7px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font:500 10px var(--font-mono,monospace);color:var(--mute)}
+@media (max-width:759px){#gmBtn kbd{display:none}}
+@media (max-width:759px){.toast{top:56px;bottom:auto}.busy{place-items:start;padding:56px 14px 0}.busy.on ~ .toast{top:98px;bottom:auto}}
+/* V048: bigger invisible hit areas on tiny buttons (looks the same, easier to hit) */
+.kd,.orw button,.top .ico,.sl .ovx,.toast .tact{position:relative}
+.kd::after,.orw button::after,.sl .ovx::after,.toast .tact::after,.top .ico::before{content:"";position:absolute;inset:-5px}
+/* V048: keyboard focus is always visible */
+button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,[tabindex]:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sl input.nb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* V048: reading and motion options (device-wide, saved in sb.ax) */
+.hbar .aa{font:700 13px var(--font-ui);letter-spacing:0}
+@media (max-width:759px){.hbar .ico span{display:none}html.ax-big .hbar{zoom:1}}
+.axmenu{left:auto;right:0}
+html.ax-calm *,html.ax-calm *::before,html.ax-calm *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html.ax-big #popB,html.ax-big #popT,html.ax-big .hbar,html.ax-big .hscroll,html.ax-big #vwMenu,html.ax-big #axMenu,html.ax-big .toast{zoom:1.18}
+html.ax-dys{--font-ui:"Atkinson Hyperlegible","OpenDyslexic",Verdana,"Trebuchet MS",Tahoma,sans-serif}
+html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 </style>
 </head>
 <body>
 <div id="home">
   <div class="hbar">
     <div class="word"><i></i>Splatbox</div>
-    <span class="hbtns"><button class="ico" id="homeBackup" type="button" aria-label="Back up all projects"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+    <span class="hbtns"><span class="vwwrap"><button class="ico" id="homeAx" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Reading and motion options"><b class="aa" aria-hidden="true">Aa</b></button><div class="vwmenu axmenu" id="axMenu" role="menu" hidden></div></span>
+    <button class="ico" id="homeBackup" type="button" aria-label="Back up all projects"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
     <button class="ico" id="homeImport" type="button" aria-label="Import a backup file"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
     <button class="ico" id="homeNew" type="button" aria-label="New project"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New project</span></button></span>
   </div>
@@ -417,6 +451,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
 </div>
 
+<div class="toast" id="toastH" hidden role="status" aria-live="polite"></div>
 <div id="editor" hidden>
   <div class="stagecol" id="stagecol">
   <section class="stage" id="stage" aria-label="3D splat viewport">
@@ -426,6 +461,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
       <div class="vwwrap"><button type="button" class="vwbtn" id="vwBtn" aria-haspopup="true" aria-expanded="false">View <svg class="i" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="vwmenu" id="vwMenu" role="menu" hidden></div></div>
       <button class="camBtn" id="camBtn" type="button" hidden aria-pressed="false"></button>
+      <button class="vwbtn" id="gmBtn" type="button" hidden><span id="gmT">Move</span><kbd>T</kbd></button>
       <div class="pname" id="pname"></div>
       <button class="ico" id="tlBtn" type="button" aria-label="Timeline" aria-pressed="false"><svg class="i" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/><path d="M8 4l2 2-2 2M15 10l2 2-2 2M11 16l2 2-2 2"/></svg></button>
       <button class="ico" id="saveBtn" type="button" aria-label="Save project (Ctrl+S)"><svg class="i" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/></svg></button>
@@ -436,6 +472,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div id="dropHint" hidden>Drop a .ply, .spz or 3D model to add it</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+    <div class="fwarn" id="folderWarn" hidden role="alert"><span>Project folder disconnected. Changes are kept in this browser.</span><button class="btn small" type="button" id="fwBtn">Reconnect</button></div>
     <div class="rjob" id="rjob" hidden><div class="rjc"><b id="rjT">Rendering…</b><div class="rbar"><i id="rjF"></i></div><button class="btn small" type="button" id="rjX">Cancel (Esc)</button></div></div>
     <div class="hud" id="hud"></div>
   </section>
@@ -506,7 +543,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 047";
+var VERSION="Version 048";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -523,12 +560,44 @@ var S=Object.assign({},DEF);
 /* ---------- state ---------- */
 var photoSrc=null, depthImg=null, photoName="example", cur=null, MODE="edit";
 var scene=null, zoom=1, TG=[0,0,0], vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
-var toastT=0;
-function setStatus(msg,kind){
-  var t=$("toast");clearTimeout(toastT);
+var toastT=0,toastF=0;
+/* V048: quiet corner message. About 3 s (errors about 6 s), longer text stays a little longer, click it to dismiss. */
+function setStatus(msg,kind,act){
+  /* the editor has its own message box (over the viewport); on the Home screen the editor is hidden, so Home has one too. act = {label,fn} adds a button (Undo) and keeps the message up for 8 s. */
+  var t=$("editor").hidden?$("toastH"):$("toast"),o=t.id==="toast"?$("toastH"):$("toast");
+  clearTimeout(toastT);clearTimeout(toastF);o.hidden=true;
   if(!msg){t.hidden=true;return}
-  t.textContent=msg;t.className="toast "+(kind||"");t.hidden=false;
-  toastT=setTimeout(function(){t.hidden=true},kind==="bad"?9000:4500);
+  t.textContent="";t.appendChild(document.createTextNode(msg));
+  if(act){var ab=document.createElement("button");ab.type="button";ab.className="tact";ab.textContent=act.label;ab.addEventListener("click",function(e){e.stopPropagation();setStatus("");act.fn()});t.appendChild(ab)}
+  t.className="toast "+(kind||"");t.hidden=false;
+  var ms=act?8000:Math.min(12000,(kind==="bad"?6000:3000)+Math.max(0,msg.length-60)*30);
+  toastT=setTimeout(function(){t.classList.add("fade");toastF=setTimeout(function(){t.hidden=true},260)},ms);
+}
+/* V048: one button and one key (T) step the gizmo Move > Rotate > Scale. Scale is skipped for cameras and lights. */
+var GMN={move:"Move",rotate:"Rotate",ring:"Rotate",scale:"Scale"},gmSig="";
+function gmCycle(){
+  if(!SEL)return;
+  var order=isGeo(SEL)?["move","rotate","scale"]:["move","rotate"],i=order.indexOf(GM==="ring"?"rotate":GM);
+  GM=order[(i+1)%order.length];syncObjFields();dirty=true;gmSync();
+}
+function gmSync(){
+  var b=$("gmBtn");if(!b)return;
+  var show=!!SEL&&MODE==="edit",sig=(show?GM:"-");if(sig===gmSig)return;gmSig=sig;
+  b.hidden=!show;if(!show)return;
+  $("gmT").textContent=GMN[GM]||"Move";
+  b.setAttribute("aria-label","Gizmo: "+(GMN[GM]||"Move")+". Click for the next one (T)");
+}
+/* V048: the save button shows where the project stands (unsaved, saving, saved, couldn't save, folder disconnected),
+   and a banner with a Reconnect button stays up while the project folder is disconnected. */
+var SV="saved",fwSig="",SVL={saved:"Saved",pending:"Unsaved changes, saving soon",saving:"Saving",error:"Couldn't save this project",folder:"Project folder disconnected, changes are kept in this browser"};
+function svSet(st){
+  if(st==="saved"&&FOLD.lapsed&&FOLD.h&&!FOLD.ok)st="folder";
+  SV=st;var b=$("saveBtn");if(!b)return;b.dataset.sv=st;b.setAttribute("aria-label",SVL[st]+" (Ctrl+S)");
+}
+function fwSync(){
+  var lapsed=!!(FOLD.lapsed&&FOLD.h&&!FOLD.ok);if(String(lapsed)===fwSig)return;fwSig=String(lapsed);
+  $("folderWarn").hidden=!lapsed;
+  if(lapsed)svSet("folder");else if(SV==="folder")svSet("saved");
 }
 function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
 function busy(on,msg){$("busy").classList.toggle("on",!!on);if(msg)$("busyT").textContent=msg}
@@ -1609,11 +1678,12 @@ function loop(t){
   if(t-OUTL_T>180){OUTL_T=t;try{renderOutl()}catch(_){}}
   requestAnimationFrame(loop);
   if($("editor").hidden||RJ)return;
+  gmSync();fwSync();
   stepKeys(t);
   if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
     orbitBy(vyaw,vpitch);
-    vyaw*=0.9;vpitch*=0.9;if(Math.abs(vyaw)<0.0003)vyaw=0;if(Math.abs(vpitch)<0.0003)vpitch=0;dirty=true;
+    if(AX.calm){vyaw=vpitch=0}vyaw*=0.9;vpitch*=0.9;if(Math.abs(vyaw)<0.0003)vyaw=0;if(Math.abs(vpitch)<0.0003)vpitch=0;dirty=true;
   }
   if(anim){
     var u=(t-anim.t0)/1000/anim.dur;
@@ -1957,6 +2027,7 @@ document.addEventListener("keydown",function(e){
   if(e.metaKey||(e.ctrlKey&&!/^Numpad/.test(e.code)))return;
   var c=e.code,ids=GROUPS.map(function(x){return x[0]});
   if(c==="Escape"){if(!curTool&&SEL){SEL=null;dirty=true}else closeTool();return}
+  if(c==="Slash"&&!e.shiftKey&&!GUIHID){e.preventDefault();if($("pop").hidden||!$("psearch"))openTool(curGroup&&groupOf(curGroup)?curGroup:ids[0]);var ps=$("psearch");if(ps){ps.focus();ps.select()}return}
   var dm=/^Digit([1-9])$/.exec(c);
   if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curTool===id)closeTool();else openTool(id);return}
   if(c==="KeyR"||c==="Home"){resetView();return}
@@ -2033,7 +2104,7 @@ function exportPNG(){
   if(!scene||RJ)return;
   if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
   closeTool();var sz=rSize(),w=sz[0]&~1,h=sz[1]&~1,tp=!!S.ralpha;
-  if(tp&&!GL2){setStatus("Transparent images need WebGL 2, which this browser doesn't have.","bad");return}
+  if(tp&&!GL2){setStatus("Transparent needs WebGL 2, which this browser lacks.","bad");return}
   rFrame(w,h,tp).then(function(b){if(b){saveBlob(b,"splatbox-"+photoName+(tp?"-alpha":"")+".png");setStatus("Saved a "+w+"×"+h+" image"+(tp?" with a transparent background":"")+".","ok")}else setStatus("Couldn't make the image.","bad")},function(){setStatus("Couldn't make the image.","bad")});
 }
 var recorder=null,recChunks=[],recMime="";
@@ -2087,6 +2158,27 @@ var rail=$("rail");
 /* V040: five groups. Each opens one panel with fold-open sections. */
 var GROUPS=[["object","Object",["add","objects","ofx","crop","select","orient"],ICON.objects],["scene","Scene",["light","fx","display"],ICON.light],["camera","Camera",["camera","dof"],ICON.camera],["image","Image",["colour","look","lens"],ICON.colour],["output","Output",["capture","file","hist"],ICON.capture]];
 var curGroup=null,LASTSEC={};
+/* V048: remember the open menu, which section is open in each menu, and whether the timeline is open, between visits (the panel and timeline sizes were already remembered). Phones only remember the section, so the sheet doesn't cover the view on launch. */
+/* V048: reading and motion options, kept on this device (not in the project) */
+var AX={calm:0,big:0,dys:0};
+try{var axs=JSON.parse(localStorage.getItem("sb.ax")||"{}");["calm","big","dys"].forEach(function(k){if(axs[k]===1||axs[k]===true)AX[k]=1})}catch(_){}
+function axApply(){var c=document.documentElement.classList;c.toggle("ax-calm",!!AX.calm);c.toggle("ax-big",!!AX.big);c.toggle("ax-dys",!!AX.dys)}
+function axSet(k,v){AX[k]=v?1:0;try{localStorage.setItem("sb.ax",JSON.stringify(AX))}catch(_){}axApply();dirty=true}
+function axItems(){return [
+  ["ax_calm","Calm motion (no animations or glide)","",!!AX.calm,function(){axSet("calm",!AX.calm)}],
+  ["ax_big","Larger text in menus","",!!AX.big,function(){axSet("big",!AX.big)}],
+  ["ax_dys","Easier-to-read font","",!!AX.dys,function(){axSet("dys",!AX.dys)}]]}
+axApply();
+var UI={quiet:0,done:false,g:null,tl:0};
+(function(){try{var u=JSON.parse(localStorage.getItem("sb.ui")||"{}");if(!u||typeof u!=="object")return;UI.g=typeof u.g==="string"?u.g:null;UI.tl=u.tl?1:0;
+  if(u.ls&&typeof u.ls==="object")GROUPS.forEach(function(g){var v=u.ls[g[0]];if(v===null||(typeof v==="string"&&g[2].indexOf(v)>=0))LASTSEC[g[0]]=v})}catch(_){}})();
+function uiSave(){if(UI.quiet)return;try{localStorage.setItem("sb.ui",JSON.stringify({g:curGroup,ls:LASTSEC,tl:(typeof TLU==="object"&&TLU.open)?1:0}))}catch(_){}}
+function uiRestore(){
+  if(UI.done)return;UI.done=true;
+  if(!wideDock())return;
+  if(UI.g&&UI.g!=="scene"&&groupOf(UI.g)){var ls=LASTSEC[UI.g];openTool(typeof ls==="string"?ls:UI.g)}
+  if(UI.tl&&typeof TLU==="object"&&!TLU.open)tlDockOpen(true);
+}
 GROUPS.forEach(function(g){
   var b=document.createElement("button");b.type="button";b.className="tool";b.dataset.tool=g[0];b.setAttribute("aria-pressed","false");b.setAttribute("aria-label",g[1]);b.title=g[1];
   b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+g[3]+'</svg><span>'+g[1]+'</span>';
@@ -2330,7 +2422,7 @@ function autoLevelObj(o){
     var raw=parsePly(ab),uv=raw&&autoUp(raw);
     if(!uv)throw new Error("Couldn't find the ground in this one. Use Flip or the rotation boxes in Objects.");
     o.R=obMat(uv,[0,0,-1]);persistObjs();syncObjFields();dirty=true;
-    setStatus("Levelled using the ground in the splat. Use Flip if it's upside down.","ok");
+    setStatus("Levelled. Use Flip if it's upside down.","ok");
   }).catch(function(err){setStatus(err.message,"warn")});
 }
 function addSplatObj(raw,name,blob,rec){
@@ -2346,7 +2438,7 @@ function addLight(kind){
   if(kind==="sun"){o.R=rotFromTo([0,1,0],[0.42,0.78,0.46]);o.pos=[0,1,0];o.inten=1}
   else if(kind==="spot"){o.pos=[0.6,0.9,0.7];o.R=rotFromTo([0,1,0],[0.6,0.9,0.7]);o.inten=3}
   else{o.pos=[0.5,0.7,0.6];o.inten=2}
-  o.color="#ffffff";OBJS.push(o);if(S.lit<0.01){S.lit=0.6;setStatus("Turned on Light the splats so the light shows on your scan. Slide it back to 0 for the original look.","ok")}
+  o.color="#ffffff";OBJS.push(o);if(S.lit<0.01){S.lit=0.6;setStatus("Light the splats is on. Slide it to 0 for the original look.","ok")}
   SEL=o;persistObjs();refreshObjs();return o;
 }
 function loadObjs(list){
@@ -2478,6 +2570,8 @@ $("popB").addEventListener("click",function(e){
     redo:function(){var x=findObj(id);if(x){delete x.st;regradeSoon();dirty=true;persistObjs();okSync()}}});
   delete o.st;regradeSoon();dirty=true;persistObjs();okSync();
 });
+function oDef(k){var o=SEL;if(!o)return null;if(k==="cfov")return 50;if(k==="cfd")return 1.95;if(k==="linten")return o.kind==="sun"?1:o.kind==="spot"?3:2;if(k.indexOf("lx_")===0)return LXD[k.slice(3)];if(oIsCrop(k))return k[2]==="1"?1:0;return null}
+$("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.o&&SEL){var d=oDef(el.dataset.o);if(d!==null&&typeof d==="number"){el.value=d;objField(el)}}});
 $("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.ok&&SEL){okUndoStart(SEL,el.dataset.ok);ovClear(SEL,el.dataset.ok);okAfter(SEL,el.dataset.ok)}});
 function objField(el){
   var o=SEL;if(!o)return;var k=el.dataset.o,v=el.type==="checkbox"?el.checked:el.value,n;
@@ -2535,7 +2629,7 @@ document.addEventListener("keydown",function(e){
   var c=e.code;
   if(c==="KeyG"){e.preventDefault();if(MODE!=="edit")setMode("edit");setVO("gizmos",!VO.gizmos);return}
   if(MODE!=="edit")return;
-  if(c==="KeyW"){GM="move";syncObjFields();dirty=true}
+  if(c==="KeyT"){gmCycle()}
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
   else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
@@ -2694,13 +2788,17 @@ function vwItems(){return [
   ["markers","Camera and light markers","",VO.markers,function(){setVO("markers",!VO.markers)}],
   ["fast","Fast preview (skips the heavy effects)","",!!S.fast,function(){setK("fast",!S.fast);syncControls()}],
   ["thru","Look through the camera","",!!THRU,function(){if(THRU)leaveThru();else{var c=curCam();if(c)enterThru(c)}dirty=true;camUI()},!cams().length],
-  ["gui","Hide all menus","H",GUIHID,function(){setGui(!GUIHID)}]]}
+  ["gui","Hide all menus","H",GUIHID,function(){setGui(!GUIHID)}]].concat(axItems())}
 function vwDraw(){
   var m=$("vwMenu");if(!m||m.hidden)return;
   m.innerHTML=vwItems().map(function(it){return '<button type="button" role="menuitemcheckbox" aria-checked="'+it[3]+'" data-vw="'+it[0]+'"'+(it[5]?' disabled':'')+'><span class="tick">'+(it[3]?"\u2713":"")+'</span>'+it[1]+'<span class="kbd">'+it[2]+'</span></button>'}).join("");
 }
 $("vwBtn").addEventListener("click",function(e){e.stopPropagation();var m=$("vwMenu");m.hidden=!m.hidden;$("vwBtn").setAttribute("aria-expanded",String(!m.hidden));vwDraw()});
 $("vwMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-vw]");if(!b)return;vwItems().forEach(function(it){if(it[0]===b.dataset.vw&&!it[5])it[4]()});vwDraw()});
+function axDraw(){var m=$("axMenu");if(!m||m.hidden)return;m.innerHTML=axItems().map(function(it){return '<button type="button" role="menuitemcheckbox" aria-checked="'+it[3]+'" data-ax="'+it[0]+'"><span class="tick">'+(it[3]?"\u2713":"")+'</span>'+it[1]+'</button>'}).join("")}
+$("homeAx").addEventListener("click",function(e){e.stopPropagation();var m=$("axMenu");m.hidden=!m.hidden;$("homeAx").setAttribute("aria-expanded",String(!m.hidden));axDraw()});
+$("axMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-ax]");if(!b)return;axItems().forEach(function(it){if(it[0]===b.dataset.ax)it[4]()});axDraw()});
+document.addEventListener("click",function(){var m=$("axMenu");if(m&&!m.hidden){m.hidden=true;$("homeAx").setAttribute("aria-expanded","false")}});
 document.addEventListener("click",function(){var m=$("vwMenu");if(m&&!m.hidden){m.hidden=true;$("vwBtn").setAttribute("aria-expanded","false")}});
 /* when a tool about objects opens, pick the object it is about if there is only one */
 function autoSel(id){
@@ -2726,13 +2824,13 @@ function openTool(id,keep){
   if(q){$("psearch").value=q}
   syncControls();if(sec&&OBJTOOL[sec])syncObjFields();if(sec==="select")syncSel();
   if(keepScroll)$("popB").scrollTop=keepScroll;
-  dirty=true;
+  dirty=true;uiSave();
 }
 function closeTool(){
   if(FOCUSPICK){FOCUSPICK=false;cv.style.cursor=""}
   if(!curTool&&!curGroup)return;curTool=null;curGroup=null;$("pop").hidden=true;dirty=true;
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed","false")});
-  dockKeep();
+  uiSave();dockKeep();
 }
 /* on a wide screen the right side is always split: settings on top, Objects below. Closing a menu falls back to the Scene menu */
 function wideDock(){return !!(window.matchMedia&&matchMedia("(min-width:760px)").matches)}
@@ -2794,10 +2892,22 @@ function oPut(k,n){
   dirty=true;clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
   var rg=$("oo-"+k);if(rg)rg.value=oGet(k);
 }
+/* simple maths in a number box: + - * / ( ) and x or the multiply sign; no eval */
+function nbMath(t){
+  var s=String(t).replace(/[\u00d7x]/g,"*").replace(/\u00f7/g,"/").replace(/\s+/g,"");
+  if(!s||s.length>60||!/^[0-9.+\-*\/()eE]+$/.test(s))return NaN;
+  var i=0;
+  function num(){var m=/^(?:\d+\.?\d*|\.\d+)(?:[eE][+\-]?\d+)?/.exec(s.slice(i));if(!m)return NaN;i+=m[0].length;return parseFloat(m[0])}
+  function prim(){if(s[i]==="("){i++;var v=expr();if(s[i]!==")")return NaN;i++;return v}return num()}
+  function un(){if(s[i]==="-"){i++;return -un()}if(s[i]==="+"){i++;return un()}return prim()}
+  function term(){var v=un();while(s[i]==="*"||s[i]==="/"){var op=s[i++],r=un();v=op==="*"?v*r:v/r}return v}
+  function expr(){var v=term();while(s[i]==="+"||s[i]==="-"){var op=s[i++],r=term();v=op==="+"?v+r:v-r}return v}
+  var r=expr();return i===s.length&&isFinite(r)?r:NaN;
+}
 function nbParse(k,str,isO){
   var t=String(str).trim(),n;
   if((k==="fov"||k==="cfov")&&/mm\s*$/i.test(t)){var mm=parseFloat(t);if(!(mm>0))return NaN;return 2*Math.atan(12/mm)*180/Math.PI}
-  n=parseFloat(t.replace(/[^0-9eE.+\-]/g,""));if(!isFinite(n))return NaN;
+  n=nbMath(t);if(!isFinite(n))n=parseFloat(t.replace(/[^0-9eE.+\-]/g,""));if(!isFinite(n))return NaN;
   if(!isO&&FMT[k]&&FMT[k](1)==="100%")n/=100;
   return n;
 }
@@ -3599,7 +3709,7 @@ function tlSetMode(m){
   TLU.mode=m;var a=document.querySelectorAll("[data-tla=mode]"),i;for(i=0;i<a.length;i++)a[i].setAttribute("aria-pressed",String(a[i].dataset.m===m));tlDockDraw();
 }
 function tlDockOpen(on){
-  TLU.open=on===undefined?!TLU.open:!!on;$("tld").hidden=!TLU.open;$("spTl").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
+  TLU.open=on===undefined?!TLU.open:!!on;uiSave();$("tld").hidden=!TLU.open;$("spTl").hidden=!TLU.open;$("stage").classList.toggle("tlopen",TLU.open);$("tlBtn").setAttribute("aria-pressed",String(TLU.open));
   if(TLU.open){tlFit();tlLoopUI();setTimeout(function(){tlDockSize();tlAddOpts();tlDockDraw();dirty=true},0)}else dirty=true;
 }
 function tlAddOpts(){
@@ -3813,7 +3923,7 @@ function tlOpenMenu(row){
     else if(a==="mode")tlSetMode(el.dataset.m);
     else if(a==="ease")tlEaseSel(el.dataset.e,el.dataset.c);
     else if(a==="autosmooth")tlAutoSmooth();
-    else if(a==="add"){var id=$("tlAdd").value||TLU.row;if(id&&tlProp(id)){if(THRU&&tlProp(id).obj===ACAM)camFromView(ACAM);tlKey(id,TL.t);TLU.row=id;$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Click a row in the list, or pick a track, then press Key it.","warn")}
+    else if(a==="add"){var id=$("tlAdd").value||TLU.row;if(id&&tlProp(id)){if(THRU&&tlProp(id).obj===ACAM)camFromView(ACAM);tlKey(id,TL.t);TLU.row=id;$("tlAdd").value="";tlAddOpts();tlDockDraw()}else setStatus("Pick a row or track, then press Key it.","warn")}
   });
   $("tlAdd").addEventListener("mousedown",tlAddOpts);$("tlAdd").addEventListener("focus",tlAddOpts);
   $("tlDur").addEventListener("change",function(){tlSetDur(+this.value,$("tlFit2").checked)});
@@ -3886,9 +3996,9 @@ function renderSeq(o){
   if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
   stopAnim();closeTool();
   var sz=o.w?[o.w,o.h]:rSize(),w=sz[0]&~1,h=sz[1]&~1,fps=o.fps||(+S.rfps)||30,dur=Math.max(0.5,S.dur||6),n=o.frames||Math.max(1,Math.round(dur*fps)),transp=o.transp!=null?o.transp:!!S.ralpha;
-  if(transp&&!GL2){setStatus("Transparent frames need WebGL 2, which this browser doesn't have.","bad");return Promise.resolve(null)}
+  if(transp&&!GL2){setStatus("Transparent needs WebGL 2, which this browser lacks.","bad");return Promise.resolve(null)}
   var fmt=isDesk()?(S.rfmt||"zip"):"zip",vid=fmt!=="zip",D=window.splatboxDesktop,eid=null;
-  if(vid&&transp&&fmt!=="prores4444"){setStatus("Only ProRes 4444 keeps a transparent background. Pick that, or turn Transparent off.","bad");return Promise.resolve(null)}
+  if(vid&&transp&&fmt!=="prores4444"){setStatus("Only ProRes 4444 keeps transparency. Pick it, or turn Transparent off.","bad");return Promise.resolve(null)}
   if(!vid&&n*w*h*1.2>2.2e9){setStatus("That's too much for one zip ("+n+" frames at "+w+"×"+h+"). Pick a smaller size or a shorter length.","bad");return Promise.resolve(null)}
   var useTl=tlHasKeys(),saveT=TL.t,z=zipNew(),base=(photoName||"splatbox").replace(/[^\w-]+/g,"_");
   RJ={cancel:false,i:0,n:n};
@@ -4020,7 +4130,7 @@ function pointsPLY(r){
 function tdExport(o){
   o=o||{};if(RJ||!scene)return Promise.resolve(null);
   var wasEdit=MODE==="edit";
-  if(!depthOK()){setStatus("The depth pass needs WebGL 2 with float buffers, which this browser doesn't have.","bad");return Promise.resolve(null)}
+  if(!depthOK()){setStatus("Depth pass needs WebGL 2 with float buffers, which this browser lacks.","bad");return Promise.resolve(null)}
   if(MODE!=="render")setMode("render");
   if(MODE==="render"&&!THRU&&curCam())enterThru(curCam());
   stopAnim();closeTool();
@@ -4312,12 +4422,12 @@ function fsLapse(){
     FOLD.probing=false;if(!FOLD.ok)return;
     if(alive){
       /* a passing hiccup: stay connected. The browser copy has the work, and the next save writes the folder again */
-      setStatus("Couldn't write to your project folder just now. Changes are kept in this browser and will be written again on the next save.","warn");
+      setStatus("Couldn't write to the project folder. Changes are kept here and retried on the next save.","warn");
       if(FOLD.dirtyCur)setTimeout(function(){if(FOLD.ok&&FOLD.dirtyCur&&cur){FOLD.dirtyCur=false;saveNow()}},15000);
       return;
     }
     FOLD.ok=false;FOLD.lapsed=true;FOLD.lapsedAt=Date.now();
-    setStatus("Couldn't reach your project folder. Changes are kept in this browser, and Splatbox will reconnect by itself when it can.","warn");
+    setStatus("Can't reach the project folder. Changes are kept here and Splatbox will reconnect.","warn");
     fsHealStart();
   });
 }
@@ -4358,13 +4468,14 @@ var dbDel=function(id){
 };
 
 var saveT=0;
-function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
+function saveSoon(){clearTimeout(saveT);svSet("pending");saveT=setTimeout(saveNow,700)}
 function saveNow(){
   clearTimeout(saveT);
   if(!cur)return Promise.resolve();
   cur.v=FORMAT;cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;
   if(!HLOAD||!cur.view){var vw=THRU&&VPS?{R:VPS.R,TG:VPS.TG,zoom:VPS.zoom}:{R:Rm,TG:TG,zoom:zoom};cur.view={R:vw.R.slice(),TG:vw.TG.slice(),zoom:vw.zoom,mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null};}cur.updated=Date.now();
-  return dbPut(cur).catch(function(){setStatus("Couldn't save this project on the device.","bad")});
+  svSet("saving");
+  return dbPut(cur).then(function(){svSet("saved")},function(){svSet("error");setStatus("Couldn't save this project on the device.","bad")});
 }
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function fitCanvas(src,maxSide){
@@ -4417,7 +4528,8 @@ function openSpace(p){
   $("pname").textContent=p.name;
   newScene();resetView();anim=null;PF.lutKey="";TLU.sel=[];if($("tlDur"))$("tlDur").value=S.dur||6;if(TLU.open)tlFit();
   if(p.view&&p.view.R&&p.view.TG){Rm=p.view.R.slice();TG=p.view.TG.slice();zoom=p.view.zoom||1}
-  showEditor();closeTool();dockKeep();applyRail();syncModeUI();applyLook();dirty=true;
+  UI.quiet=1;try{showEditor();closeTool();dockKeep();uiRestore()}finally{UI.quiet=0}
+  applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");
   return loadObjs(p.objs).then(function(){
     busy(false);refreshSpace();regrade();dirty=true;
@@ -4472,6 +4584,9 @@ function fmtDate(t){
   if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" h ago";
   return new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 }
+var PEND={};
+function pendFlush(id){var e=PEND[id];if(!e)return Promise.resolve();clearTimeout(e.t);delete PEND[id];return dbDel(id).then(function(){var h=$("home");if(h&&!h.hidden)renderHome()},function(){setStatus("Couldn't delete.","bad")})}
+window.addEventListener("pagehide",function(){Object.keys(PEND).forEach(pendFlush)});
 function renderHome(){
   thumbUrls.forEach(function(u){URL.revokeObjectURL(u)});thumbUrls=[];
   var grid=$("grid");grid.innerHTML="";
@@ -4480,7 +4595,7 @@ function renderHome(){
   add.addEventListener("click",function(){createSpace()});grid.appendChild(add);
   return fsRestore().then(dbAll).catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
     renderFolderBar();
-    list=(list||[]).sort(function(a,b){return b.updated-a.updated});
+    list=(list||[]).filter(function(p){return !PEND[p.id]}).sort(function(a,b){return b.updated-a.updated});
     $("emptyMsg").hidden=list.length>0;
     if(!list.length){
       var ex=document.createElement("button");ex.type="button";ex.className="card new";
@@ -4676,8 +4791,10 @@ function openMenu(card,p){
     dbPut(c).then(renderHome).catch(function(){setStatus("Couldn't duplicate.","bad")})});
   var del=document.createElement("button");del.type="button";del.className="danger";del.textContent="Delete";
   del.addEventListener("click",function(e){e.stopPropagation();
-    if(del.dataset.sure!=="1"){del.dataset.sure="1";del.textContent="Tap again to delete";return}
-    closeMenus();dbDel(p.id).then(renderHome).catch(function(){setStatus("Couldn't delete.","bad")})});
+    /* V048: no "tap again". It goes from the list at once and is really removed after 9 s; Undo in the message puts it back. */
+    closeMenus();
+    PEND[p.id]={t:setTimeout(function(){pendFlush(p.id)},9000)};renderHome();
+    setStatus("Deleted \u201c"+(p.name||"project")+"\u201d","ok",{label:"Undo",fn:function(){var e=PEND[p.id];if(e){clearTimeout(e.t);delete PEND[p.id];renderHome()}}})});
   var exp=document.createElement("button");exp.type="button";exp.textContent="Export backup";
   exp.addEventListener("click",function(e){e.stopPropagation();closeMenus();exportProject(p)});
   m.appendChild(exp);m.appendChild(dup);m.appendChild(del);card.appendChild(m);
@@ -4725,7 +4842,7 @@ var PHONEQ={n:"Phone",iters:10000,init:60000,max:150000};
 /* projects made before the empty-space change (photo + depth, or photo scans) become spaces the first time they are opened */
 function openAny(p){
   if(p.bad||p.broken){setStatus(p.bad?"Splatbox couldn't read this project's file.":"Some of this project's files haven't finished syncing yet. Try again in a minute.","bad");return Promise.resolve()}
-  if(tooNew(p)){setStatus("This project was saved by a newer Splatbox. Open it in the newer version so nothing gets damaged.","bad");return Promise.resolve()}
+  if(tooNew(p)){setStatus("Saved by a newer Splatbox. Open it there so nothing gets damaged.","bad");return Promise.resolve()}
   busy(true,"Opening…");
   return fsLockOpen(p).then(function(go){if(!go){busy(false);return}return migrateProject(p).then(function(q){
     upgradeRec(q);busy(false);
@@ -4847,7 +4964,7 @@ function smallBlobOld(file,side){
 $("multiIn").addEventListener("change",function(e){
   var files=Array.prototype.slice.call(e.target.files||[]);e.target.value="";
   if(!files.length||!cur)return;
-  if(files.length<3){setStatus("Pick at least 3 photos. 20 or more of the same place or object, taken from slightly different spots, works best.","warn");return}
+  if(files.length<3){setStatus("Pick at least 3 photos. 20 or more from slightly different spots works best.","warn");return}
   busy(true,"Preparing "+files.length+" photos…");
   var out=[],scores=[],i=0;
   (function next(){
@@ -5028,7 +5145,7 @@ $("newIn").addEventListener("change",function(e){
 $("cubeIn").addEventListener("change",function(e){
   var f=e.target.files[0];e.target.value="";if(!f||!cur)return;
   f.text().then(function(t){
-    if(!parseCube(t)){setStatus("That .cube file isn't a 3D LUT this app can read (it needs LUT_3D_SIZE).","bad");return}
+    if(!parseCube(t)){setStatus("Not a 3D LUT Splatbox can read (needs LUT_3D_SIZE).","bad");return}
     cur.lut=t;cur.lutName=f.name.replace(/\.cube$/i,"");PF.lutKey="";S.look="cube";if(S.lookMix<=0)S.lookMix=1;applyLook();saveNow();if(curTool==="look")openTool("look");setStatus("LUT loaded: "+cur.lutName,"ok");
   }).catch(function(err){setStatus(err.message,"bad")});
 });
@@ -5058,7 +5175,7 @@ var bkEl=$("bk");if(bkEl)bkEl.textContent=backupText();
 $("homeBackup").addEventListener("click",backupAll);
 $("fbar").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var a=b.dataset.a;
   if(a==="pick"||a==="change")fsConnect().then(renderHome).catch(function(err){if(err&&err.name!=="AbortError")setStatus("Couldn't use that folder: "+(err.message||err),"bad")});
-  else if(a==="reconnect")fsReconnect().then(renderHome).catch(function(){setStatus("The folder wasn't unlocked, so projects are still saved in this browser only.","warn")});
+  else if(a==="reconnect")fsReconnect().then(renderHome).catch(function(){setStatus("Folder not unlocked, so projects stay in this browser only.","warn")});
   else if(a==="move")fsMigrate().then(renderHome)});
 $("ibar").addEventListener("click",function(e){var b=e.target.closest("button");if(b&&b.dataset.a)ibAction(b.dataset.a)});
 $("ibar").addEventListener("change",function(e){
@@ -5516,6 +5633,9 @@ var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the se
   new MutationObserver(notesToTips).observe($("popB"),{childList:true,subtree:true});
 })();
 /* ---------- start ---------- */
+$("toast").addEventListener("click",function(){setStatus("")});$("toastH").addEventListener("click",function(){setStatus("")});
+$("gmBtn").addEventListener("click",function(){gmCycle()});
+$("fwBtn").addEventListener("click",function(){fsHeal().then(function(ok){if(!ok)setStatus("Still can't reach the folder. Check it is connected, then try again.","warn")})});
 if(!gl||!GL2){
   document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';
 }else{
