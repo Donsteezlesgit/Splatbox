@@ -54,7 +54,7 @@ async def run(br,site,fx):
     await t.ev("renderHome()"); await t.wait(1200)
     ok("an unreadable project shows a clear card",await t.pg.locator("#grid .card:has-text('Couldn')").count()==1)
     await t.pg.locator("#grid .card:has-text('Couldn')").click(); await t.wait(500)
-    ok("opening it is refused politely",("read this" in await t.pg.inner_text("#toast")) and await t.pg.locator("#editor").is_hidden(),await t.pg.inner_text("#toast"))
+    ok("opening it is refused politely",("read this" in await t.pg.inner_text("#toastH")) and await t.pg.locator("#editor").is_hidden(),await t.pg.inner_text("#toastH"))
     # a passing hiccup (one failed write) must NOT lock the folder
     await t.ev("window._ogd=FOLD.h.getDirectoryHandle;var _n=0;FOLD.h.getDirectoryHandle=function(){if(_n++<2)return Promise.reject(new Error('blip'));return window._ogd.apply(FOLD.h,arguments)};0")
     await t.ev("dbPut(Object.assign({},{v:FORMAT,id:'zz0',name:'Blip',kind:'space',created:1,updated:Date.now(),settings:{},objs:[]}))"); await t.wait(6000)

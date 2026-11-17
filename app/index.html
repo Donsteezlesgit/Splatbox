@@ -400,6 +400,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 /* V048: messages sit small in the bottom-left corner; the Working spinner joins them (the render box stays centred) */
 .toast{top:auto;left:14px;bottom:calc(34px + var(--safe-b));transform:none;max-width:min(340px,calc(100% - 28px));padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.35;text-align:left;pointer-events:auto;cursor:pointer;transition:opacity .25s}
 .toast.fade{opacity:0}
+#toastH{position:fixed;top:auto;left:14px;bottom:calc(14px + var(--safe-b));z-index:60}
+.toast .tact{margin-left:10px;padding:0 2px;border:0;background:none;color:var(--accent);font:600 12px var(--font-ui);text-decoration:underline;cursor:pointer}
 .busy{place-items:end start;padding:0 14px calc(34px + var(--safe-b))}
 .busy span{padding:6px 10px;border-radius:8px;font-size:12px}
 .busy.on ~ .toast{bottom:calc(72px + var(--safe-b))}
@@ -434,6 +436,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
   </div>
 </div>
 
+<div class="toast" id="toastH" hidden role="status" aria-live="polite"></div>
 <div id="editor" hidden>
   <div class="stagecol" id="stagecol">
   <section class="stage" id="stage" aria-label="3D splat viewport">
@@ -544,11 +547,15 @@ var photoSrc=null, depthImg=null, photoName="example", cur=null, MODE="edit";
 var scene=null, zoom=1, TG=[0,0,0], vyaw=0, vpitch=0, lastTyv=Math.tan(25*Math.PI/180), dirty=true, timer=0, anim=null;
 var toastT=0,toastF=0;
 /* V048: quiet corner message. About 3 s (errors about 6 s), longer text stays a little longer, click it to dismiss. */
-function setStatus(msg,kind){
-  var t=$("toast");clearTimeout(toastT);clearTimeout(toastF);
+function setStatus(msg,kind,act){
+  /* the editor has its own message box (over the viewport); on the Home screen the editor is hidden, so Home has one too. act = {label,fn} adds a button (Undo) and keeps the message up for 8 s. */
+  var t=$("editor").hidden?$("toastH"):$("toast"),o=t.id==="toast"?$("toastH"):$("toast");
+  clearTimeout(toastT);clearTimeout(toastF);o.hidden=true;
   if(!msg){t.hidden=true;return}
-  t.textContent=msg;t.className="toast "+(kind||"");t.hidden=false;
-  var ms=Math.min(12000,(kind==="bad"?6000:3000)+Math.max(0,msg.length-60)*30);
+  t.textContent="";t.appendChild(document.createTextNode(msg));
+  if(act){var ab=document.createElement("button");ab.type="button";ab.className="tact";ab.textContent=act.label;ab.addEventListener("click",function(e){e.stopPropagation();setStatus("");act.fn()});t.appendChild(ab)}
+  t.className="toast "+(kind||"");t.hidden=false;
+  var ms=act?8000:Math.min(12000,(kind==="bad"?6000:3000)+Math.max(0,msg.length-60)*30);
   toastT=setTimeout(function(){t.classList.add("fade");toastF=setTimeout(function(){t.hidden=true},260)},ms);
 }
 /* V048: one button and one key (T) step the gizmo Move > Rotate > Scale. Scale is skipped for cameras and lights. */
@@ -4521,6 +4528,9 @@ function fmtDate(t){
   if(m<1)return "just now";if(m<60)return m+" min ago";var h=Math.round(m/60);if(h<24)return h+" h ago";
   return new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
 }
+var PEND={};
+function pendFlush(id){var e=PEND[id];if(!e)return Promise.resolve();clearTimeout(e.t);delete PEND[id];return dbDel(id).then(function(){var h=$("home");if(h&&!h.hidden)renderHome()},function(){setStatus("Couldn't delete.","bad")})}
+window.addEventListener("pagehide",function(){Object.keys(PEND).forEach(pendFlush)});
 function renderHome(){
   thumbUrls.forEach(function(u){URL.revokeObjectURL(u)});thumbUrls=[];
   var grid=$("grid");grid.innerHTML="";
@@ -4529,7 +4539,7 @@ function renderHome(){
   add.addEventListener("click",function(){createSpace()});grid.appendChild(add);
   return fsRestore().then(dbAll).catch(function(){setStatus("Saved projects aren't available in this browser.","warn");return []}).then(function(list){
     renderFolderBar();
-    list=(list||[]).sort(function(a,b){return b.updated-a.updated});
+    list=(list||[]).filter(function(p){return !PEND[p.id]}).sort(function(a,b){return b.updated-a.updated});
     $("emptyMsg").hidden=list.length>0;
     if(!list.length){
       var ex=document.createElement("button");ex.type="button";ex.className="card new";
@@ -4725,8 +4735,10 @@ function openMenu(card,p){
     dbPut(c).then(renderHome).catch(function(){setStatus("Couldn't duplicate.","bad")})});
   var del=document.createElement("button");del.type="button";del.className="danger";del.textContent="Delete";
   del.addEventListener("click",function(e){e.stopPropagation();
-    if(del.dataset.sure!=="1"){del.dataset.sure="1";del.textContent="Tap again to delete";return}
-    closeMenus();dbDel(p.id).then(renderHome).catch(function(){setStatus("Couldn't delete.","bad")})});
+    /* V048: no "tap again". It goes from the list at once and is really removed after 9 s; Undo in the message puts it back. */
+    closeMenus();
+    PEND[p.id]={t:setTimeout(function(){pendFlush(p.id)},9000)};renderHome();
+    setStatus("Deleted \u201c"+(p.name||"project")+"\u201d","ok",{label:"Undo",fn:function(){var e=PEND[p.id];if(e){clearTimeout(e.t);delete PEND[p.id];renderHome()}}})});
   var exp=document.createElement("button");exp.type="button";exp.textContent="Export backup";
   exp.addEventListener("click",function(e){e.stopPropagation();closeMenus();exportProject(p)});
   m.appendChild(exp);m.appendChild(dup);m.appendChild(del);card.appendChild(m);
@@ -5565,7 +5577,7 @@ var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the se
   new MutationObserver(notesToTips).observe($("popB"),{childList:true,subtree:true});
 })();
 /* ---------- start ---------- */
-$("toast").addEventListener("click",function(){setStatus("")});
+$("toast").addEventListener("click",function(){setStatus("")});$("toastH").addEventListener("click",function(){setStatus("")});
 $("gmBtn").addEventListener("click",function(){gmCycle()});
 $("fwBtn").addEventListener("click",function(){fsHeal().then(function(ok){if(!ok)setStatus("Still can't reach the folder. Check it is connected, then try again.","warn")})});
 if(!gl||!GL2){
