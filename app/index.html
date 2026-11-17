@@ -2012,6 +2012,7 @@ document.addEventListener("keydown",function(e){
   if(e.metaKey||(e.ctrlKey&&!/^Numpad/.test(e.code)))return;
   var c=e.code,ids=GROUPS.map(function(x){return x[0]});
   if(c==="Escape"){if(!curTool&&SEL){SEL=null;dirty=true}else closeTool();return}
+  if(c==="Slash"&&!e.shiftKey&&!GUIHID){e.preventDefault();if($("pop").hidden||!$("psearch"))openTool(curGroup&&groupOf(curGroup)?curGroup:ids[0]);var ps=$("psearch");if(ps){ps.focus();ps.select()}return}
   var dm=/^Digit([1-9])$/.exec(c);
   if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curTool===id)closeTool();else openTool(id);return}
   if(c==="KeyR"||c==="Home"){resetView();return}
@@ -2544,6 +2545,8 @@ $("popB").addEventListener("click",function(e){
     redo:function(){var x=findObj(id);if(x){delete x.st;regradeSoon();dirty=true;persistObjs();okSync()}}});
   delete o.st;regradeSoon();dirty=true;persistObjs();okSync();
 });
+function oDef(k){var o=SEL;if(!o)return null;if(k==="cfov")return 50;if(k==="cfd")return 1.95;if(k==="linten")return o.kind==="sun"?1:o.kind==="spot"?3:2;if(k.indexOf("lx_")===0)return LXD[k.slice(3)];if(oIsCrop(k))return k[2]==="1"?1:0;return null}
+$("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.o&&SEL){var d=oDef(el.dataset.o);if(d!==null&&typeof d==="number"){el.value=d;objField(el)}}});
 $("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.ok&&SEL){okUndoStart(SEL,el.dataset.ok);ovClear(SEL,el.dataset.ok);okAfter(SEL,el.dataset.ok)}});
 function objField(el){
   var o=SEL;if(!o)return;var k=el.dataset.o,v=el.type==="checkbox"?el.checked:el.value,n;
@@ -2860,10 +2863,22 @@ function oPut(k,n){
   dirty=true;clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
   var rg=$("oo-"+k);if(rg)rg.value=oGet(k);
 }
+/* simple maths in a number box: + - * / ( ) and x or the multiply sign; no eval */
+function nbMath(t){
+  var s=String(t).replace(/[\u00d7x]/g,"*").replace(/\u00f7/g,"/").replace(/\s+/g,"");
+  if(!s||s.length>60||!/^[0-9.+\-*\/()eE]+$/.test(s))return NaN;
+  var i=0;
+  function num(){var m=/^(?:\d+\.?\d*|\.\d+)(?:[eE][+\-]?\d+)?/.exec(s.slice(i));if(!m)return NaN;i+=m[0].length;return parseFloat(m[0])}
+  function prim(){if(s[i]==="("){i++;var v=expr();if(s[i]!==")")return NaN;i++;return v}return num()}
+  function un(){if(s[i]==="-"){i++;return -un()}if(s[i]==="+"){i++;return un()}return prim()}
+  function term(){var v=un();while(s[i]==="*"||s[i]==="/"){var op=s[i++],r=un();v=op==="*"?v*r:v/r}return v}
+  function expr(){var v=term();while(s[i]==="+"||s[i]==="-"){var op=s[i++],r=term();v=op==="+"?v+r:v-r}return v}
+  var r=expr();return i===s.length&&isFinite(r)?r:NaN;
+}
 function nbParse(k,str,isO){
   var t=String(str).trim(),n;
   if((k==="fov"||k==="cfov")&&/mm\s*$/i.test(t)){var mm=parseFloat(t);if(!(mm>0))return NaN;return 2*Math.atan(12/mm)*180/Math.PI}
-  n=parseFloat(t.replace(/[^0-9eE.+\-]/g,""));if(!isFinite(n))return NaN;
+  n=nbMath(t);if(!isFinite(n))n=parseFloat(t.replace(/[^0-9eE.+\-]/g,""));if(!isFinite(n))return NaN;
   if(!isO&&FMT[k]&&FMT[k](1)==="100%")n/=100;
   return n;
 }

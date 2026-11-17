@@ -115,3 +115,31 @@ async def uistate(br,site,fx):
     await pg.click("#grid .card:not(.new) >> nth=0"); await t.wait(2800)
     ok("bad saved values are ignored",(await t.ev("!!curGroup"))==True and (await t.ev("typeof curTool"))=="string")
     return t.finish()
+async def numkeys(br,site,fx):
+    t=await open_page(br,site,"v048nk",w=1300,h=800); ok=t.ok; pg=t.pg
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.wait(500)
+    # "/" jumps to the settings search, panel closed or open
+    await t.ev("closeTool();0"); await t.wait(150)
+    await pg.keyboard.press("/"); await t.wait(250)
+    ok("/ opens the panel and focuses the search",(await t.ev("document.activeElement&&document.activeElement.id"))=="psearch",await t.ev("document.activeElement&&document.activeElement.id"))
+    await pg.keyboard.type("/"); await t.wait(100)
+    ok("typing / inside the search just types it",(await t.ev("$('psearch').value"))=="/")
+    await t.ev("$('psearch').blur();openTool('dof');0"); await t.wait(150)
+    await pg.keyboard.press("/"); await t.wait(150)
+    ok("/ with a panel already open also focuses it",(await t.ev("document.activeElement&&document.activeElement.id"))=="psearch")
+    # maths in a number box
+    m=await t.ev("[nbMath('2+3'),nbMath('2*(3+4)'),nbMath('50x2'),nbMath('10/4'),nbMath('-5+2'),String(nbMath('1/0')),String(nbMath('2+')),String(nbMath('alert(1)')),nbMath('1e3')]")
+    ok("simple sums work",m[:5]==[5,14,100,2.5,-3],m)
+    ok("bad sums and code are refused",m[5:8]==["NaN","NaN","NaN"] and m[8]==1000,m)
+    ok("35mm still means a lens",abs((await t.ev("nbParse('fov','35mm',false)"))-37.85)<0.1,await t.ev("nbParse('fov','35mm',false)"))
+    ok("a plain number still parses",(await t.ev("nbParse('fov','42',false)"))==42)
+    # double-click an object slider to reset it (camera lens)
+    await t.ev("addCamera?addCamera():0;0"); await t.wait(300)
+    await t.ev("openTool('camera');0"); await t.wait(250)
+    if await t.ev("!!document.querySelector('#popB input[data-o=\"cfov\"]')"):
+        await t.ev("var o=SEL;o.fov=90;refreshObjs();0"); await t.wait(250)
+        await pg.dblclick('#popB input[data-o="cfov"]'); await t.wait(250)
+        ok("double-click puts the camera lens back to 50",(await t.ev("SEL.fov"))==50,await t.ev("SEL.fov"))
+    else:
+        ok("camera lens slider exists",False,"no cfov slider found")
+    return t.finish()
