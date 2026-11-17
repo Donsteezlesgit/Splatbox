@@ -9,7 +9,11 @@ async def run(br,site,fx):
     # ---- reopen puts the free view at the camera
     await t.ev("addCamera();leaveThru()"); rid=await t.ev("SEL.id")
     await t.ev("var c=findObj('"+rid+"');c.pos=[0.7,0.2,0.4];c.R=rFromEuler(10,30,0);persistObjs();saveNow()"); await t.wait(800)
-    await t.ev("window.__p=cur;goHome()"); await t.wait(500); await t.ev("openSpace(window.__p)"); await t.wait(3000)
+    await t.ev("goHome()"); await t.wait(800); await t.pg.click("#grid .card:not(.new) >> nth=0")  # open it the way a person does
+    for _ in range(40):  # wait for the scene to finish loading
+        if await t.ev("!!findObj('"+rid+"')"): break
+        await t.wait(250)
+    await t.wait(300)
     d=json.loads(await t.ev("var c=findObj('"+rid+"');var d=0;for(var i=0;i<9;i++)d+=Math.abs(Rm[i]-c.R[i]);JSON.stringify({thru:THRU,d:d})"))
     ok("reopening starts the free view at the camera (not looking through it)",d["thru"]==False and d["d"]<0.05,d)
     await t.ev("removeObj(findObj('"+rid+"'))")
