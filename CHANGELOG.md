@@ -1,6 +1,12 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 049
+- Speed: while you drag, orbit, use the wheel or play a preview, the viewer can draw at a lower resolution (auto: only when frames are slow). It goes back to full size the moment you stop. Renders, recordings and exports are never lowered.
+- Speed: depth-of-field blur is much cheaper while you move. Blurred splats are thinned out during motion only; a still frame is identical to before. Strength (gentle, balanced, strong) and an "always" option are in the debug screen.
+- Speed: faint splats are drawn smaller. Same picture, fewer pixels.
+- New debug screen (press the ` key, or View > Debug screen): frame times and a graph, GPU time where the browser allows it, per-object splat counts, sorting, effect settings that differ from default, memory, device, recent errors, and a plain "what is probably costing" list. Freeze it to take a screenshot, or Copy report. It also has a Bench switch (redraw nonstop, to measure real fps) and switches for each speed change.
+
 ## Version 048
 - Messages are small and sit in the bottom-left corner (top-left on a phone). They fade after a few seconds, click to dismiss. Messages now also show on the Home screen, where they never appeared before.
 - Gizmo: a Move / Rotate / Scale button next to the camera button, and the T key cycles the same way. V (rotate) and B (scale) still work. W is now only for flying the view.

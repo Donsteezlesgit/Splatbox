@@ -16,6 +16,7 @@ Splatbox is Max's Gaussian-splat viewer/editor. One file, `app/index.html` (abou
 - Style: old-style JS (`var`, `function`, no arrow functions), one big wrapper. Some lines are very long; use `grep -n` then `cut -c1-200`.
 - Key functions: `openTool` (panels), `setK` (settings), `addLight`, `saveNow`/`openSpace`/`upgradeRec` (save/load/migrate), `setStatus` (toast), `DEF` (all default settings), `TL` (timeline), `GM` (gizmo mode), `OBJS`/`SEL` (scene objects).
 - Look: colour tokens are in `:root` at the top. V047's look is an override block at the END of `<style>` (`/* V047 ... */`), after the older rules. Edit tokens first; add overrides there, not in the old rules.
+- Speed and debug: `PERF` (settings, kept in `sb.perf`), `LR` (lower resolution while moving), `thinK()` (blur thinning, moving only), the debug screen is the `` ` `` key. Shader uniform `uTune`. Renders (`RO`/`RJ`/recording) must never be lowered or thinned.
 - Keys are handled in several `keydown` listeners (search `addEventListener("keydown"`). Check all before adding a key. Gizmo: T cycles Move/Rotate/Scale (V rotate, B scale), W is fly-only. Current clash: 1-5 open tools in the editor but pick easing in the timeline.
 - Adding anything new (settings, object kinds, saved state): follow the checklist in `RELEASING.md`. `tests/test_roundtrip.py` fails until you do.
 
