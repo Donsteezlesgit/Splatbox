@@ -4,7 +4,7 @@ look-and-css      dock core viewmenu layout hideall msgs gizmo visual
 viewport-controls camera stuck select
 lighting-gizmos   v046 objfx camera visual
 timeline          timeline tl2 dock curves autokey visual
-save-folder-inbox roundtrip folder backup inbox presets
+save-folder-inbox savestate roundtrip folder backup inbox presets
 render-export     render td spz fx
 scan-photo        photo scan sortworker overlap
 undo-selection    undo select

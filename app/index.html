@@ -403,6 +403,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 .busy{place-items:end start;padding:0 14px calc(34px + var(--safe-b))}
 .busy span{padding:6px 10px;border-radius:8px;font-size:12px}
 .busy.on ~ .toast{bottom:calc(72px + var(--safe-b))}
+.fwarn{position:absolute;top:calc(56px + var(--safe-t));left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:5px 6px 5px 12px;border-radius:8px;background:#0b0d10f2;border:1px solid var(--warn);color:var(--warn);font-size:12px;max-width:calc(100% - 28px);z-index:5}
+.fwarn[hidden]{display:none}
+#saveBtn{position:relative}
+#saveBtn::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;box-sizing:border-box;pointer-events:none}
+#saveBtn[data-sv=pending]::after{border:2px solid var(--warn)}
+#saveBtn[data-sv=saving]::after{background:var(--accent)}
+#saveBtn[data-sv=error]::after{background:var(--bad)}
+#saveBtn[data-sv=folder]::after{background:var(--bad);border-radius:2px}
 #gmBtn kbd{margin-left:7px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font:500 10px var(--font-mono,monospace);color:var(--mute)}
 @media (max-width:759px){#gmBtn kbd{display:none}}
 @media (max-width:759px){.toast{top:56px;bottom:auto}.busy{place-items:start;padding:56px 14px 0}.busy.on ~ .toast{top:98px;bottom:auto}}
@@ -446,6 +454,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
     <div id="dropHint" hidden>Drop a .ply, .spz or 3D model to add it</div>
     <div class="busy" id="busy"><span id="busyT">Working…</span></div>
     <div class="toast" id="toast" hidden role="status" aria-live="polite"></div>
+    <div class="fwarn" id="folderWarn" hidden role="alert"><span>Project folder disconnected. Changes are kept in this browser.</span><button class="btn small" type="button" id="fwBtn">Reconnect</button></div>
     <div class="rjob" id="rjob" hidden><div class="rjc"><b id="rjT">Rendering…</b><div class="rbar"><i id="rjF"></i></div><button class="btn small" type="button" id="rjX">Cancel (Esc)</button></div></div>
     <div class="hud" id="hud"></div>
   </section>
@@ -555,6 +564,18 @@ function gmSync(){
   b.hidden=!show;if(!show)return;
   $("gmT").textContent=GMN[GM]||"Move";
   b.setAttribute("aria-label","Gizmo: "+(GMN[GM]||"Move")+". Click for the next one (T)");
+}
+/* V048: the save button shows where the project stands (unsaved, saving, saved, couldn't save, folder disconnected),
+   and a banner with a Reconnect button stays up while the project folder is disconnected. */
+var SV="saved",fwSig="",SVL={saved:"Saved",pending:"Unsaved changes, saving soon",saving:"Saving",error:"Couldn't save this project",folder:"Project folder disconnected, changes are kept in this browser"};
+function svSet(st){
+  if(st==="saved"&&FOLD.lapsed&&FOLD.h&&!FOLD.ok)st="folder";
+  SV=st;var b=$("saveBtn");if(!b)return;b.dataset.sv=st;b.setAttribute("aria-label",SVL[st]+" (Ctrl+S)");
+}
+function fwSync(){
+  var lapsed=!!(FOLD.lapsed&&FOLD.h&&!FOLD.ok);if(String(lapsed)===fwSig)return;fwSig=String(lapsed);
+  $("folderWarn").hidden=!lapsed;
+  if(lapsed)svSet("folder");else if(SV==="folder")svSet("saved");
 }
 function dims(s){return {w:s.naturalWidth||s.width, h:s.naturalHeight||s.height}}
 function busy(on,msg){$("busy").classList.toggle("on",!!on);if(msg)$("busyT").textContent=msg}
@@ -1635,7 +1656,7 @@ function loop(t){
   if(t-OUTL_T>180){OUTL_T=t;try{renderOutl()}catch(_){}}
   requestAnimationFrame(loop);
   if($("editor").hidden||RJ)return;
-  gmSync();
+  gmSync();fwSync();
   stepKeys(t);
   if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
@@ -4385,13 +4406,14 @@ var dbDel=function(id){
 };
 
 var saveT=0;
-function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,700)}
+function saveSoon(){clearTimeout(saveT);svSet("pending");saveT=setTimeout(saveNow,700)}
 function saveNow(){
   clearTimeout(saveT);
   if(!cur)return Promise.resolve();
   cur.v=FORMAT;cur.settings=Object.assign({},S);if(THRU&&VPS)cur.settings.fov=VPS.fov;
   if(!HLOAD||!cur.view){var vw=THRU&&VPS?{R:VPS.R,TG:VPS.TG,zoom:VPS.zoom}:{R:Rm,TG:TG,zoom:zoom};cur.view={R:vw.R.slice(),TG:vw.TG.slice(),zoom:vw.zoom,mode:MODE,acam:ACAM?ACAM.id:null,thru:THRU&&ACAM?ACAM.id:null};}cur.updated=Date.now();
-  return dbPut(cur).catch(function(){setStatus("Couldn't save this project on the device.","bad")});
+  svSet("saving");
+  return dbPut(cur).then(function(){svSet("saved")},function(){svSet("error");setStatus("Couldn't save this project on the device.","bad")});
 }
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function fitCanvas(src,maxSide){
@@ -5545,6 +5567,7 @@ var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the se
 /* ---------- start ---------- */
 $("toast").addEventListener("click",function(){setStatus("")});
 $("gmBtn").addEventListener("click",function(){gmCycle()});
+$("fwBtn").addEventListener("click",function(){fsHeal().then(function(ok){if(!ok)setStatus("Still can't reach the folder. Check it is connected, then try again.","warn")})});
 if(!gl||!GL2){
   document.body.innerHTML='<p style="padding:24px">This browser can\'t draw 3D with WebGL 2 (it is off or unsupported), so Splatbox can\'t run.</p>';
 }else{

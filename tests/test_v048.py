@@ -46,3 +46,23 @@ async def gizmo(br,site,fx):
     await t.ev("$('tmpIn').remove();0")
     await pg.screenshot(path="/tmp/shots/gizmo_btn.png")
     return t.finish()
+async def savestate(br,site,fx):
+    t=await open_page(br,site,"v048save",w=1300,h=800); ok=t.ok; pg=t.pg
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.wait(1500)
+    ok("a saved project shows no unsaved mark",(await t.ev("$('saveBtn').dataset.sv"))=="saved")
+    await t.ev("S.fog=0.3;saveSoon();0"); await t.wait(150)
+    ok("a change shows 'unsaved' straight away",(await t.ev("$('saveBtn').dataset.sv"))=="pending" and "Unsaved" in await t.ev("$('saveBtn').getAttribute('aria-label')"))
+    await t.wait(1800)
+    ok("and goes back to saved after the autosave",(await t.ev("$('saveBtn').dataset.sv"))=="saved")
+    # folder disconnected: banner + save mark, then it clears when the folder is back
+    ok("no folder warning normally",(await t.ev("$('folderWarn').hidden"))==True)
+    await t.ev("FOLD.h={name:'Projects'};FOLD.ok=false;FOLD.lapsed=true;0"); await t.wait(300)
+    ok("the banner shows when the folder is disconnected",(await t.ev("$('folderWarn').hidden"))==False and "Reconnect" in await t.pg.inner_text("#fwBtn"))
+    ok("the save button says the folder is disconnected",(await t.ev("$('saveBtn').dataset.sv"))=="folder")
+    await pg.screenshot(path="/tmp/shots/folder_warn.png")
+    await t.ev("window._r=0;fsHeal=function(){window._r++;FOLD.ok=true;FOLD.lapsed=false;return Promise.resolve(true)};0")
+    await pg.click("#fwBtn"); await t.wait(300)
+    ok("Reconnect asks for the folder back",(await t.ev("window._r"))==1)
+    ok("the banner goes away once it is back",(await t.ev("$('folderWarn').hidden"))==True and (await t.ev("$('saveBtn').dataset.sv"))=="saved")
+    await t.ev("FOLD.h=null;FOLD.ok=false;FOLD.lapsed=false;0")
+    return t.finish()
