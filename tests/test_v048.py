@@ -143,3 +143,41 @@ async def numkeys(br,site,fx):
     else:
         ok("camera lens slider exists",False,"no cfov slider found")
     return t.finish()
+async def access(br,site,fx):
+    t=await open_page(br,site,"v048ax",w=1300,h=800); ok=t.ok; pg=t.pg
+    await t.ev("localStorage.removeItem('sb.ax');0")
+    await pg.reload(); await t.wait(1500)
+    # Home: the Aa menu
+    await pg.click("#homeAx"); await t.wait(200)
+    ok("Home has the options menu with 3 items",(await t.ev("document.querySelectorAll('#axMenu [data-ax]').length"))==3)
+    await pg.click("#axMenu [data-ax=ax_calm]"); await t.wait(150)
+    await pg.click("#homeAx") if await t.ev("$('axMenu').hidden") else None
+    await pg.click("#axMenu [data-ax=ax_big]"); await t.wait(100)
+    await pg.click("#axMenu [data-ax=ax_dys]"); await t.wait(150)
+    cls=await t.ev("document.documentElement.className")
+    ok("each option sets its class",all(c in cls for c in ["ax-calm","ax-big","ax-dys"]),cls)
+    ok("the dyslexia option changes the font",(await t.ev("getComputedStyle(document.body).fontFamily")).startswith("Atkinson") or "Verdana" in await t.ev("getComputedStyle(document.body).fontFamily"))
+    ok("calm turns animations off",(await t.ev("getComputedStyle(document.body).animationName"))=="none")
+    st=await t.ev("localStorage.getItem('sb.ax')")
+    ok("choices are saved on this device",'"calm":1' in st and '"big":1' in st and '"dys":1' in st,st)
+    await pg.reload(); await t.wait(1500)
+    cls=await t.ev("document.documentElement.className")
+    ok("and come back next visit",all(c in cls for c in ["ax-calm","ax-big","ax-dys"]),cls)
+    # editor: View menu has them too, and toggling off works
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.wait(500)
+    await pg.click("#vwBtn"); await t.wait(150)
+    ok("View menu lists them",(await t.ev("document.querySelectorAll('#vwMenu [data-vw^=ax_]').length"))==3)
+    await pg.click("#vwMenu [data-vw=ax_calm]"); await t.wait(150)
+    ok("toggling off removes the class",'ax-calm' not in await t.ev("document.documentElement.className"))
+    await t.ev("localStorage.setItem('sb.ax','{\"calm\":\"yes\",\"big\":7}');0")
+    await pg.reload(); await t.wait(1500)
+    ok("junk in storage turns nothing on",(await t.ev("document.documentElement.className.indexOf('ax-')"))==-1,await t.ev("document.documentElement.className"))
+    # hit areas: a point just outside a small button still lands on it
+    await pg.click("#grid .card:not(.new) >> nth=0"); await t.wait(2500)
+    r=await t.ev("(function(){var b=document.querySelector('.top .ico:not([hidden])');if(!b)return null;var q=b.getBoundingClientRect();var el=document.elementFromPoint(q.left-3,q.top+q.height/2);return [!!el&&(el===b||b.contains(el)),b.id]})()")
+    ok("a click just outside a small button still hits it",bool(r and r[0]),r)
+    # focus ring on keyboard focus
+    await pg.keyboard.press("Tab"); await t.wait(100)
+    o=await t.ev("(function(){var a=document.activeElement;return a?getComputedStyle(a).outlineStyle+' '+getComputedStyle(a).outlineWidth:''})()")
+    ok("tabbing shows a focus ring",o.startswith("solid") and not o.endswith(" 0px"),o)
+    return t.finish()

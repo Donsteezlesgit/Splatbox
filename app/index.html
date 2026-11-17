@@ -416,13 +416,28 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-acti
 #gmBtn kbd{margin-left:7px;padding:0 5px;border:1px solid var(--line);border-radius:4px;font:500 10px var(--font-mono,monospace);color:var(--mute)}
 @media (max-width:759px){#gmBtn kbd{display:none}}
 @media (max-width:759px){.toast{top:56px;bottom:auto}.busy{place-items:start;padding:56px 14px 0}.busy.on ~ .toast{top:98px;bottom:auto}}
+/* V048: bigger invisible hit areas on tiny buttons (looks the same, easier to hit) */
+.kd,.orw button,.top .ico,.sl .ovx,.toast .tact{position:relative}
+.kd::after,.orw button::after,.sl .ovx::after,.toast .tact::after,.top .ico::before{content:"";position:absolute;inset:-5px}
+/* V048: keyboard focus is always visible */
+button:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,[tabindex]:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sl input.nb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* V048: reading and motion options (device-wide, saved in sb.ax) */
+.hbar .aa{font:700 13px var(--font-ui);letter-spacing:0}
+@media (max-width:759px){.hbar .ico span{display:none}html.ax-big .hbar{zoom:1}}
+.axmenu{left:auto;right:0}
+html.ax-calm *,html.ax-calm *::before,html.ax-calm *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+html.ax-big #popB,html.ax-big #popT,html.ax-big .hbar,html.ax-big .hscroll,html.ax-big #vwMenu,html.ax-big #axMenu,html.ax-big .toast{zoom:1.18}
+html.ax-dys{--font-ui:"Atkinson Hyperlegible","OpenDyslexic",Verdana,"Trebuchet MS",Tahoma,sans-serif}
+html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 </style>
 </head>
 <body>
 <div id="home">
   <div class="hbar">
     <div class="word"><i></i>Splatbox</div>
-    <span class="hbtns"><button class="ico" id="homeBackup" type="button" aria-label="Back up all projects"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
+    <span class="hbtns"><span class="vwwrap"><button class="ico" id="homeAx" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Reading and motion options"><b class="aa" aria-hidden="true">Aa</b></button><div class="vwmenu axmenu" id="axMenu" role="menu" hidden></div></span>
+    <button class="ico" id="homeBackup" type="button" aria-label="Back up all projects"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></button>
     <button class="ico" id="homeImport" type="button" aria-label="Import a backup file"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></button>
     <button class="ico" id="homeNew" type="button" aria-label="New project"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>New project</span></button></span>
   </div>
@@ -1668,7 +1683,7 @@ function loop(t){
   if(focusA){var fu=Math.min(1,(t-focusA.t0)/240),fe=fu*fu*(3-2*fu);TG=[focusA.a[0]+(focusA.b[0]-focusA.a[0])*fe,focusA.a[1]+(focusA.b[1]-focusA.a[1])*fe,focusA.a[2]+(focusA.b[2]-focusA.a[2])*fe];if(fu>=1)focusA=null;dirty=true}
   if((vyaw||vpitch)&&!ptrs.size&&!anim){
     orbitBy(vyaw,vpitch);
-    vyaw*=0.9;vpitch*=0.9;if(Math.abs(vyaw)<0.0003)vyaw=0;if(Math.abs(vpitch)<0.0003)vpitch=0;dirty=true;
+    if(AX.calm){vyaw=vpitch=0}vyaw*=0.9;vpitch*=0.9;if(Math.abs(vyaw)<0.0003)vyaw=0;if(Math.abs(vpitch)<0.0003)vpitch=0;dirty=true;
   }
   if(anim){
     var u=(t-anim.t0)/1000/anim.dur;
@@ -2144,6 +2159,16 @@ var rail=$("rail");
 var GROUPS=[["object","Object",["add","objects","ofx","crop","select","orient"],ICON.objects],["scene","Scene",["light","fx","display"],ICON.light],["camera","Camera",["camera","dof"],ICON.camera],["image","Image",["colour","look","lens"],ICON.colour],["output","Output",["capture","file","hist"],ICON.capture]];
 var curGroup=null,LASTSEC={};
 /* V048: remember the open menu, which section is open in each menu, and whether the timeline is open, between visits (the panel and timeline sizes were already remembered). Phones only remember the section, so the sheet doesn't cover the view on launch. */
+/* V048: reading and motion options, kept on this device (not in the project) */
+var AX={calm:0,big:0,dys:0};
+try{var axs=JSON.parse(localStorage.getItem("sb.ax")||"{}");["calm","big","dys"].forEach(function(k){if(axs[k]===1||axs[k]===true)AX[k]=1})}catch(_){}
+function axApply(){var c=document.documentElement.classList;c.toggle("ax-calm",!!AX.calm);c.toggle("ax-big",!!AX.big);c.toggle("ax-dys",!!AX.dys)}
+function axSet(k,v){AX[k]=v?1:0;try{localStorage.setItem("sb.ax",JSON.stringify(AX))}catch(_){}axApply();dirty=true}
+function axItems(){return [
+  ["ax_calm","Calm motion (no animations or glide)","",!!AX.calm,function(){axSet("calm",!AX.calm)}],
+  ["ax_big","Larger text in menus","",!!AX.big,function(){axSet("big",!AX.big)}],
+  ["ax_dys","Easier-to-read font","",!!AX.dys,function(){axSet("dys",!AX.dys)}]]}
+axApply();
 var UI={quiet:0,done:false,g:null,tl:0};
 (function(){try{var u=JSON.parse(localStorage.getItem("sb.ui")||"{}");if(!u||typeof u!=="object")return;UI.g=typeof u.g==="string"?u.g:null;UI.tl=u.tl?1:0;
   if(u.ls&&typeof u.ls==="object")GROUPS.forEach(function(g){var v=u.ls[g[0]];if(v===null||(typeof v==="string"&&g[2].indexOf(v)>=0))LASTSEC[g[0]]=v})}catch(_){}})();
@@ -2763,13 +2788,17 @@ function vwItems(){return [
   ["markers","Camera and light markers","",VO.markers,function(){setVO("markers",!VO.markers)}],
   ["fast","Fast preview (skips the heavy effects)","",!!S.fast,function(){setK("fast",!S.fast);syncControls()}],
   ["thru","Look through the camera","",!!THRU,function(){if(THRU)leaveThru();else{var c=curCam();if(c)enterThru(c)}dirty=true;camUI()},!cams().length],
-  ["gui","Hide all menus","H",GUIHID,function(){setGui(!GUIHID)}]]}
+  ["gui","Hide all menus","H",GUIHID,function(){setGui(!GUIHID)}]].concat(axItems())}
 function vwDraw(){
   var m=$("vwMenu");if(!m||m.hidden)return;
   m.innerHTML=vwItems().map(function(it){return '<button type="button" role="menuitemcheckbox" aria-checked="'+it[3]+'" data-vw="'+it[0]+'"'+(it[5]?' disabled':'')+'><span class="tick">'+(it[3]?"\u2713":"")+'</span>'+it[1]+'<span class="kbd">'+it[2]+'</span></button>'}).join("");
 }
 $("vwBtn").addEventListener("click",function(e){e.stopPropagation();var m=$("vwMenu");m.hidden=!m.hidden;$("vwBtn").setAttribute("aria-expanded",String(!m.hidden));vwDraw()});
 $("vwMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-vw]");if(!b)return;vwItems().forEach(function(it){if(it[0]===b.dataset.vw&&!it[5])it[4]()});vwDraw()});
+function axDraw(){var m=$("axMenu");if(!m||m.hidden)return;m.innerHTML=axItems().map(function(it){return '<button type="button" role="menuitemcheckbox" aria-checked="'+it[3]+'" data-ax="'+it[0]+'"><span class="tick">'+(it[3]?"\u2713":"")+'</span>'+it[1]+'</button>'}).join("")}
+$("homeAx").addEventListener("click",function(e){e.stopPropagation();var m=$("axMenu");m.hidden=!m.hidden;$("homeAx").setAttribute("aria-expanded",String(!m.hidden));axDraw()});
+$("axMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-ax]");if(!b)return;axItems().forEach(function(it){if(it[0]===b.dataset.ax)it[4]()});axDraw()});
+document.addEventListener("click",function(){var m=$("axMenu");if(m&&!m.hidden){m.hidden=true;$("homeAx").setAttribute("aria-expanded","false")}});
 document.addEventListener("click",function(){var m=$("vwMenu");if(m&&!m.hidden){m.hidden=true;$("vwBtn").setAttribute("aria-expanded","false")}});
 /* when a tool about objects opens, pick the object it is about if there is only one */
 function autoSel(id){
