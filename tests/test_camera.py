@@ -63,7 +63,7 @@ async def run(br,site,fx):
     await t.ev("draw(null)")
     chk=await t.ev("(function(){var f=camFocusPt(curCam()),V=LASTM.V;return [__dd[__dd.length-1],-(V[2]*f[0]+V[6]*f[1]+V[10]*f[2]+V[14])]})()")
     ok("depth effects measured to the camera's focus point",abs(chk[0]-chk[1])<1e-4,chk)
-    await t.ev("S.fog=0.7;S.defocus=0.5;S.focus=0.5;SEL=curCam();openTool('camobj',true)")
+    await t.ev("S.fog=0.7;curCam().dof={defocus:0.5,focus:0.5};SEL=curCam();openTool('camobj',true)")
     await t.pg.click('[data-act=camThru]'); await t.wait(700); sb=await t.pg.evaluate(SNAP)
     await t.pg.click('#camBtn'); await t.wait(300)
     await t.ev("rawTurnTo(1.3,-0.2);TG=[1.3,0.4,-0.6];zoom=2.2;dirty=true;draw(null)"); await t.pg.mouse.dblclick(cx+60,cy+40); await t.wait(900)

@@ -165,3 +165,93 @@ async def phone(br,site,fx):
     ok("tapping empty space deselects",(await S(t))["sel"] is None)
     ok("no console or page errors",len(t.errs)==0,t.errs[:3])
     return t.finish()
+
+async def dofcam(br,site,fx):
+    t=await open_page(br,site,"v050dof",w=1440,h=900); ok=t.ok; pg=t.pg
+    await t.new_project(); await t.add_ply(fx["tilt"])
+    await t.ev("addCamera();addCamera();closeTool();0"); await t.wait(300)
+    ids=json.loads(await t.ev("JSON.stringify(OBJS.filter(isCam).map(function(o){return o.id}))"))
+    A,B=ids
+    await t.ev(f"findObj('{A}').dof={{defocus:1,focus:0.3,dofTilt:0.5}};findObj('{B}').dof={{defocus:0.4,focus:0.8}};0")
+    ok("the scene has no depth of field settings of its own",await t.ev("['defocus','focus','focusRange','dofNear','dofTilt'].every(function(k){return S[k]===undefined})"))
+    ok("free view: no blur, even though cameras have it",(await t.ev("RV().defocus"))==0 and (await t.ev("RV().dofTilt"))==0)
+    await t.ev(f"enterThru(findObj('{A}'));0"); await t.wait(200)
+    ok("looking through camera A uses A's blur",(await t.ev("RV().defocus"))==1 and abs(await t.ev("RV().focus")-0.3)<1e-9 and (await t.ev("RV().dofNear"))==1)
+    await t.ev(f"enterThru(findObj('{B}'));0"); await t.wait(200)
+    ok("looking through camera B uses B's blur",(await t.ev("RV().defocus"))==0.4 and abs(await t.ev("RV().focus")-0.8)<1e-9 and (await t.ev("RV().dofTilt"))==0)
+    await t.ev("leaveThru();0"); await t.wait(100)
+    ok("leaving the camera turns blur off again",(await t.ev("RV().defocus"))==0)
+    # --- fast preview still strips it while moving
+    await t.ev(f"enterThru(findObj('{A}'));S.fast=true;0")
+    ok("fast preview strips blur in the viewer",(await t.ev("RV().defocus"))==0); await t.ev("S.fast=false;0")
+    # --- the pane edits the selected camera only
+    await t.ev(f"SEL=findObj('{A}');showObjPage(true);openTool('dof');0"); await t.wait(250)
+    ok("the Depth of field section shows on the camera page",(await t.ev("curTool"))=="dof" and await pg.is_visible("#oo-dof_defocus"))
+    ok("slider shows this camera's value",abs(float(await pg.input_value("#oo-dof_defocus"))-1)<1e-6)
+    await pg.fill("#oo-dof_defocus","1.6"); await pg.dispatch_event("#oo-dof_defocus","input"); await t.wait(150)
+    ok("moving the slider changes this camera",abs(await t.ev(f"findObj('{A}').dof.defocus")-1.6)<1e-6 and abs(await t.ev(f"findObj('{B}').dof.defocus")-0.4)<1e-6)
+    ok("a diamond is on every blur slider",(await pg.locator("#popB .kd").count())>=10)
+    await pg.click("[data-act=resetDof]"); await t.wait(200)
+    ok("Reset puts this camera back to no blur",(await t.ev(f"camDof(findObj('{A}'),'defocus')"))==0 and abs(await t.ev(f"findObj('{B}').dof.defocus")-0.4)<1e-6)
+    await pg.keyboard.press("Control+z"); await t.wait(900)
+    # --- pick focus needs the camera view
+    await t.ev("leaveThru();openTool('dof');0"); await t.wait(150)
+    await pg.click("[data-act=pickFocus]"); await t.wait(150)
+    ok("Pick focus point says to look through the camera first",(await t.ev("FOCUSPICK"))==False)
+    # --- mouse wheel changes focus distance while looking through a camera
+    await t.ev(f"SEL=findObj('{A}');enterThru(SEL);0"); await t.wait(300)
+    cb=await t.ev("(function(){var r=cv.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/3]})()")
+    await pg.mouse.move(*cb)
+    eye=await t.ev("JSON.stringify(worldOf(ACAM))"); f0=await t.ev("ACAM.fdist")
+    await pg.mouse.wheel(0,100); await t.wait(250)
+    f1=await t.ev("ACAM.fdist")
+    ok("wheel down moves the focus further away",f1>f0,[f0,f1])
+    ok("the camera itself did not move",await t.ev("JSON.stringify(worldOf(ACAM))")==eye)
+    ok("the readout shows the new distance",await pg.is_visible("#fdRead") and ("%.2f"%f1) in await t.ev("$('fdRead').textContent"),await t.ev("$('fdRead').textContent"))
+    await pg.mouse.wheel(0,-100); await t.wait(250)
+    ok("wheel up brings it back (multiplicative, so it round-trips)",abs(await t.ev("ACAM.fdist")-f0)<0.01,await t.ev("ACAM.fdist"))
+    f2=await t.ev("ACAM.fdist"); await pg.keyboard.down("Shift"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Shift"); await t.wait(200); fs=await t.ev("ACAM.fdist")
+    await t.ev(f"ACAM.fdist={f2};viewFromCam(ACAM);0"); await pg.keyboard.down("Control"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Control"); await t.wait(200); fc=await t.ev("ACAM.fdist")
+    ok("Shift is faster and Ctrl is finer",fs/f2>f1/f0>fc/f2>1,[fs/f2,f1/f0,fc/f2])
+    await t.ev("ACAM.fdist=0.06;viewFromCam(ACAM);0"); await pg.mouse.wheel(0,-3000); await t.wait(200)
+    ok("it stops at the near limit",await t.ev("ACAM.fdist")>=0.0499,[await t.ev("ACAM.fdist"),await t.ev("THRU")])
+    await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);0"); await t.wait(100)
+    await t.ev("ACAM.locked=true;0"); await pg.mouse.wheel(0,100); await t.wait(150)
+    ok("a locked camera ignores the wheel",abs(await t.ev("ACAM.fdist")-1.95)<1e-6); await t.ev("delete ACAM.locked;0")
+    await t.ev("leaveThru();0"); await t.wait(200); g0=await t.ev("TG.join()+'/'+zoom")
+    await pg.mouse.wheel(0,100); await t.wait(200)
+    ok("in the free view the wheel still zooms the view",(await t.ev("TG.join()+'/'+zoom"))!=g0 and abs(await t.ev(f"findObj('{A}').fdist")-1.95)<1e-6)
+    # --- keyframes ride on the camera
+    await t.ev(f"S.dur=2;tlKey('o:{A}:dof:defocus',0,[0]);tlKey('o:{A}:dof:defocus',2,[1]);tlSetTime(1);0"); await t.wait(150)
+    ok("blur keys animate on the camera",abs(await t.ev(f"camDof(findObj('{A}'),'defocus')")-0.5)<0.02)
+    ok("the timeline lists the camera's blur, not a scene one",await t.ev("tlAllProps().some(function(d){return d.id==='o:%s:dof:defocus'})"%A) and not await t.ev("tlAllProps().some(function(d){return d.id==='s:defocus'})"))
+    ok("keyframe jumps open the camera's Depth of field section",(await t.ev(f"tlToolFor(tlProp('o:{A}:dof:focus'))"))=="dof")
+    # --- saved with the project
+    await t.ev(f"findObj('{B}').dof={{defocus:0.9,focus:0.1}};persistObjs();saveNow();0"); await t.wait(700)
+    await pg.reload(); await t.wait(1800)
+    await pg.click("#grid .card:not(.new) >> nth=0"); await t.wait(2800)
+    ok("a camera keeps its own blur after reopening",abs(await t.ev(f"camDof(findObj('{B}'),'defocus')")-0.9)<1e-6 and abs(await t.ev(f"camDof(findObj('{B}'),'focus')")-0.1)<1e-6,[await t.ev(f"JSON.stringify(findObj('{B}')&&findObj('{B}').dof)"),await t.ev("JSON.stringify(OBJS.map(function(o){return [o.id,o.dof]}))")])
+    ok("blur keyframes on a camera are still there",await t.ev(f"!!TL.tracks['o:{A}:dof:defocus']"))
+    ok("camera blur survives a save and reopen",len(await t.ev("OBJS.filter(function(o){return o.dof}).map(function(o){return o.id}).join()"))>0)
+    ok("no console or page errors",len(t.errs)==0,t.errs[:3])
+    return t.finish()
+
+async def dofmigrate(br,site,fx):
+    t=await open_page(br,site,"v050mig",w=1000,h=700); ok=t.ok
+    r=json.loads(await t.ev("""JSON.stringify(upgradeRec({v:5,settings:{defocus:0.7,focus:0.2,dofTilt:0.4,fog:0.3},
+      objs:[{id:'c1',kind:'camera'},{id:'c2',kind:'camera',fov:40},{id:'s1',kind:'splat'}],
+      timeline:{fps:30,tracks:{'s:defocus':{k:[{t:0,v:[0]},{t:2,v:[1]}]},'s:fog':{k:[{t:0,v:[0]}]}}}}))"""))
+    ok("the record is now format 6",r["v"]==6)
+    ok("scene blur settings are gone from the scene",all(k not in r["settings"] for k in ["defocus","focus","dofTilt"]) and r["settings"]["fog"]==0.3,r["settings"])
+    c1=[o for o in r["objs"] if o["id"]=="c1"][0]; c2=[o for o in r["objs"] if o["id"]=="c2"][0]; s1=[o for o in r["objs"] if o["id"]=="s1"][0]
+    ok("every camera gets the scene's blur",c1["dof"]=={"defocus":0.7,"focus":0.2,"dofTilt":0.4} and c2["dof"]==c1["dof"],[c1,c2])
+    ok("splats are left alone",("dof" not in s1))
+    tr=r["timeline"]["tracks"]
+    ok("blur keyframes move onto every camera","s:defocus" not in tr and tr["o:c1:dof:defocus"]["k"][1]["v"]==[1] and tr["o:c2:dof:defocus"]["k"][1]["t"]==2,list(tr))
+    ok("other scene keyframes stay put","s:fog" in tr)
+    r2=json.loads(await t.ev("JSON.stringify(upgradeRec({v:5,settings:{defocus:0.7},objs:[{id:'s1',kind:'splat'}],timeline:{fps:30,tracks:{'s:defocus':{k:[]}}}}))"))
+    ok("a project with no camera loses the blur cleanly",r2["v"]==6 and "defocus" not in r2["settings"] and "s:defocus" not in r2["timeline"]["tracks"])
+    r3=json.loads(await t.ev("JSON.stringify(upgradeRec({v:6,settings:{fog:0.1},objs:[{id:'c1',kind:'camera',dof:{defocus:2}}],timeline:{fps:30,tracks:{}}}))"))
+    ok("a current project is left alone",r3["objs"][0]["dof"]=={"defocus":2})
+    ok("no console or page errors",len(t.errs)==0,t.errs[:3])
+    return t.finish()

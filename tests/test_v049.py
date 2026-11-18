@@ -8,7 +8,7 @@ def px(data_url):
     return np.asarray(Image.open(io.BytesIO(base64.b64decode(data_url.split(",")[1]))).convert("RGB")).astype(int)
 async def setup(t,fx,blur=0.9):
     await t.new_project(); await t.add_ply(fx["tilt"])
-    await t.ev("setVO('gizmos',false);setVO('grids',false);SEL=null;closeTool();S.defocus=%s;S.focus=0.0;S.focusRange=0.04;dirty=true;0"%blur); await t.wait(1200)
+    await t.ev("setVO('gizmos',false);setVO('grids',false);SEL=null;addCamera();SEL=null;closeTool();enterThru(curCam());curCam().dof={defocus:%s,focus:0,focusRange:0.04};dirty=true;0"%blur); await t.wait(1200)
 
 async def perfdbg(br,site,fx):
     t=await open_page(br,site,"v049dbg",w=1300,h=800); ok=t.ok; pg=t.pg
@@ -24,7 +24,7 @@ async def perfdbg(br,site,fx):
     ok("sections are shown on screen",(await t.ev("$('dbgP').children.length"))>=8)
     ok("it fits on screen (no cut-off panel)",await t.ev("(function(){var r=$('dbg').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.right<=innerWidth})()"))
     # bench redraws nonstop, and closing stops it
-    await t.ev("S.defocus=0;dirty=true;0"); await t.wait(600)
+    await t.ev("curCam().dof.defocus=0;dirty=true;0"); await t.wait(600)
     d0=await t.ev("PERF.draws"); await pg.check("#dbgBench"); await t.wait(1500)
     ok("bench keeps drawing",(await t.ev("PERF.draws"))-d0>=3,(await t.ev("PERF.draws"))-d0)
     await pg.keyboard.press("`"); await t.wait(300)

@@ -1,6 +1,14 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 050
+- Menus rebuilt. The left rail has four buttons: Add, Look, Scene, File. Each opens one page at the top right. Look is the scene's picture (colour, look, lens, depth and effects). Scene is lighting, display, free view and grids.
+- Click anything in the Objects list or in the view and its own page opens: splat, model, light or camera, with only that object's settings. A splat page has Transform, Object look, Crop, Select and Orient.
+- Opening or closing a page never changes what is selected, and nothing gets selected for you. The X button, the active rail button and the same number key all close a page. Escape deselects first, then closes. Number keys are now 1 to 4.
+- Depth of field belongs to the camera. Each camera has its own blur, focus point, sharp zone and tilt-shift on its page. It shows when you look through that camera and in video and images made with it. The free view has none. Old projects copy the scene's blur onto every camera, keys included.
+- While looking through a camera, the mouse wheel changes the focus distance instead of moving the camera (Shift faster, Ctrl finer). A small readout shows the distance. Focus distance also sets the window that depth fog and slice use, so those move with it.
+- Pick focus point needs the camera view.
+
 ## Version 049
 - Speed: while you drag, orbit, use the wheel or play a preview, the viewer can draw at a lower resolution (auto: only when frames are slow). It goes back to full size the moment you stop. Renders, recordings and exports are never lowered.
 - Speed: depth-of-field blur is much cheaper while you move. Blurred splats are thinned out during motion only; a still frame is identical to before. Strength (gentle, balanced, strong) and an "always" option are in the debug screen.

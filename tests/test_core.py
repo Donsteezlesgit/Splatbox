@@ -2,7 +2,7 @@
 import json
 from harness import *
 EFFECTS=[("none",""),("vig","S.vig=0.6"),("vigBlur","S.vigBlur=0.5"),("dist","S.dist=25"),("ca","S.ca=0.3"),("grain","S.grain=0.3"),("look","S.look='velvia';S.lookMix=1;applyLook()"),
-         ("fog","S.fog=0.8"),("defocus","S.defocus=0.7"),("slice","S.sliceA=0.3"),("solid","S.render='solid'"),("points","S.render='points'"),("depth","S.render='depth'"),("lit","S.render='splat';S.lit=0.6")]
+         ("fog","S.fog=0.8"),("defocus","if(!curCam())addCamera();curCam().dof={defocus:0.7};enterThru(curCam())"),("slice","S.sliceA=0.3"),("solid","S.render='solid'"),("points","S.render='points'"),("depth","S.render='depth'"),("lit","S.render='splat';S.lit=0.6")]
 LUMA="""(()=>{const c=document.getElementById('gl'),x=document.createElement('canvas');x.width=c.width;x.height=c.height;const g=x.getContext('2d');g.drawImage(c,0,0);const d=g.getImageData(0,0,x.width,x.height).data;let s=0,n=0;for(let i=0;i<d.length;i+=16){s+=(d[i]+d[i+1]+d[i+2])/3;n++}return s/n})()"""
 async def run(br,site,fx):
     t=await open_page(br,site,"core",w=1100,h=700)

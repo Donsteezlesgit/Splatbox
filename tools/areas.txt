@@ -1,10 +1,10 @@
 # area -> test suites (names for: python3 tests/run.py <name>). Pick the areas you touched; run `full` before a release.
 # Every suite name is a substring match, so keep them exact.
 look-and-css      dock core viewmenu layout hideall msgs gizmo numkeys access perfdbg perfspeed lowres visual
-viewport-controls camera stuck select
+viewport-controls camera stuck select pages50 rules50 phone50 dofcam50
 lighting-gizmos   v046 objfx camera visual
 timeline          timeline tl2 dock curves autokey visual
-save-folder-inbox savestate undodel uistate roundtrip folder backup inbox presets
+save-folder-inbox savestate undodel uistate roundtrip folder backup inbox presets remember50 dofmig50
 render-export     render td spz fx
 scan-photo        photo scan sortworker overlap
 undo-selection    undo select

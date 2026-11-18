@@ -85,3 +85,16 @@ async def run_all(tests,only=None):
     bad=[r for r in allres if not r[1]]
     print(f"\n{len(allres)-len(bad)} passed, {len(bad)} failed")
     return 1 if bad else 0
+
+DOFKEYS=["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"]
+async def sd(t,code):
+    """Run test code that sets scene-style depth of field values (S.defocus=1;S.focus=0.2 ...). Blur lives on the active camera since V050, so
+    those assignments are written onto it (a camera is added if there is none) and the rest of the code runs as written."""
+    import re
+    d=[];rest=[]
+    for part in [p for p in code.split(";") if p.strip()]:
+        m=re.fullmatch(r"\s*S\.(%s)\s*=\s*(.+?)\s*"%"|".join(DOFKEYS),part)
+        if m: d.append(f"{m.group(1)}:{m.group(2)}")
+        else: rest.append(part)
+    js="(function(){var c=curCam();if(!c){c=addCamera()||curCam()}c.dof=Object.assign(c.dof||{},{%s});dirty=true;if(!THRU)enterThru(c)})()"%",".join(d) if d else ""
+    return await t.ev(";".join([x for x in [js]+rest if x])+";0")
