@@ -2028,13 +2028,19 @@ function release(e){
 }
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
 cv.addEventListener("wheel",function(e){e.preventDefault();LR.wheelT=performance.now();var d=e.deltaY*(e.deltaMode===1?16:1);
-  if(THRU&&ACAM&&isCam(ACAM)){if(!ACAM.locked)wheelFocus(d,e);return}
+  if(THRU&&ACAM&&isCam(ACAM)&&!e.altKey){if(!ACAM.locked)wheelFocus(d,e);return}
   if(S.ctrl==="fly"){var f=mv(Rm,[0,0,-1]),st=-d*(e.ctrlKey?0.003:0.0022)*flyUnit()*(e.shiftKey?3:1);TG=[TG[0]+f[0]*st,TG[1]+f[1]*st,TG[2]+f[2]*st];dirty=true}
   else zoomAt(Math.exp(d*(e.ctrlKey?0.01:0.0012)),e.clientX,e.clientY)},{passive:false});
 var FDR=null,FDT=0;
 function wheelFocus(d,e){
   var o=ACAM,old=o.fdist||1.95,k=Math.exp(d*0.0007*(+S.fdSens||1)*(e.ctrlKey?0.25:e.shiftKey?4:1));
   o.fdist=clamp(old*k,0.05,500);viewFromCam(o);dirty=true;
+  /* the wheel keys the focus distance: when the timeline is open or this camera already animates it, a key is written at the playhead (one undo step per burst) */
+  var kid="o:"+o.id+":fdist",ktr=TL.tracks[kid];
+  if(TL.ready!==false&&!anim&&!(ktr&&(ktr.mute||ktr.lock))&&(TLU.open||(ktr&&ktr.k.length))){
+    if(!TLA.ids[kid]){TLA.ids[kid]=1;TLA.before[kid]=tlTrackCopy(kid)}
+    tlKey(kid,TL.t,[o.fdist],null,true,true);clearTimeout(TLA.timer);TLA.timer=setTimeout(tlAutoFlush,450);
+  }
   clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
   if(curTool==="camobj"&&SEL===o)try{syncObjFields()}catch(_){}
   if(!FDR){FDR=document.createElement("div");FDR.id="fdRead";FDR.setAttribute("aria-live","polite");$("stage").appendChild(FDR)}

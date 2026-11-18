@@ -213,6 +213,19 @@ async def dofcam(br,site,fx):
     f2=await t.ev("ACAM.fdist"); await pg.keyboard.down("Shift"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Shift"); await t.wait(200); fs=await t.ev("ACAM.fdist")
     await t.ev(f"ACAM.fdist={f2};viewFromCam(ACAM);0"); await pg.keyboard.down("Control"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Control"); await t.wait(200); fc=await t.ev("ACAM.fdist")
     ok("Shift is faster and Ctrl is finer",fs/f2>f1/f0>fc/f2>1,[fs/f2,f1/f0,fc/f2])
+    # Alt + wheel is the old movement
+    zt=await t.ev("TG.join()+'/'+zoom+'/'+ACAM.fdist"); await pg.keyboard.down("Alt"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Alt"); await t.wait(250)
+    ok("Alt + wheel moves the camera instead",await t.ev("ACAM.fdist")==float(zt.split('/')[2]) and await t.ev("TG.join()+'/'+zoom+'/'+ACAM.fdist")!=zt)
+    await t.ev("camFromView(ACAM);0")
+    # the wheel keys the focus distance
+    ok("no key before the timeline is in play",not await t.ev(f"!!TL.tracks['o:'+ACAM.id+':fdist']"))
+    await t.ev("S.dur=4;tlSetTime(0);TLU.open=true;0"); await pg.mouse.wheel(0,100); await t.wait(250)
+    ok("with the timeline open the wheel writes a focus distance key",await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k.length")==1)
+    await t.ev("tlSetTime(2);0"); await pg.mouse.wheel(0,200); await t.wait(250)
+    ok("at another time it adds a second key",await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k.length")==2 and await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k[1].v[0]")>await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k[0].v[0]"))
+    await t.ev("tlSetTime(1);0"); mid=await t.ev("ACAM.fdist")
+    ok("the focus distance animates between the keys",await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k[0].v[0]")<mid<await t.ev("TL.tracks['o:'+ACAM.id+':fdist'].k[1].v[0]"),mid)
+    await t.ev("delete TL.tracks['o:'+ACAM.id+':fdist'];TLU.open=false;tlSetTime(0);0")
     await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);S.fdSens=1;0"); await pg.mouse.wheel(0,100); await t.wait(200); n1=await t.ev("ACAM.fdist")/1.95
     await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);S.fdSens=0.2;0"); await pg.mouse.wheel(0,100); await t.wait(200); n2=await t.ev("ACAM.fdist")/1.95; await t.ev("S.fdSens=1;0")
     ok("one wheel notch is a gentle step, and the sensitivity setting scales it",1.03<n1<1.12 and 1.0<n2<n1 and abs((n1-1)/(n2-1)-5)<1.2,[n1,n2])

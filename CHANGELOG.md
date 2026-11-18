@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 052
+- The wheel focus now keys the focus distance: with the timeline open (or if the camera already animates it) each wheel move writes a key at the playhead.
+- Alt + wheel while looking through a camera moves the camera, as the wheel used to.
+
 ## Version 051
 - The mouse wheel changes focus distance in much smaller steps. New "Wheel focus speed" slider in the camera's Depth of field section (Shift faster, Ctrl finer still).
 
