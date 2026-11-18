@@ -100,8 +100,9 @@ async def lowres(br,site,fx):
     ok("'off' keeps full size while dragging",(await t.ev("cv.width"))==full[0],await t.ev("cv.width"))
     await pg.mouse.up(); await t.wait(300)
     # wheel counts as interacting
-    await t.ev("PERF.low='half';0"); await pg.mouse.move(box["x"]+box["width"]/2,box["y"]+box["height"]/2); await pg.mouse.wheel(0,40); await t.wait(120)
-    ok("the wheel lowers it briefly",await t.ev("LR.on"),await t.ev("[LR.on,cv.width]"))
+    await t.ev("PERF.low='half';window.__w=0;(function f(){if(LR.on)window.__w=1;if(!window.__wStop)requestAnimationFrame(f)})();0"); await pg.mouse.move(box["x"]+box["width"]/2,box["y"]+box["height"]/2); await pg.mouse.wheel(0,40); await t.wait(700)
+    ok("the wheel lowers it briefly",await t.ev("window.__w")==1,await t.ev("[window.__w,LR.on,cv.width]"))
+    await t.ev("window.__wStop=1;0")
     await t.wait(900)
     ok("and it comes back after",(await t.ev("LR.on"))==False and (await t.ev("cv.width"))==full[0],await t.ev("[LR.on,cv.width]"))
     # auto mode only drops when frames are slow: a fast frame time means no drop
