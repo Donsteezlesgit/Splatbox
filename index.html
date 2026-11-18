@@ -441,6 +441,9 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 .dbg .secs{columns:2 340px;column-gap:16px;margin-top:6px}
 .dbg .dsec{white-space:pre-wrap;word-break:break-word;break-inside:avoid;margin:0 0 9px;letter-spacing:0}
 @media (max-width:759px){.dbg{font-size:10px;top:48px;max-height:calc(100vh - 170px)}}
+/* V050: focus distance readout while the wheel changes it */
+#fdRead{position:absolute;left:12px;bottom:12px;padding:5px 9px;border-radius:6px;background:rgba(20,22,24,.82);color:#e8e4dc;font:600 12px/1.2 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .15s;z-index:6}
+#fdRead.on{opacity:1}
 </style>
 </head>
 <body>
@@ -560,9 +563,9 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 049";
+var VERSION="Version 050";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
-var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=5;
+var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=6;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
 var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparent target, always re-sort */
 
@@ -570,8 +573,8 @@ var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparen
 var DEF={range:1.9,smooth:4,cut:0,invert:false,fill:1,
   size:1.1,detail:512,shape:0,bg:"#0a0c0d",
   exp:0,con:0,sat:0,hue:0,warm:0,
-  fog:0,defocus:0,focus:0.5,dofNear:1,dofFar:1,dofSoft:0,dofTilt:0,dofTiltA:0,dofTiltP:0,dofTiltB:0.25,dofVis:false,fast:false,sliceA:0,sliceB:1,fxDis:0,fxScat:0,fxPulse:0,fxPhase:0,
-  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,grainSoft:0.5,grainCol:0.35,grainRate:1,look:"none",lookMix:1,focusRange:0,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
+  fog:0,dofVis:false,fast:false,sliceA:0,sliceB:1,fxDis:0,fxScat:0,fxPulse:0,fxPhase:0,
+  cam:"orbit",dur:6,loop:false,turn:0,render:"splat",ctrl:"fly",ctrlV:16,fov:50,sens:1,tiltX:0,tiltZ:0,spin:0,flip:false,vig:0,vigSoft:0.6,vigBlur:0,dist:0,ca:0,grain:0,grainSize:1.5,grainSoft:0.5,grainCol:0.35,grainRate:1,look:"none",lookMix:1,gridY:false,gridX:false,gridZ:false,axes:false,lit:0,amb:0.45,bakeGrade:false,rsize:"view",rfps:30,ralpha:false,rfmt:"zip",tdrgb:true,tdply:true};
 var S=Object.assign({},DEF);
 
 /* ---------- state ---------- */
@@ -1101,7 +1104,7 @@ function applyRec(o,r){
   if(r.pos)o.pos=r.pos.slice();if(r.R)o.R=r.R.slice();if(r.scl)o.scl=r.scl;if(r.vis!=null)o.vis=!!r.vis;if(r.locked)o.locked=true;
   if(r.st)o.st=Object.assign({},r.st);
   if(r.crop)o.crop=Object.assign(newCrop(),r.crop);if(r.name)o.name=r.name;if(r.color)o.color=r.color;if(r.inten!=null)o.inten=r.inten;if(r.lx)o.lx=Object.assign({},r.lx);
-  if(r.mask)o.maskRle=r.mask;if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;if(r.fov)o.fov=r.fov;if(r.fdist)o.fdist=r.fdist;
+  if(r.mask)o.maskRle=r.mask;if(r.blob)o.blob=r.blob;if(r.fmt)o.fmt=r.fmt;if(r.id)o.id=r.id;if(r.fov)o.fov=r.fov;if(r.fdist)o.fdist=r.fdist;if(r.dof)o.dof=Object.assign({},r.dof);
   return o;
 }
 function mat4mul(a,b){var o=new Float32Array(16),i,j,k,s;for(i=0;i<4;i++)for(j=0;j<4;j++){s=0;for(k=0;k<4;k++)s+=a[k*4+i]*b[j*4+k];o[j*4+i]=s}return o}
@@ -1248,7 +1251,17 @@ function meshObjs(){return OBJS.filter(function(o){return o.kind==="mesh"&&o.vis
 /* Edit shows the scene as it will export; Render adds the view-only effects */
 /* what you see is the render: every effect is on in the workspace too. Fast preview drops the heavy ones in the viewer only (never in exports) */
 function fastOn(){return !!S.fast&&!RO&&!RJ&&!(anim&&anim.rec)}
-function RV(){return fastOn()?Object.assign({},S,{defocus:0,dofTilt:0,lit:0,fxDis:0,fxScat:0,fxPulse:0}):S}
+/* depth of field belongs to a camera: it shows only while looking through one (and in anything made with one). The free view has none. */
+var DOFK=["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"];
+var DOFD={defocus:0,focus:0.5,focusRange:0,dofSoft:0,dofNear:1,dofFar:1,dofTilt:0,dofTiltA:0,dofTiltP:0,dofTiltB:0.25};
+var DOFLAB={defocus:"blur amount",focus:"focus point",focusRange:"sharp zone",dofSoft:"falloff",dofNear:"near blur",dofFar:"far blur",dofTilt:"tilt-shift blur",dofTiltA:"band angle",dofTiltP:"band position",dofTiltB:"sharp band"};
+function camDof(o,k){return o&&o.dof&&o.dof[k]!==undefined?o.dof[k]:DOFD[k]}
+function RV(){
+  var z;if(THRU&&ACAM&&ACAM.kind==="camera"){z=Object.assign({},S);DOFK.forEach(function(k){z[k]=camDof(ACAM,k)})}
+  else z=Object.assign({},S,DOFD);
+  if(fastOn())Object.assign(z,{defocus:0,dofTilt:0,lit:0,fxDis:0,fxScat:0,fxPulse:0});
+  return z;
+}
 var gsTrail=0;
 /* do any two visible splat objects overlap in space? (then whole-object sorting can pick the wrong front/back) */
 function splatsOverlap(list){
@@ -1597,7 +1610,7 @@ function leaveThru(){
 function addCamera(){
   if(THRU&&ACAM)camFromView(ACAM);
   var o=mkCam("Camera "+(cams().length+1));camFromView(o);OBJS.push(o);SEL=o;ACAM=o;if(GM==="scale")GM="move";
-  persistObjs();camUI();
+  persistObjs();camUI();showObjPage(true);
   setStatus("Added "+o.name+" at your view. Look through it to move it. Leave it and it stays put.","ok");
 }
 function refreshCamBtn(){
@@ -1607,7 +1620,7 @@ function refreshCamBtn(){
   b.textContent=THRU&&ACAM?"Leave "+ACAM.name:"Look through "+(curCam()?curCam().name:"camera");
   b.title=THRU?"Leave the camera. It stays where it is.":"Look through "+(curCam()?curCam().name:"the camera");
 }
-function camUI(){refreshCamBtn();if(curTool==="camera")openTool("camera",true);dirty=true}
+function camUI(){refreshCamBtn();if(curTool==="camobj")openTool("camobj",true);dirty=true}
 $("camBtn").addEventListener("click",function(){if(THRU)leaveThru();else enterThru(curCam())});
 /* little camera shapes in the view (Render only) */
 function drawCamMarks(c){
@@ -1719,7 +1732,7 @@ function loop(t){
   if(!dirty&&S.grain>0.001&&!fastOn()&&t-grainT>33){grainT=t;dirty=true}
   if(!dirty)return;
   dirty=false;
-  if(THRU&&ACAM){camFromView(ACAM);clearTimeout(camT);camT=setTimeout(persistObjs,600);if(curTool==="camera"&&t-camSyncT>120){camSyncT=t;syncObjFields()}}
+  if(THRU&&ACAM){camFromView(ACAM);clearTimeout(camT);camT=setTimeout(persistObjs,600);if(curTool==="camobj"&&t-camSyncT>120){camSyncT=t;syncObjFields()}}
   tlAutoCheck();
   draw(null);
 }
@@ -1776,7 +1789,7 @@ function focusFromDepth(d,dist){return clamp((d-(dist-1.1))/2.2,0,1)}
 function pickFocusAt(cx,cy){
   var pt=pickAt(cx,cy),L=LASTM;if(!pt||!L){setStatus("Nothing there to focus on. Click on the splat.","warn");return false}
   var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=focusFromDepth(d,L.dRef||L.dist);
-  setK("focus",+f.toFixed(3));syncControls();return true;
+  if(!(THRU&&ACAM))return false;ACAM.dof=ACAM.dof||{};ACAM.dof.focus=+f.toFixed(3);dirty=true;persistObjs();if(SEL===ACAM)try{syncObjFields()}catch(_){}return true;
 }
 cv.addEventListener("pointerdown",function(e){
   if(!FOCUSPICK)return;e.stopImmediatePropagation();e.preventDefault();
@@ -1955,7 +1968,7 @@ function tapObj(e){
   if(MODE==="render"){
     var rr=cv.getBoundingClientRect(),tx=e.clientX-rr.left,ty=e.clientY-rr.top,bc=null,bd=24;
     cams().forEach(function(o){if(THRU&&o===ACAM)return;var p=projW(worldOf(o));if(!p)return;var d=Math.hypot(p[0]-tx,p[1]-ty);if(d<bd){bd=d;bc=o}});
-    if(bc){SEL=bc;ACAM=bc;if(GM==="scale")GM="move";dirty=true;if(curTool!=="camera")openTool("camera",true);else refreshObjs();return true}
+    if(bc){SEL=bc;ACAM=bc;if(GM==="scale")GM="move";dirty=true;showObjPage(true);return true}
     return false;
   }
   if(MODE!=="edit")return false;
@@ -1969,9 +1982,9 @@ function tapObj(e){
     }
     if(area!=null&&area<ba){ba=area;best=o}
   });
-  if(mk){SEL=mk;if(isCam(mk))ACAM=mk;if(GM==="scale")GM="move";dirty=true;openTool(isCam(mk)?"camera":"light",true);return true}
-  if(best){SEL=best;dirty=true;if(OBJTOOL[curTool])openTool(curTool,true);return true}
-  if(SEL&&OBJTOOL[curTool]){SEL=null;dirty=true;openTool(curTool,true);return true}
+  if(mk){SEL=mk;if(isCam(mk))ACAM=mk;if(GM==="scale")GM="move";dirty=true;showObjPage(true);return true}
+  if(best){SEL=best;dirty=true;showObjPage();return true}
+  if(SEL){SEL=null;dirty=true;showObjPage();return true}
   return false;
 }
 cv.addEventListener("contextmenu",function(e){e.preventDefault()});
@@ -2011,12 +2024,22 @@ function release(e){
   var was=ptrs.size;ptrs.delete(e.pointerId);lastD=pinch();cv.style.cursor="";
   /* only coast if the pointer was still moving when let go */
   if(performance.now()-lastMoveT>70||mode!=="orbit"||S.ctrl==="fly"){vyaw=vpitch=0}
-  if(was===1&&moved<10&&!tapObj(e)){closeTool()}
+  if(was===1&&moved<10&&!tapObj(e)){if(!wideDock())closeTool()}
 }
 cv.addEventListener("pointerup",release);cv.addEventListener("pointercancel",release);
 cv.addEventListener("wheel",function(e){e.preventDefault();LR.wheelT=performance.now();var d=e.deltaY*(e.deltaMode===1?16:1);
+  if(THRU&&ACAM&&isCam(ACAM)){if(!ACAM.locked)wheelFocus(d,e);return}
   if(S.ctrl==="fly"){var f=mv(Rm,[0,0,-1]),st=-d*(e.ctrlKey?0.003:0.0022)*flyUnit()*(e.shiftKey?3:1);TG=[TG[0]+f[0]*st,TG[1]+f[1]*st,TG[2]+f[2]*st];dirty=true}
   else zoomAt(Math.exp(d*(e.ctrlKey?0.01:0.0012)),e.clientX,e.clientY)},{passive:false});
+var FDR=null,FDT=0;
+function wheelFocus(d,e){
+  var o=ACAM,old=o.fdist||1.95,k=Math.exp(d*(e.ctrlKey?0.0006:e.shiftKey?0.006:0.002));
+  o.fdist=clamp(old*k,0.05,500);viewFromCam(o);dirty=true;
+  clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
+  if(curTool==="camobj"&&SEL===o)try{syncObjFields()}catch(_){}
+  if(!FDR){FDR=document.createElement("div");FDR.id="fdRead";FDR.setAttribute("aria-live","polite");$("stage").appendChild(FDR)}
+  FDR.textContent="Focus distance "+o.fdist.toFixed(2);FDR.classList.add("on");clearTimeout(FDT);FDT=setTimeout(function(){FDR.classList.remove("on")},900);
+}
 cv.addEventListener("dblclick",function(e){focusOn(e.clientX,e.clientY)});
 var KEYMAP={ArrowLeft:1,ArrowRight:1,ArrowUp:1,ArrowDown:1,KeyW:1,KeyA:1,KeyS:1,KeyD:1,KeyQ:1,KeyE:1,BracketLeft:1,BracketRight:1,Equal:1,Minus:1,NumpadAdd:1,NumpadSubtract:1};
 var lastKT=0;
@@ -2048,11 +2071,11 @@ document.addEventListener("keydown",function(e){
   if(GUIHID&&e.code==="Escape"){setGui(false);return}
   if(e.metaKey||(e.ctrlKey&&!/^Numpad/.test(e.code)))return;
   var c=e.code,ids=GROUPS.map(function(x){return x[0]});
-  if(c==="Escape"){if(!curTool&&SEL){SEL=null;dirty=true}else closeTool();return}
+  if(c==="Escape"){if(SEL){SEL=null;dirty=true;showObjPage()}else if(curGroup)closeTool();return}
   if(c==="Backquote"&&!e.shiftKey){e.preventDefault();dbgToggle();return}
-  if(c==="Slash"&&!e.shiftKey&&!GUIHID){e.preventDefault();if($("pop").hidden||!$("psearch"))openTool(curGroup&&groupOf(curGroup)?curGroup:ids[0]);var ps=$("psearch");if(ps){ps.focus();ps.select()}return}
+  if(c==="Slash"&&!e.shiftKey&&!GUIHID){e.preventDefault();if($("pop").hidden||!$("psearch"))openTool(curGroup&&isRail(curGroup)?curGroup:(UI.lr||ids[0]));var ps=$("psearch");if(ps){ps.focus();ps.select()}return}
   var dm=/^Digit([1-9])$/.exec(c);
-  if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curTool===id)closeTool();else openTool(id);return}
+  if(dm&&ids[+dm[1]-1]){e.preventDefault();var id=ids[+dm[1]-1];if(curGroup===id)closeTool();else openTool(id);return}
   if(c==="KeyR"||c==="Home"){resetView();return}
   if(c==="KeyF"){frameAll();return}
   if(c==="KeyL"){levelHorizon();return}
@@ -2161,9 +2184,8 @@ var ICON={
   camera:'<rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/>',
   export:'<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'
 };
-var EDIT_T={add:1,objects:1,crop:1,select:1,orient:1,file:1},OBJTOOL={objects:1,ofx:1,crop:1,select:1,orient:1,light:1,camera:1};
-var TOOLS=[["add","Add"],["objects","Objects"],["crop","Crop"],["select","Select"],["orient","Orient"],["file","File"],
-  ["camera","Camera"],["lens","Lens"],["ofx","Object look"],["fx","Depth and effects"],["dof","Depth of field"],["look","Look"],["colour","Colour"],["light","Light"],["display","Display"],["capture","Capture"],["hist","History"]];
+var EDIT_T={add:1,objects:1,crop:1,select:1,orient:1,file:1},OBJTOOL={objects:1,ofx:1,crop:1,select:1,orient:1,lightobj:1,camobj:1,dof:1};
+var TOOLS=[["add","Bring in"],["addlight","Lights"],["addcam","Camera"],["colour","Colour"],["looks","Look"],["lens","Lens"],["fx","Depth and effects"],["lighting","Light the splats"],["display","Display"],["freeview","Free view"],["helpers","Grids and axes"],["file","File"],["capture","Capture"],["hist","History"],["objects","Transform"],["ofx","Object look"],["crop","Crop"],["select","Select"],["orient","Orient"],["lightobj","Light"],["camobj","Camera"],["dof","Depth of field"]];
 ICON.dof=ICON.depth;
 ICON.hist='<path d="M4 12a8 8 0 108-8 8 8 0 00-5.7 2.4L4 8"/><path d="M4 3v5h5M12 8v4l3 2"/>';ICON.fx=ICON.depth;ICON.ofx=ICON.colour;
 ICON.colour='<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.2"/><circle cx="12" cy="7.5" r="1.2"/><circle cx="15.5" cy="10" r="1.2"/>';
@@ -2179,7 +2201,9 @@ ICON.display='<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M
 ICON.capture='<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 7l1.5-3h5L16 7"/>';
 var rail=$("rail");
 /* V040: five groups. Each opens one panel with fold-open sections. */
-var GROUPS=[["object","Object",["add","objects","ofx","crop","select","orient"],ICON.objects],["scene","Scene",["light","fx","display"],ICON.light],["camera","Camera",["camera","dof"],ICON.camera],["image","Image",["colour","look","lens"],ICON.colour],["output","Output",["capture","file","hist"],ICON.capture]];
+var GROUPS=[["add","Add",["add","addlight","addcam"],ICON.add],["look","Look",["colour","looks","lens","fx"],ICON.colour],["scene","Scene",["lighting","display","freeview","helpers"],ICON.display],["file","File",["file","capture","hist"],ICON.file]];
+/* V050: clicking an object opens one page for its kind. These pages have no rail button. */
+var OGROUPS=[["o-splat","Splat",["objects","ofx","crop","select","orient"]],["o-mesh","Model",["objects"]],["o-light","Light",["lightobj"]],["o-camera","Camera",["camobj","dof"]]];
 var curGroup=null,LASTSEC={};
 /* V048: remember the open menu, which section is open in each menu, and whether the timeline is open, between visits (the panel and timeline sizes were already remembered). Phones only remember the section, so the sheet doesn't cover the view on launch. */
 /* V048: reading and motion options, kept on this device (not in the project) */
@@ -2192,14 +2216,15 @@ function axItems(){return [
   ["ax_big","Larger text in menus","",!!AX.big,function(){axSet("big",!AX.big)}],
   ["ax_dys","Easier-to-read font","",!!AX.dys,function(){axSet("dys",!AX.dys)}]]}
 axApply();
-var UI={quiet:0,done:false,g:null,tl:0};
-(function(){try{var u=JSON.parse(localStorage.getItem("sb.ui")||"{}");if(!u||typeof u!=="object")return;UI.g=typeof u.g==="string"?u.g:null;UI.tl=u.tl?1:0;
-  if(u.ls&&typeof u.ls==="object")GROUPS.forEach(function(g){var v=u.ls[g[0]];if(v===null||(typeof v==="string"&&g[2].indexOf(v)>=0))LASTSEC[g[0]]=v})}catch(_){}})();
-function uiSave(){if(UI.quiet)return;try{localStorage.setItem("sb.ui",JSON.stringify({g:curGroup,ls:LASTSEC,tl:(typeof TLU==="object"&&TLU.open)?1:0}))}catch(_){}}
+var UI={quiet:0,done:false,g:null,tl:0,has:0,lr:null};
+(function(){try{var u=JSON.parse(localStorage.getItem("sb.ui")||"{}");if(!u||typeof u!=="object")return;UI.has=1;UI.g=(typeof u.g==="string"||u.g===null)?u.g:"scene";UI.tl=u.tl?1:0;
+  if(u.ls&&typeof u.ls==="object")GROUPS.concat(OGROUPS).forEach(function(g){var v=u.ls[g[0]];if(v===null||(typeof v==="string"&&g[2].indexOf(v)>=0))LASTSEC[g[0]]=v})}catch(_){}})();
+function uiSave(){if(UI.quiet)return;try{localStorage.setItem("sb.ui",JSON.stringify({g:(isRail(curGroup)?curGroup:(curGroup?UI.lr:null)),ls:LASTSEC,tl:(typeof TLU==="object"&&TLU.open)?1:0}))}catch(_){}}
 function uiRestore(){
   if(UI.done)return;UI.done=true;
   if(!wideDock())return;
-  if(UI.g&&UI.g!=="scene"&&groupOf(UI.g)){var ls=LASTSEC[UI.g];openTool(typeof ls==="string"?ls:UI.g)}
+  var g0=!UI.has?"scene":(UI.g===null?null:(isRail(UI.g)?UI.g:"scene"));
+  if(g0){var ls=LASTSEC[g0];openTool(typeof ls==="string"?ls:g0)}
   if(UI.tl&&typeof TLU==="object"&&!TLU.open)tlDockOpen(true);
 }
 GROUPS.forEach(function(g){
@@ -2207,7 +2232,13 @@ GROUPS.forEach(function(g){
   b.innerHTML='<svg class="i" viewBox="0 0 24 24" aria-hidden="true">'+g[3]+'</svg><span>'+g[1]+'</span>';
   rail.appendChild(b);
 });
-function groupOf(id){var i;for(i=0;i<GROUPS.length;i++)if(GROUPS[i][0]===id||GROUPS[i][2].indexOf(id)>=0)return GROUPS[i];return null}
+function groupOf(id){
+  var i,og=objGroupFor(SEL);
+  for(i=0;i<GROUPS.length;i++)if(GROUPS[i][0]===id||GROUPS[i][2].indexOf(id)>=0)return GROUPS[i];
+  for(i=0;i<OGROUPS.length;i++)if(OGROUPS[i][0]===id)return OGROUPS[i];
+  for(i=0;i<OGROUPS.length;i++)if(OGROUPS[i][0]===og&&OGROUPS[i][2].indexOf(id)>=0)return OGROUPS[i];
+  for(i=0;i<OGROUPS.length;i++)if(OGROUPS[i][2].indexOf(id)>=0)return OGROUPS[i];
+  return null}
 function secName(id){var t=TOOLS.filter(function(x){return x[0]===id})[0];return t?t[1]:id}
 function kd(id){return '<button class="kd" type="button" data-kd="'+id+'" aria-label="Keyframe at the playhead" title="Keyframe at the playhead"></button>'}
 function kdO(o,f){return o?kd("o:"+o.id+":"+f):""}
@@ -2232,7 +2263,7 @@ function objRow(o){
     '<span class="okind">'+objKindLabel(o)+'</span>'+
     '<button type="button" data-oid="'+o.id+'" data-oact="del" aria-label="Delete '+esc(nm)+'">✕</button></div>';
 }
-function osl(k,label,min,max,step){var kf=k==="cfov"?"fov":k==="linten"?"inten":k==="cfd"?"fdist":null;return '<div class="sl"><label for="oo-'+k+'">'+label+(kf?kdO(SEL,kf):"")+'</label>'+nbBox("oov-"+k,k)+'<input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
+function osl(k,label,min,max,step){var kf=k==="cfov"?"fov":k==="linten"?"inten":k==="cfd"?"fdist":k.indexOf("dof_")===0?"dof:"+k.slice(4):null;return '<div class="sl"><label for="oo-'+k+'">'+label+(kf?kdO(SEL,kf):"")+'</label>'+nbBox("oov-"+k,k)+'<input id="oo-'+k+'" data-o="'+k+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'"></div>'}
 function numIn(k,step){return '<input class="num" type="number" step="'+step+'" data-o="'+k+'" aria-label="'+k+'">'}
 function objList(filter,empty){
   var l=OBJS.filter(filter);
@@ -2248,7 +2279,7 @@ var PANES={
     '<p class="note">Pick 20 or more photos of the same place or object from slightly different spots. Training runs on your graphics card (needs WebGPU) and nothing leaves this PC. The result lands here as an object.</p>'+
     '<button class="btn" type="button" data-act="addPhoto">Photo to 3D (AI depth)</button>'+
     sl("range","Depth range",0.1,4,0.05)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+sl("detail","Detail (long side)",192,768,64)+
-    '<p class="note">Photo to 3D runs Depth Anything V2 Small on your device. The first run downloads about 40 MB, once. The sliders above apply to the next photo you make. Lights are in Render, under Light.</p>'},
+    '<p class="note">Photo to 3D runs Depth Anything V2 Small on your device. The first run downloads about 40 MB, once. The sliders above apply to the next photo you make.</p>'},
   objects:function(){
     var geo=OBJS.filter(isGeo),h=geo.length?"":'<p class="note">Nothing here yet. Use Add to bring in a splat, a 3D model, a photo scan or a photo.</p>',o=SEL&&isGeo(SEL)?SEL:null;
     if(o){
@@ -2289,15 +2320,13 @@ var PANES={
       '<p class="note">The crop is part of the object, so it follows the splat into the exported .ply.</p>';
   },
   orient:function(){
-    var sp=OBJS.filter(function(o){return o.kind==="splat"}),o=SEL&&SEL.kind==="splat"?SEL:null;
-    var h="";
-    if(sp.length){
-      h+='<p class="lbl">Orientation'+(o?': '+esc(o.name):'')+'</p>'+(o?'<div class="row2"><button class="btn small" type="button" data-act="aLevel">Auto-level</button><button class="btn small" type="button" data-act="aFlip">Flip upside down</button></div><button class="btn small" type="button" data-act="aResetRot">Reset rotation</button>':'<p class="note">Pick a splat in the Objects window, or tap it in the view.</p>');
-    }else h+='<p class="note">Add a splat to level it. The helpers below work any time.</p>';
-    h+='<p class="lbl">Helpers (Edit only, never exported)</p>'+chk("gridY","Floor grid (X / Z plane)")+chk("gridX","Side grid (Y / Z plane)")+chk("gridZ","Back grid (X / Y plane)")+chk("axes","Axes: X red, Y green, Z blue")+
-      '<div class="row2"><button class="btn small" type="button" data-act="level">Level horizon</button><button class="btn small" type="button" data-act="frame">Frame all</button></div>'+
-      '<p class="note">Auto-level finds the ground and makes it flat. If it ends up upside down, use Flip. For fine tuning, use the rotation boxes in Objects.</p>';
-    return h;
+    var o=SEL&&SEL.kind==="splat"?SEL:null;
+    if(!o)return '<p class="note">Pick a splat in the Objects window, or tap it in the view.</p>';
+    return '<p class="lbl">Orientation: '+esc(o.name)+'</p><div class="row2"><button class="btn small" type="button" data-act="aLevel">Auto-level</button><button class="btn small" type="button" data-act="aFlip">Flip upside down</button></div><button class="btn small" type="button" data-act="aResetRot">Reset rotation</button>'+
+      '<p class="note">Auto-level finds the ground and makes it flat. If it ends up upside down, use Flip. For fine tuning, use the rotation boxes in Transform.</p>';
+  },
+  helpers:function(){
+    return '<p class="lbl">Helpers (Edit only, never exported)</p>'+chk("gridY","Floor grid (X / Z plane)")+chk("gridX","Side grid (Y / Z plane)")+chk("gridZ","Back grid (X / Y plane)")+chk("axes","Axes: X red, Y green, Z blue");
   },
   file:function(){return '<button class="btn primary" type="button" data-act="fSave">Save project now</button><button class="btn" type="button" data-act="fExport">Export backup file (.splatbox)</button><p class="note">Saves the objects, cameras, effects and where the free view is. Shortcut: Ctrl+S.</p><label class="lbl" for="c-name">Project name</label><input class="txt" id="c-name" type="text" maxlength="60" value="">'+
     '<p class="note">Changes save by themselves.</p>'+
@@ -2309,11 +2338,10 @@ var PANES={
     '<button class="btn" type="button" data-act="spz">Export scene (.spz, about 10x smaller)</button>'+
     chk("bakeGrade","Bake my Colour grade into the file")+
     '<p class="note">Saves every visible splat with its moves, rotation, scale and crop. Not included: 3D models, lights, lens effects, looks, fog and depth of field. Those are Render only. The .ply opens in SuperSplat or any splat viewer.</p>'},
-  camera:function(){
-    var o=SEL&&isCam(SEL)?SEL:null,here=THRU&&o&&o===ACAM;
-    var h=(cams().length?'':'<p class="note">No cameras yet. Move the free view to where you want one, then press Add camera here.</p>')+
-      '<button class="btn" type="button" data-act="camAdd">Add camera here</button>';
-    if(o){
+  addcam:function(){return (cams().length?'':'<p class="note">No cameras yet. Move the free view to where you want one, then press Add camera here.</p>')+'<button class="btn" type="button" data-act="camAdd">Add camera here</button><p class="note">Click a camera in the Objects window to change it or look through it.</p>'},
+  camobj:function(){
+    var o=SEL&&isCam(SEL)?SEL:null,here=THRU&&o&&o===ACAM,h="";
+    if(!o)return '<p class="note">Pick a camera in the Objects window, or tap its shape in the view.</p>';
       h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Camera name">'+
         '<button class="btn primary" type="button" data-act="camThru">'+(here?'Leave camera (it stays here)':'Look through this camera')+'</button>';
       if(here)h+='<p class="note">You are looking through it. Fly around and the camera moves with you. Press Leave and it stays put.</p>';
@@ -2325,7 +2353,10 @@ var PANES={
         '<p class="lbl">Rotation (degrees)'+kdO(o,"rot")+'</p><div class="xyz">'+numIn("r0","1")+numIn("r1","1")+numIn("r2","1")+'</div>'+
         tlPanelHTML()+
         '<button class="btn small" type="button" data-act="oDel">Delete this camera</button>';
-    }else if(cams().length)h+='<p class="note">Pick a camera in the Objects window, or tap its shape in the view.</p>';
+    return h;
+  },
+  freeview:function(){
+    var h="";
     h+='<p class="lbl">Free view</p>'+seg("ctrl",[["fly","Free fly"],["orbit","Orbit"],["trackball","Free roll"]]);
     if(!THRU)h+=sl("fov","Free view lens (field of view)",8,150,1);
     h+=sl("sens","Mouse speed",0.1,6,0.1)+
@@ -2338,21 +2369,22 @@ var PANES={
     sl("grain","Film grain",0,2,0.02)+sl("grainSize","Grain size",0.5,6,0.25)+sl("grainSoft","Grain softness",0,1,0.02)+sl("grainCol","Grain colour",0,1,0.02)+sl("grainRate","Grain rate (frames per change)",1,8,1)+
     '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
     '<p class="note">Lens effects show in the viewer, PNG and video. They are never saved into the .ply.</p>'},
-  dof:function(){return sl("defocus","Blur amount",0,2,0.05)+'<button class="btn small'+(FOCUSPICK?' on':'')+'" type="button" data-act="pickFocus">'+(FOCUSPICK?'Click the viewport\u2026':'Pick focus point')+'</button>'+sl("focus","Focus distance",0,1,0.01)+sl("focusRange","Sharp zone size",0,1,0.02)+sl("dofSoft","Falloff softness",0,0.5,0.01)+sl("dofNear","Near blur (in front of focus)",0,2,0.05)+sl("dofFar","Far blur (behind focus)",0,2,0.05)+chk("dofVis","Show the focus zone in green")+
-    '<p class="lbl">Tilt-shift</p>'+sl("dofTilt","Tilt-shift blur",0,2,0.05)+sl("dofTiltA","Band angle",-90,90,1)+sl("dofTiltP","Band position",-1,1,0.02)+sl("dofTiltB","Sharp band size",0,1,0.02)+
-    '<button class="btn small" type="button" data-act="resetDof">Reset depth of field</button><p class="note">Blur is a camera property. It shows while you work and in video and images, and is never saved into the .ply.</p>'},
+  dof:function(){var d=function(n,l,a,b,st){return osl("dof_"+n,l,a,b,st)};return d("defocus","Blur amount",0,2,0.05)+'<button class="btn small'+(FOCUSPICK?' on':'')+'" type="button" data-act="pickFocus">'+(FOCUSPICK?'Click the viewport\u2026':'Pick focus point')+'</button>'+d("focus","Focus point",0,1,0.01)+d("focusRange","Sharp zone size",0,1,0.02)+d("dofSoft","Falloff softness",0,0.5,0.01)+d("dofNear","Near blur (in front of focus)",0,2,0.05)+d("dofFar","Far blur (behind focus)",0,2,0.05)+chk("dofVis","Show the focus zone in green")+
+    '<p class="lbl">Tilt-shift</p>'+d("dofTilt","Tilt-shift blur",0,2,0.05)+d("dofTiltA","Band angle",-90,90,1)+d("dofTiltP","Band position",-1,1,0.02)+d("dofTiltB","Sharp band size",0,1,0.02)+
+    '<button class="btn small" type="button" data-act="resetDof">Reset depth of field</button><p class="note">Blur belongs to this camera. It shows when you look through it, and in video and images made with it. The free view has none. Scroll while looking through the camera to change its focus distance.</p>'},
   fx:function(){return '<p class="lbl">Fog and slice</p>'+sl("fog","Depth fog",0,1,0.05)+sl("sliceA","Slice: near edge",0,1,0.02)+sl("sliceB","Slice: far edge",0,1,0.02)+
     '<p class="lbl">Splat effects</p>'+sl("fxDis","Dissolve",0,1,0.01)+sl("fxScat","Scatter",0,1,0.01)+sl("fxPulse","Pulse strength",0,1,0.02)+sl("fxPhase","Pulse position (keyframe 0 to 1)",0,1,0.01)+
     '<button class="btn small" type="button" data-act="resetFx">Reset depth and effects</button><p class="note">Depth and splat effects show while you work and in video and images. They aren\'t saved into the .ply.</p>'},
-  look:function(){return '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+esc((cur.lutName||"Imported LUT").slice(0,18))+'</button>':'')+'</div>'+
+  looks:function(){return '<p class="lbl">Camera looks</p><div class="seg wrap lookgrid"><button type="button" data-k="look" data-v="none" aria-pressed="false">None</button>'+LOOKS.map(function(l){return '<button type="button" data-k="look" data-v="'+l[0]+'" aria-pressed="false">'+l[1]+'</button>'}).join("")+(cur&&cur.lut?'<button type="button" data-k="look" data-v="cube" aria-pressed="false">'+esc((cur.lutName||"Imported LUT").slice(0,18))+'</button>':'')+'</div>'+
     sl("lookMix","Look strength",0,1,0.05)+'<button class="btn small" type="button" data-act="cube">Import .cube LUT</button>'+
     '<p class="note">Looks are hand-built approximations of film stocks and camera styles, not manufacturer LUTs. For an exact match, import your own .cube file. Render only, never exported.</p>'},
   colour:function(){return sl("exp","Exposure",-100,100,1)+sl("con","Contrast",-100,100,1)+sl("sat","Saturation",-100,100,1)+sl("hue","Hue",-180,180,1)+sl("warm","Warmth",-100,100,1)+
     '<button class="btn small" type="button" data-act="resetColour">Reset colour</button><p class="note">The grade shows in Render. It only goes into the .ply if you tick "Bake my Colour grade" in File.</p>'},
-  light:function(){
-    var o=SEL&&isLight(SEL)?SEL:null,h=sl("lit","Light the splats",0,1,0.05)+sl("amb","Ambient light",0,1,0.05)+
-      '<div class="row2"><button class="btn small" type="button" data-act="oAddSun">Add sun</button><button class="btn small" type="button" data-act="oAddPoint">Add point light</button><button class="btn small" type="button" data-act="oAddSpot">Add spot light</button></div>'+(OBJS.some(isLight)?'':'<p class="note">No lights yet. Add a sun or a point light.</p>');
-    if(o){
+  addlight:function(){return '<div class="row2"><button class="btn small" type="button" data-act="oAddSun">Add sun</button><button class="btn small" type="button" data-act="oAddPoint">Add point light</button><button class="btn small" type="button" data-act="oAddSpot">Add spot light</button></div>'+(OBJS.some(isLight)?'':'<p class="note">No lights yet. Add a sun or a point light.</p>')+'<p class="note">Click a light in the Objects window to change it. Up to 8 lights are used. Lights are Render only and are not exported.</p>'},
+  lighting:function(){return sl("lit","Light the splats",0,1,0.05)+sl("amb","Ambient light",0,1,0.05)+'<p class="note">Splats have their lighting baked in. "Light the splats" estimates surface direction from each splat, so sun and point lights add a rough relight. At 0 your scan looks exactly as captured. 3D models are always lit. Add lights from the Add page.</p>'},
+  lightobj:function(){
+    var o=SEL&&isLight(SEL)?SEL:null,h="";
+    if(!o)return '<p class="note">Pick a light in the Objects window, or tap it in the view.</p>';
       h+='<p class="lbl">Selected</p><input class="txt" type="text" data-o="name" maxlength="40" aria-label="Light name">';
       if(o.kind!=="sun")h+='<p class="lbl">Position'+kdO(o,"pos")+'</p><div class="xyz">'+numIn("p0","0.05")+numIn("p1","0.05")+numIn("p2","0.05")+'</div>';
       if(o.kind!=="point")h+='<p class="lbl">Direction (rotation, degrees)'+kdO(o,"rot")+'</p><div class="xyz">'+numIn("r0","5")+numIn("r1","5")+numIn("r2","5")+'</div>';
@@ -2363,8 +2395,7 @@ var PANES={
       h+='<p class="lbl">Side shading</p><div class="seg" role="group" aria-label="Side shading"><button type="button" data-act="lxSide" data-v="surface" aria-pressed="'+!gr+'">Surface</button><button type="button" data-act="lxSide" data-v="gradient" aria-pressed="'+gr+'">Gradient</button></div>'+
         (gr?osl("lx_sstr","Gradient strength",0,1,0.02)+osl("lx_ssoft","Gradient softness",0.05,1,0.02):'<p class="note">Surface shades by which way each bit of surface faces. Gradient ignores that and just darkens the side of the object away from this light.</p>')+
         '<button class="btn small" type="button" data-act="oDel">Delete this light</button>';
-    }
-    return h+'<p class="note">Splats have their lighting baked in. "Light the splats" estimates surface direction from each splat, so sun and point lights add a rough relight. At 0 your scan looks exactly as captured. 3D models are always lit. Up to 8 lights are used. Lights are Render only and are not exported.</p>';
+    return h;
   },
   display:function(){return chk("fast","Fast preview (viewer only: skips depth of field, effects and lighting)")+'<p class="lbl">Render</p>'+seg("render",[["splat","Splats"],["solid","Solid"],["points","Points"],["depth","Depth"]])+
     '<p class="note">Splats = real soft Gaussians. Solid = hard-edged ellipses. Points = simple dots. Depth = colour by distance.</p>'+
@@ -2403,6 +2434,7 @@ function syncObjFields(){
     else if(/^c[xyz][01]$/.test(k)){v=o.crop[k.slice(1)];var oc=$("oov-"+k);if(oc)setOut(oc,Math.round(v*100)+"%")}
     else if(k==="cfov"){v=o.fov||50;var oq=$("oov-cfov");if(oq)setOut(oq,fovTxt(v))}
     else if(k==="cfd"){v=+(o.fdist||1.95).toFixed(3);var of2=$("oov-cfd");if(of2)setOut(of2,v.toFixed(2))}
+    else if(k.indexOf("dof_")===0){v=camDof(o,k.slice(4));var od2=$("oov-"+k);if(od2)setOut(od2,oTxt(k,v))}
     else if(k==="lcol"){v=o.color||"#ffffff";var hx=$("lcolHex");if(hx)hx.textContent=String(v).toUpperCase()}
     else if(k==="linten"){v=o.inten==null?1:o.inten;var oi=$("oov-linten");if(oi)setOut(oi,(+v).toFixed(2))}
     else if(k.indexOf("lx_")===0){v=lxGet(o,k.slice(3));var ol=$("oov-"+k);if(ol)setOut(ol,lxTxt(k.slice(3),v))}
@@ -2412,7 +2444,7 @@ function syncObjFields(){
 var objSaveT=0;
 function objRec(o){
   var r={id:o.id,kind:o.kind,name:o.name,pos:o.pos.slice(),R:o.R.slice(),scl:o.scl,vis:o.vis,crop:Object.assign({},o.crop)};
-  if(o.locked)r.locked=true;if(o.st&&Object.keys(o.st).length)r.st=Object.assign({},o.st);if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.lx&&Object.keys(o.lx).length)r.lx=Object.assign({},o.lx);if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.gs&&o.gs.mask){var ml=maskRle(o.gs.mask);if(ml)r.mask=ml}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist}return r;
+  if(o.locked)r.locked=true;if(o.st&&Object.keys(o.st).length)r.st=Object.assign({},o.st);if(o.color)r.color=o.color;if(o.inten!=null)r.inten=o.inten;if(o.lx&&Object.keys(o.lx).length)r.lx=Object.assign({},o.lx);if(o.blob){r.blob=o.blob;r.fmt=o.fmt}if(o.gs&&o.gs.mask){var ml=maskRle(o.gs.mask);if(ml)r.mask=ml}if(o.kind==="camera"){r.fov=o.fov;r.fdist=o.fdist;if(o.dof&&Object.keys(o.dof).length)r.dof=Object.assign({},o.dof)}return r;
 }
 function persistObjs(){
   if(!cur)return;
@@ -2420,7 +2452,7 @@ function persistObjs(){
   cur.objs=OBJS.map(objRec);
   saveSoon();
 }
-function refreshObjs(){if(OBJTOOL[curTool])openTool(curTool,true);dirty=true}
+function refreshObjs(){if(isObjPage()){if(objGroupFor(SEL)===curGroup)openTool(curTool||curGroup,true);else showObjPage()}dirty=true}
 function findObj(id){for(var i=0;i<OBJS.length;i++)if(OBJS[i].id===id)return OBJS[i];return null}
 /* removing an object can be undone: it is rebuilt from the same saved record */
 function objUndoCmd(o){
@@ -2462,7 +2494,7 @@ function addLight(kind){
   else if(kind==="spot"){o.pos=[0.6,0.9,0.7];o.R=rotFromTo([0,1,0],[0.6,0.9,0.7]);o.inten=3}
   else{o.pos=[0.5,0.7,0.6];o.inten=2}
   o.color="#ffffff";OBJS.push(o);if(S.lit<0.01){S.lit=0.6;setStatus("Light the splats is on. Slide it to 0 for the original look.","ok")}
-  SEL=o;persistObjs();refreshObjs();return o;
+  SEL=o;persistObjs();showObjPage(true);dirty=true;return o;
 }
 function loadObjs(list){
   HLOAD++;
@@ -2477,7 +2509,7 @@ function loadObjs(list){
 }
 function afterAdd(o,msg){
   if(OBJS.filter(isGeo).length===1)frameAll();
-  SEL=o;persistObjs();regrade();if(curTool!=="objects")openTool("objects");else refreshObjs();setStatus(msg,"ok");
+  SEL=o;persistObjs();regrade();showObjPage(true);setStatus(msg,"ok");
 }
 /* ---------- V032: one photo -> a 3D splat card. One splat per pixel, pulled forward by a depth map (white = near); scene space is Y up with the camera on +Z. No depth map: a gentle relief from brightness. ---------- */
 function photoToPly(photo,depth){
@@ -2593,7 +2625,7 @@ $("popB").addEventListener("click",function(e){
     redo:function(){var x=findObj(id);if(x){delete x.st;regradeSoon();dirty=true;persistObjs();okSync()}}});
   delete o.st;regradeSoon();dirty=true;persistObjs();okSync();
 });
-function oDef(k){var o=SEL;if(!o)return null;if(k==="cfov")return 50;if(k==="cfd")return 1.95;if(k==="linten")return o.kind==="sun"?1:o.kind==="spot"?3:2;if(k.indexOf("lx_")===0)return LXD[k.slice(3)];if(oIsCrop(k))return k[2]==="1"?1:0;return null}
+function oDef(k){var o=SEL;if(!o)return null;if(k==="cfov")return 50;if(k==="cfd")return 1.95;if(k.indexOf("dof_")===0)return DOFD[k.slice(4)];if(k==="linten")return o.kind==="sun"?1:o.kind==="spot"?3:2;if(k.indexOf("lx_")===0)return LXD[k.slice(3)];if(oIsCrop(k))return k[2]==="1"?1:0;return null}
 $("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.o&&SEL){var d=oDef(el.dataset.o);if(d!==null&&typeof d==="number"){el.value=d;objField(el)}}});
 $("popB").addEventListener("dblclick",function(e){var el=e.target;if(el.type==="range"&&el.dataset.ok&&SEL){okUndoStart(SEL,el.dataset.ok);ovClear(SEL,el.dataset.ok);okAfter(SEL,el.dataset.ok)}});
 function objField(el){
@@ -2613,6 +2645,7 @@ function objField(el){
   else if(k==="linten"){o.inten=+v;var oi=$("oov-linten");if(oi)setOut(oi,(+v).toFixed(2))}
   else if(k==="cfov"){n=parseFloat(v);if(isFinite(n)){o.fov=clamp(n,4,170);var oq=$("oov-cfov");if(oq)setOut(oq,fovTxt(o.fov))}}
   else if(k==="cfd"){n=parseFloat(v);if(isFinite(n)&&n>0.05){o.fdist=n;var of3=$("oov-cfd");if(of3)setOut(of3,n.toFixed(2))}}
+  else if(k.indexOf("dof_")===0){n=parseFloat(v);if(isFinite(n)){o.dof=o.dof||{};o.dof[k.slice(4)]=n;var od3=$("oov-"+k);if(od3)setOut(od3,oTxt(k,n))}}
   if(THRU&&o===ACAM&&isCam(o))viewFromCam(o);
   dirty=true;clearTimeout(objSaveT);objSaveT=setTimeout(persistObjs,500);
 }
@@ -2632,7 +2665,7 @@ $("popB").addEventListener("click",function(e){
   else if(a==="oAddSun")addLight("sun");
   else if(a==="oAddPoint")addLight("point");
   else if(a==="oAddSpot")addLight("spot");
-  else if(a==="lxSide"&&SEL&&isLight(SEL)){SEL.lx=SEL.lx||{};SEL.lx.side=el.dataset.v;dirty=true;persistObjs();openTool("light",true)}
+  else if(a==="lxSide"&&SEL&&isLight(SEL)){SEL.lx=SEL.lx||{};SEL.lx.side=el.dataset.v;dirty=true;persistObjs();openTool("lightobj",true)}
   else if(a==="camAdd")addCamera();
   else if(tlAct(a,el)){}
   else if(a==="camThru"){if(THRU&&SEL===ACAM)leaveThru();else enterThru(SEL&&isCam(SEL)?SEL:curCam())}
@@ -2655,7 +2688,7 @@ document.addEventListener("keydown",function(e){
   if(c==="KeyT"){gmCycle()}
   else if(c==="KeyV"){GM="rotate";syncObjFields();dirty=true}
   else if(c==="KeyB"){GM="scale";syncObjFields();dirty=true}
-  else if(c==="KeyO"){if(curTool==="objects")closeTool();else openTool("objects")}
+  else if(c==="KeyO"){if(curTool==="objects")closeTool();else if(SEL)openTool("objects")}
   else if((c==="Delete"||c==="Backspace")&&SEL&&isGeo(SEL)&&curTool!=="select"&&!TLU.sel.length){e.preventDefault();removeObj(SEL)}
 });
 /* ---------- V032: SPZ (Niantic's compressed splat format), gzip versions 2 and 3 ---------- */
@@ -2824,23 +2857,26 @@ $("homeAx").addEventListener("click",function(e){e.stopPropagation();var m=$("ax
 $("axMenu").addEventListener("click",function(e){e.stopPropagation();var b=e.target.closest("[data-ax]");if(!b)return;axItems().forEach(function(it){if(it[0]===b.dataset.ax)it[4]()});axDraw()});
 document.addEventListener("click",function(){var m=$("axMenu");if(m&&!m.hidden){m.hidden=true;$("homeAx").setAttribute("aria-expanded","false")}});
 document.addEventListener("click",function(){var m=$("vwMenu");if(m&&!m.hidden){m.hidden=true;$("vwBtn").setAttribute("aria-expanded","false")}});
-/* when a tool about objects opens, pick the object it is about if there is only one */
-function autoSel(id){
-  var want=id==="light"?isLight:id==="camera"?isCam:(id==="crop"||id==="orient"||id==="select")?function(o){return o.kind==="splat"}:isGeo;
-  if(SEL&&want(SEL)){if(isCam(SEL))ACAM=SEL;return}
-  var l=OBJS.filter(want);SEL=l.length===1?l[0]:null;if(SEL&&isCam(SEL))ACAM=SEL;
-}
 function secKeys(id){var h="",ks=[],m,re=/data-k="(\w+)"/g;try{h=PANES[id]()}catch(_){return ks}while((m=re.exec(h)))if(ks.indexOf(m[1])<0&&DEF[m[1]]!==undefined&&typeof DEF[m[1]]!=="object")ks.push(m[1]);return ks}
 function secChanged(id){return secKeys(id).some(function(k){return S[k]!==DEF[k]})}
+function isRail(id){var i;for(i=0;i<GROUPS.length;i++)if(GROUPS[i][0]===id)return true;return false}
+function isObjPage(){return !!curGroup&&curGroup.indexOf("o-")===0}
+function objGroupFor(o){return !o?null:o.kind==="splat"?"o-splat":o.kind==="mesh"?"o-mesh":isLight(o)?"o-light":isCam(o)?"o-camera":null}
+function pageGroups(){var cg=objGroupFor(SEL),g=cg?OGROUPS.filter(function(x){return x[0]===cg})[0]:null;return g?GROUPS.concat([g]):GROUPS}
+/* V050: a page is either one of the four rail pages (whole scene) or the page for the picked object. Opening or closing a page never changes what is selected. */
 function openTool(id,keep){
-  var g=groupOf(id);if(!g)return;var sec=g[2].indexOf(id)>=0?id:(LASTSEC[g[0]]||g[2][0]);
-  if(id===g[0]&&LASTSEC[g[0]]===null)sec=null;
+  var g=groupOf(id);if(!g)return false;
+  var isO=g[0].indexOf("o-")===0;
+  if(isO&&(!SEL||objGroupFor(SEL)!==g[0]))return false;
+  var sec=g[2].indexOf(id)>=0?id:(LASTSEC[g[0]]||g[2][0]),single=g[2].length===1;
+  if(id===g[0]&&LASTSEC[g[0]]===null&&!single)sec=null;
   var keepScroll=curGroup===g[0]&&keep?$("popB").scrollTop:0,q=($("psearch")&&keep)?$("psearch").value:"";
-  curTool=sec;curGroup=g[0];if(sec)LASTSEC[g[0]]=sec;if(sec&&OBJTOOL[sec]&&!keep)autoSel(sec);
+  curTool=sec;curGroup=g[0];if(sec)LASTSEC[g[0]]=sec;if(!isO)UI.lr=g[0];
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed",String(b.dataset.tool===g[0]))});
-  $("popT").textContent=g[1];
+  $("popT").textContent=isO?g[1]+": "+SEL.name:g[1];
   var h='<input class="psearch" id="psearch" type="search" placeholder="Search all settings" aria-label="Search all settings" autocomplete="off"><div id="sres" hidden></div><div id="psecs">';
   g[2].forEach(function(t){
+    if(single){h+='<div class="sec open"><div class="secb">'+PANES[t]()+'</div></div>';return}
     var on=t===sec,ch=secChanged(t);
     h+='<div class="sec'+(on?' open':'')+'"><div class="sech"><button type="button" class="sechb" data-sec="'+t+'" aria-expanded="'+on+'">'+secName(t)+(ch?'<i class="cdot" title="Changed from the default"></i>':'')+'</button>'+(ch&&secKeys(t).length?'<button type="button" class="secr" data-secr="'+t+'">Reset</button>':'')+'</div>'+(on?'<div class="secb">'+PANES[t]()+'</div>':'')+'</div>';
   });
@@ -2848,23 +2884,27 @@ function openTool(id,keep){
   if(q){$("psearch").value=q}
   syncControls();if(sec&&OBJTOOL[sec])syncObjFields();if(sec==="select")syncSel();
   if(keepScroll)$("popB").scrollTop=keepScroll;
-  dirty=true;uiSave();
+  dirty=true;uiSave();return true;
 }
 function closeTool(){
   if(FOCUSPICK){FOCUSPICK=false;cv.style.cursor=""}
   if(!curTool&&!curGroup)return;curTool=null;curGroup=null;$("pop").hidden=true;dirty=true;
   Array.prototype.forEach.call(rail.children,function(b){b.setAttribute("aria-pressed","false")});
-  uiSave();dockKeep();
+  uiSave();
 }
-/* on a wide screen the right side is always split: settings on top, Objects below. Closing a menu falls back to the Scene menu */
+/* show the page for the picked object (force = even if no page is open, as after adding something); close an object page when nothing is picked */
+function showObjPage(force){
+  var gid=objGroupFor(SEL);
+  if(gid){if(force||wideDock()||curGroup){if(curGroup!==gid)delete LASTSEC[gid];openTool(gid,curGroup===gid)}}
+  else if(isObjPage())closeTool();
+}
 function wideDock(){return !!(window.matchMedia&&matchMedia("(min-width:760px)").matches)}
-function dockKeep(){if(wideDock()&&cur&&!$("editor").hidden&&!curGroup)openTool("scene")}
 rail.addEventListener("click",function(e){var b=e.target.closest(".tool");if(!b)return;if(curGroup===b.dataset.tool)closeTool();else openTool(b.dataset.tool)});
 /* section headers, per-section reset, search */
 function popSearch(q){
   var box=$("sres"),secs=$("psecs");if(!box)return;q=q.trim().toLowerCase();
   if(!q){box.hidden=true;secs.hidden=false;return}
-  var out=[],seen={};GROUPS.forEach(function(g){g[2].forEach(function(t){
+  var out=[],seen={};pageGroups().forEach(function(g){g[2].forEach(function(t){
     var h="",m,re=/<label for="c-(\w+)">([^<]+)</g,re2=/<label class="chk"><input type="checkbox" data-k="(\w+)"> ([^<]+)</g;try{h=PANES[t]()}catch(_){return}
     if(secName(t).toLowerCase().indexOf(q)>=0&&!seen["s"+t]){seen["s"+t]=1;out.push({t:t,k:"",l:secName(t),g:g[1]})}
     while((m=re.exec(h)))if(m[2].toLowerCase().indexOf(q)>=0&&!seen[m[1]]){seen[m[1]]=1;out.push({t:t,k:m[1],l:m[2].trim(),g:g[1]})}
@@ -2904,12 +2944,13 @@ $("popB").addEventListener("input",function(e){
 /* number boxes: type any value, up to the hard limit (the slider only shows the everyday range) */
 /* typed values for the per-object sliders (camera lens, focus distance, intensity, light shape, crop) */
 function oIsCrop(k){return /^c[xyz][01]$/.test(k)}
-function oGet(k){var o=SEL;if(!o)return 0;if(k==="cfov")return o.fov||50;if(k==="cfd")return o.fdist||1.95;if(k==="linten")return o.inten==null?1:o.inten;if(k.indexOf("lx_")===0)return lxGet(o,k.slice(3));if(oIsCrop(k))return o.crop[k.slice(1)];return 0}
-function oTxt(k,v){if(k==="cfov")return fovTxt(v);if(k==="cfd")return (+v).toFixed(2);if(k.indexOf("lx_")===0)return lxTxt(k.slice(3),v);if(oIsCrop(k))return Math.round(v*100)+"%";return (+v).toFixed(2)}
+function oGet(k){var o=SEL;if(!o)return 0;if(k==="cfov")return o.fov||50;if(k==="cfd")return o.fdist||1.95;if(k.indexOf("dof_")===0)return camDof(o,k.slice(4));if(k==="linten")return o.inten==null?1:o.inten;if(k.indexOf("lx_")===0)return lxGet(o,k.slice(3));if(oIsCrop(k))return o.crop[k.slice(1)];return 0}
+function oTxt(k,v){if(k==="dof_dofTiltA")return Math.round(v)+"\u00b0";if(k==="dof_dofTiltP")return (+v).toFixed(2);if(k.indexOf("dof_")===0)return Math.round(v*100)+"%";if(k==="cfov")return fovTxt(v);if(k==="cfd")return (+v).toFixed(2);if(k.indexOf("lx_")===0)return lxTxt(k.slice(3),v);if(oIsCrop(k))return Math.round(v*100)+"%";return (+v).toFixed(2)}
 function oPut(k,n){
   var o=SEL;if(!o)return;
   if(k==="cfov"){o.fov=clamp(n,4,170);if(THRU&&o===ACAM&&isCam(o))viewFromCam(o)}
   else if(k==="cfd")o.fdist=Math.max(0.05,n);
+  else if(k.indexOf("dof_")===0){o.dof=o.dof||{};o.dof[k.slice(4)]=n}
   else if(k==="linten")o.inten=Math.max(0,n);
   else if(k.indexOf("lx_")===0){o.lx=o.lx||{};o.lx[k.slice(3)]=n}
   else if(oIsCrop(k)){o.crop[k.slice(1)]=clamp(n,0,1);if(!o.crop.on){o.crop.on=true;var cb=$("popB").querySelector('[data-o="cropOn"]');if(cb)cb.checked=true}}
@@ -2968,9 +3009,9 @@ $("popB").addEventListener("click",function(e){
   var a=b.dataset.act;
   if(a&&a.indexOf("sx-")===0){sxAct(a,b);return}
   if(a==="resetColour"){["exp","con","sat","hue","warm"].forEach(function(k){S[k]=DEF[k]});regrade();syncControls();saveSoon()}
-  else if(a==="pickFocus"){setFocusPick(!FOCUSPICK);if(FOCUSPICK)setStatus("Click on the splat to focus on it.","ok")}
+  else if(a==="pickFocus"){if(!THRU||!ACAM){setStatus("Look through the camera first, then pick the focus point.","warn");return}setFocusPick(!FOCUSPICK);if(FOCUSPICK)setStatus("Click on the splat to focus on it.","ok")}
   else if(a==="resetFx"){["fog","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
-  else if(a==="resetDof"){["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"].forEach(function(k){S[k]=DEF[k]});dirty=true;syncControls();saveSoon()}
+  else if(a==="resetDof"){if(SEL&&isCam(SEL)){SEL.dof={};dirty=true;syncObjFields();persistObjs()}}
   else if(a==="play"){if(anim&&!anim.rec)stopAnim();else startAnim(false)}
   else if(a==="record")startRecord();
   else if(a==="rFrames")renderSeq();
@@ -3013,7 +3054,7 @@ function undoUI(){var u=$("sxUndo"),r=$("sxRedo");if(u)u.disabled=!UNDO.done.len
   var hb=$("hUndo"),hr=$("hRedo");if(hb)hb.disabled=!UNDO.done.length;if(hr)hr.disabled=!UNDO.undone.length;if(curTool==="hist")histDraw()}
 /* V040 history. Anything you change with a slider, box, gizmo or key is noticed after the gesture ends, compared with how it was before,
    and stored as one undo step. Steps with their own undo (delete, merge, selection, keyframes) are left to that code. */
-var HLOAD=0,HLAST=null,HREBASE=false,HCO=null,PDOWN=false,HOBJK=["name","pos","R","scl","vis","locked","crop","color","inten","lx","fov","fdist"];
+var HLOAD=0,HLAST=null,HREBASE=false,HCO=null,PDOWN=false,HOBJK=["name","pos","R","scl","vis","locked","crop","color","inten","lx","fov","fdist","dof"];
 function histSnap(){
   var r={s:{},o:{},n:{},k:{}},k,i,v;
   for(k in S){try{v=JSON.stringify(S[k])}catch(_){continue}if(v!==undefined&&v.length<1500)r.s[k]=v}
@@ -3025,7 +3066,7 @@ function histApply(sm,om){
   for(k in sm){S[k]=JSON.parse(sm[k]);any=true}
   if(any){if(sm.look!==undefined)applyLook();regradeSoon();setTimeout(buildHelpers,0);saveSoon()}
   for(id in om){var o=findObj(id);if(!o)continue;var r=JSON.parse(om[id]);
-    HOBJK.forEach(function(f){if(r[f]!==undefined)o[f]=r[f];else if(f==="locked")delete o[f]});
+    HOBJK.forEach(function(f){if(r[f]!==undefined)o[f]=r[f];else if(f==="locked"||f==="dof")delete o[f]});
     if(THRU&&o===ACAM&&isCam(o))viewFromCam(o)}
   regradeSoon();dirty=true;persistObjs();HREBASE=true;
   if($("popB")&&curTool){try{syncControls()}catch(_){}try{syncObjFields()}catch(_){}if(curTool==="ofx"||curTool==="objects"||curTool==="crop")openTool(curTool,true)}
@@ -3313,7 +3354,7 @@ document.addEventListener("keydown",function(e){
 
 /* ---------- V025 timeline engine: every animatable value is a named property, keys live in cur.timeline, one clock drives them all ---------- */
 var TL={tracks:{},fps:30,t:0,markers:[],range:null,bounce:false};
-var TL_S=["exp","con","sat","hue","warm","fog","defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
+var TL_S=["exp","con","sat","hue","warm","fog","sliceA","sliceB","fxDis","fxScat","fxPulse","fxPhase","vig","vigSoft","vigBlur","dist","ca","grain","grainSize","lookMix","size","lit","amb"];
 var TL_CROP=["x0","x1","y0","y1","z0","z1"];
 function tlLoad(p){if(!p.timeline)p.timeline={fps:30,tracks:{}};if(!p.timeline.tracks)p.timeline.tracks={};TL.tracks=p.timeline.tracks;TL.fps=p.timeline.fps||30;TL.t=0;TL.ready=false;if(!Array.isArray(p.timeline.markers))p.timeline.markers=[];TL.markers=p.timeline.markers;TL.range=p.timeline.range&&p.timeline.range.b>p.timeline.range.a?p.timeline.range:null;TL.bounce=!!p.timeline.bounce}
 function tlHasKeys(){for(var k in TL.tracks)if(TL.tracks[k].k&&TL.tracks[k].k.length&&tlProp(k))return true;return false}
@@ -3346,6 +3387,7 @@ function tlProp(id){
   if(f==="vis")return {id:id,obj:o,label:nm+" visible",group:nm,dim:1,step:true,get:function(){return [o.vis?1:0]},set:function(v){o.vis=v[0]>=0.5}};
   if(f==="fov"&&o.kind==="camera")return {id:id,obj:o,label:nm+" lens",group:nm,dim:1,get:function(){return [o.fov||50]},set:function(v){o.fov=clamp(v[0],4,170)}};
   if(f==="fdist"&&o.kind==="camera")return {id:id,obj:o,label:nm+" focus distance",group:nm,dim:1,get:function(){return [o.fdist||1.95]},set:function(v){o.fdist=Math.max(0.05,v[0])}};
+  if(f==="dof"&&o.kind==="camera"&&DOFD[a[3]]!==undefined){var dk=a[3];return {id:id,obj:o,label:nm+" "+DOFLAB[dk],group:nm,dim:1,get:function(){return [camDof(o,dk)]},set:function(v){o.dof=o.dof||{};o.dof[dk]=v[0]}}}
   if(f==="inten"&&isLight(o))return {id:id,obj:o,label:nm+" intensity",group:nm,dim:1,get:function(){return [o.inten==null?1:o.inten]},set:function(v){o.inten=Math.max(0,v[0])}};
   if(f==="st"&&o.kind==="splat"&&OLAB[a[3]]){var sk=a[3];return {id:id,obj:o,label:nm+" "+OLAB[sk],group:nm,dim:1,get:function(){return [+ovGet(o,sk)]},set:function(v){ovSet(o,sk,v[0]);if(OGRD[sk])regradeSoon()}}}
   if(f==="crop"&&o.crop)return {id:id,obj:o,label:nm+" crop box",group:nm,dim:6,get:function(){return TL_CROP.map(function(k){return o.crop[k]})},set:function(v){TL_CROP.forEach(function(k,i){o.crop[k]=clamp(v[i],0,1)})}};
@@ -3354,7 +3396,7 @@ function tlProp(id){
 /* every property that exists right now, for the timeline panel to list */
 function tlAllProps(){
   var out=[];TL_S.forEach(function(k){out.push(tlProp("s:"+k))});
-  OBJS.forEach(function(o){["pos","rot","scl","vis","fov","fdist","inten","crop"].forEach(function(f){var d=tlProp("o:"+o.id+":"+f);if(d)out.push(d)});if(o.st)Object.keys(o.st).forEach(function(k){var d=tlProp("o:"+o.id+":st:"+k);if(d)out.push(d)})});
+  OBJS.forEach(function(o){["pos","rot","scl","vis","fov","fdist","inten","crop"].forEach(function(f){var d=tlProp("o:"+o.id+":"+f);if(d)out.push(d)});if(o.kind==="camera")DOFK.forEach(function(k){var d=tlProp("o:"+o.id+":dof:"+k);if(d)out.push(d)});if(o.st)Object.keys(o.st).forEach(function(k){var d=tlProp("o:"+o.id+":st:"+k);if(d)out.push(d)})});
   return out;
 }
 function tlBez(c,u){
@@ -3401,7 +3443,7 @@ function tlSnap(t){return Math.round(t*TL.fps)/TL.fps}
 function tlStoreX(){var p=cur&&cur.timeline;if(p){p.markers=TL.markers;p.range=TL.range;p.bounce=!!TL.bounce}saveSoon();if(TLU.open)tlDockDraw()}
 function tlTrackCopy(id){var tr=TL.tracks[id];return tr?JSON.parse(JSON.stringify(tr)):null}
 function tlSetTrack(id,tr){if(tr&&tr.k&&tr.k.length)TL.tracks[id]=tr;else delete TL.tracks[id];tlChanged()}
-function tlChanged(quiet){if(!quiet&&TL.ready!==false)tlSetTime(TL.t);saveSoon();dirty=true;if(!quiet&&curTool==="camera")openTool("camera",true);if(typeof tlDockDraw==="function")tlDockDraw();tlKdRefresh()}
+function tlChanged(quiet){if(!quiet&&TL.ready!==false)tlSetTime(TL.t);saveSoon();dirty=true;if(!quiet&&curTool==="camobj")openTool("camobj",true);if(typeof tlDockDraw==="function")tlDockDraw();tlKdRefresh()}
 function tlUndoCmd(label,ids,before){
   var after=ids.map(tlTrackCopy);
   return {label:label,bytes:2000,undo:function(){ids.forEach(function(id,i){tlSetTrack(id,before[i]?JSON.parse(JSON.stringify(before[i])):null)});tlSetTime(TL.t)},
@@ -3466,7 +3508,7 @@ function tlPanelHTML(){
 }
 function tlAct(a,el){
   if(a==="tlKey"){tlKeyCam(SEL&&isCam(SEL)?SEL:curCam(),TL.t);setStatus("Keyed the camera at "+TL.t.toFixed(2)+" s.","ok");return true}
-  if(a==="tlBake"){if(tlBakePreset(S.cam,SEL&&isCam(SEL)?SEL:null)){persistObjs();setStatus("Turned the "+S.cam+" move into keyframes.","ok");openTool("camera",true)}return true}
+  if(a==="tlBake"){if(tlBakePreset(S.cam,SEL&&isCam(SEL)?SEL:null)){persistObjs();setStatus("Turned the "+S.cam+" move into keyframes.","ok");openTool("camobj",true)}return true}
   if(a==="tlClear"){tlClearCam(SEL&&isCam(SEL)?SEL:null);setStatus("Cleared the camera's keys.","ok");return true}
   return false;
 }
@@ -3560,7 +3602,7 @@ function tlSetDur(v,stretch){
     cmd.redo=function(){S.dur=v;TL.markers=ma.slice();TL.range=ra?{a:ra.a,b:ra.b}:null;r0();tlStoreX();tlFit()};
     undoPush(cmd);tlStoreX();tlChanged();
   }else{S.dur=v;if(TL.range&&TL.range.b>v){TL.range=TL.range.a<v?{a:TL.range.a,b:v}:null}}
-  saveSoon();tlFit();if(curTool==="camera")openTool("camera",true);
+  saveSoon();tlFit();if(curTool==="camobj")openTool("camobj",true);
 }
 /* jumping around */
 function tlGo(t){tlSetTime(tlSnap(Math.max(0,t)));if(TL.t<TLU.v0||TL.t>TLU.v1){var w=TLU.v1-TLU.v0;TLU.v0=Math.max(0,TL.t-w*0.1);TLU.v1=TLU.v0+w}tlDockDraw()}
@@ -3577,7 +3619,7 @@ function tlRangeSet(w){
 }
 function tlRangeClear(){TL.range=null;tlStoreX()}
 function tlLoopUI(){var b=$("tlLoop");if(b)b.textContent=!S.loop?"Once":TL.bounce?"Bounce":"Loop"}
-function tlLoopCycle(){var m=!S.loop?"once":TL.bounce?"bounce":"loop",n=m==="once"?"loop":m==="loop"?"bounce":"once";S.loop=n!=="once";TL.bounce=n==="bounce";tlStoreX();tlLoopUI();if(curTool==="camera")openTool("camera",true)}
+function tlLoopCycle(){var m=!S.loop?"once":TL.bounce?"bounce":"loop",n=m==="once"?"loop":m==="loop"?"bounce":"once";S.loop=n!=="once";TL.bounce=n==="bounce";tlStoreX();tlLoopUI();if(curTool==="camobj")openTool("camobj",true)}
 /* nearest marker, playhead or range edge within a few pixels (for scrubbing and dragging keys) */
 function tlSnapT(t,skipHead){
   if(!TLU.snap)return null;var c=TL.markers.slice(),best=null,bd=6,i,d;
@@ -3797,12 +3839,12 @@ function tlToolFor(d){
   var a=d.id.split(":"),i,h;
   if(a[0]==="s"){for(i=0;i<TOOLS.length;i++){h="";try{h=PANES[TOOLS[i][0]]()}catch(_){}if(h.indexOf('data-kd="s:'+a[1]+'"')>=0)return TOOLS[i][0]}return null}
   var o=d.obj;if(!o)return null;
-  if(o.kind==="camera")return "camera";if(isLight(o))return "light";if(a[2]==="crop")return "crop";if(a[2]==="st")return "ofx";return "objects";
+  if(o.kind==="camera")return a[2]==="dof"?"dof":"camobj";if(isLight(o))return "lightobj";if(a[2]==="crop")return "crop";if(a[2]==="st")return "ofx";return "objects";
 }
 function tlOpenMenu(row){
   var tool=tlToolFor(row.d);if(!tool){setStatus("There's no menu for that one.","warn");return}
   TLU.row=row.id;if(row.d.obj){SEL=row.d.obj;if(isCam(SEL))ACAM=SEL}
-  openTool(tool,true);if(row.d.obj)camUI();dirty=true;tlDockDraw();
+  if(!openTool(tool,true)){setStatus("Pick the object for that one first.","warn");return}if(row.d.obj)camUI();dirty=true;tlDockDraw();
 }
 (function(){
   var c=$("tlc");
@@ -4552,7 +4594,7 @@ function openSpace(p){
   $("pname").textContent=p.name;
   newScene();resetView();anim=null;PF.lutKey="";TLU.sel=[];if($("tlDur"))$("tlDur").value=S.dur||6;if(TLU.open)tlFit();
   if(p.view&&p.view.R&&p.view.TG){Rm=p.view.R.slice();TG=p.view.TG.slice();zoom=p.view.zoom||1}
-  UI.quiet=1;try{showEditor();closeTool();dockKeep();uiRestore()}finally{UI.quiet=0}
+  var kg=curGroup?(isRail(curGroup)?curGroup:UI.lr):null;UI.quiet=1;try{showEditor();closeTool();uiRestore();if(kg&&!curGroup&&wideDock())openTool(kg)}finally{UI.quiet=0}
   applyRail();syncModeUI();applyLook();dirty=true;
   busy(true,"Opening…");
   return loadObjs(p.objs).then(function(){
@@ -4726,6 +4768,13 @@ function upgradeRec(p){
   if(v<3){/* V021: projects may now live in a folder; nothing in the record itself changes */}
   if(v<4){/* V023: splat objects may carry a deleted-splats mask; older projects simply have none */}
   if(v<5){/* V025: keyframes live in p.timeline */if(!p.timeline)p.timeline={fps:30,tracks:{}}}
+  if(v<6){/* V050: depth of field belongs to cameras. Copy the scene's blur onto every camera, and move its keyframes with it */
+    var st6=p.settings||{},d6={},k6,cm=(p.objs||[]).filter(function(r){return r.kind==="camera"}),tr=p.timeline&&p.timeline.tracks;
+    ["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"].forEach(function(k){if(st6[k]!==undefined)d6[k]=st6[k];delete st6[k]});
+    cm.forEach(function(r){if(Object.keys(d6).length)r.dof=Object.assign({},d6,r.dof||{})});
+    if(tr)Object.keys(tr).forEach(function(id){var m=/^s:(defocus|focus|focusRange|dofSoft|dofNear|dofFar|dofTilt|dofTiltA|dofTiltP|dofTiltB)$/.exec(id);if(!m)return;
+      cm.forEach(function(r){tr["o:"+r.id+":dof:"+m[1]]=JSON.parse(JSON.stringify(tr[id]))});delete tr[id]});
+  }
   p.v=FORMAT;return p;
 }
 function tooNew(p){return (p.v||1)>FORMAT}
@@ -5170,7 +5219,7 @@ $("cubeIn").addEventListener("change",function(e){
   var f=e.target.files[0];e.target.value="";if(!f||!cur)return;
   f.text().then(function(t){
     if(!parseCube(t)){setStatus("Not a 3D LUT Splatbox can read (needs LUT_3D_SIZE).","bad");return}
-    cur.lut=t;cur.lutName=f.name.replace(/\.cube$/i,"");PF.lutKey="";S.look="cube";if(S.lookMix<=0)S.lookMix=1;applyLook();saveNow();if(curTool==="look")openTool("look");setStatus("LUT loaded: "+cur.lutName,"ok");
+    cur.lut=t;cur.lutName=f.name.replace(/\.cube$/i,"");PF.lutKey="";S.look="cube";if(S.lookMix<=0)S.lookMix=1;applyLook();saveNow();if(curTool==="looks")openTool("looks");setStatus("LUT loaded: "+cur.lutName,"ok");
   }).catch(function(err){setStatus(err.message,"bad")});
 });
 
@@ -5467,7 +5516,7 @@ function renderOutl(force){
 function mergeBtn(){var b=$("outlMerge");if(!b)return;var n=MSEL.length;b.hidden=n<2;b.textContent="Merge "+n}
 function outlSelect(o){
   SEL=o;if(isCam(o))ACAM=o;if(GM==="scale"&&!isGeo(o))GM="move";dirty=true;
-  if(isCam(o)&&curTool!=="camera"&&curGroup)openTool("camera",true);else if(isLight(o)&&curTool!=="light"&&curGroup)openTool("light",true);else if(OBJTOOL[curTool])openTool(curTool,true);
+  showObjPage(true);
   Array.prototype.forEach.call($("outlB").querySelectorAll(".orw"),function(r){r.classList.toggle("sel",r.dataset.oid===o.id)});OUTL_SIG=outlSig();
 }
 $("outlB").addEventListener("click",function(e){
