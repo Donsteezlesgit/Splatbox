@@ -50,10 +50,10 @@ async def run(br,site,fx):
     d=json.loads(await t.ev("var L=lightsData(false);JSON.stringify({n:L.n,t:L.lp[11],side:L.ls[8],cone:Math.round(Math.acos(L.la[10])*360/Math.PI)})"))
     ok("the spot reaches the shader with its cone and gradient",d["t"]==2 and d["side"]==1 and abs(d["cone"]-40)<2,d)
     await t.ev("for(var i=0;i<6;i++)addLight('point')"); ok("up to 8 lights are used",await t.ev("lightsData(false).n")==8)
-    await t.ev("SEL=findObj('"+sid+"');openTool('light')"); await t.wait(200)
+    await t.ev("SEL=findObj('"+sid+"');openTool('lightobj')"); await t.wait(200)
     ok("the light menu shows the spot's own controls",await t.ev("!!document.getElementById('oo-lx_cone')&&!!document.getElementById('oo-lx_range')"))
     # ---- typed value on the camera focus distance slider
-    await t.ev("SEL=findObj('"+cid+"');openTool('camera')"); await t.wait(200)
+    await t.ev("SEL=findObj('"+cid+"');openTool('camobj')"); await t.wait(200)
     ok("camera focus distance is a slider with a typed box",await t.ev("!!document.getElementById('oo-cfd')&&document.getElementById('oov-cfd').tagName==='INPUT'"))
     await t.pg.fill("#oov-cfd","3.5"); await t.pg.press("#oov-cfd","Enter"); await t.wait(200)
     ok("typing sets it",abs(await t.ev("findObj('"+cid+"').fdist")-3.5)<0.01)

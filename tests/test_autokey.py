@@ -53,7 +53,7 @@ async def run(br,site,fx):
     ok("clicking a diamond keys the value at the playhead",await t.ev("!!TL.tracks['s:con']&&TL.tracks['s:con'].k.length==1") and await t.pg.locator('[data-kd="s:con"].on').count()==1)
     await t.pg.click('[data-kd="s:con"]'); await t.wait(200)
     ok("clicking a filled diamond removes that key",not await t.ev("!!TL.tracks['s:con']"))
-    await t.ev("SEL=findObj('%s');openTool('camera',true)"%cid); await t.wait(300)
+    await t.ev("SEL=findObj('%s');openTool('camobj',true)"%cid); await t.wait(300)
     ok("camera panel has diamonds for position, rotation, lens and focus",(await t.pg.locator('#popB [data-kd^="o:"]').count())>=4,await t.pg.locator('#popB [data-kd^="o:"]').count())
     await t.ev("closeTool();SEL=OBJS.filter(isGeo)[0];openTool('objects')"); await t.wait(300)
     ok("object panel has diamonds for position, rotation and scale",(await t.pg.locator('#popB [data-kd$=":scl"]').count())==1 and (await t.pg.locator('#popB [data-kd$=":pos"]').count())>=1)

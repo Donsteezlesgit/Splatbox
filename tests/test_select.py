@@ -64,7 +64,7 @@ async def run(br,site,fx):
     head=open(path,"rb").read(400).decode("latin1"); m=re.search(r"element vertex (\d+)",head)
     ok("export leaves out deleted splats",m and int(m.group(1))==n-deleted,[m and m.group(1),n-deleted])
     # bring back + undo history is per project
-    await t.ev("openTool('select')"); await t.wait(400); await t.pg.click("[data-act=sx-restore]"); await t.wait(300)
+    await t.ev("SEL=OBJS[0];openTool('select')"); await t.wait(400); await t.pg.click("[data-act=sx-restore]"); await t.wait(300)
     ok("bring deleted back clears the mask",(await counts(t))["del"]==0)
     # removing a whole object with Delete can be undone; Delete in the Select tool only deletes the selection
     await t.ev("closeTool()"); await t.ev("SEL=OBJS[0]"); await t.pg.keyboard.press("Delete"); await t.wait(500)

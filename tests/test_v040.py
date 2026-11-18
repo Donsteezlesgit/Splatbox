@@ -44,9 +44,9 @@ async def ranges(br,site,fx):
     await pg.locator("#c-vig").dblclick(); await t.wait(100)
     ok("double-click resets a slider",await t.ev("S.vig")==0,await t.ev("S.vig"))
     await t.ev("setK('vig',-0.7)"); ok("vignette can go negative",await t.ev("S.vig")==-0.7)
-    await t.ev("closeTool();openTool('camera')"); await t.wait(300)
+    await t.ev("closeTool();openTool('freeview')"); await t.wait(300)
     # lens: free view
-    await t.ev("S.fov=50;openTool('camera')"); await t.wait(200)
+    await t.ev("S.fov=50;openTool('freeview')"); await t.wait(200)
     if await t.ev("!!$('o-fov')"):
         b=pg.locator("#o-fov"); await b.click(); await b.fill("14mm"); await b.press("Enter"); await t.wait(100)
         f=await t.ev("S.fov"); ok("typing 14mm sets a wide field of view",abs(f-2*__import__('math').atan(12/14)*180/__import__('math').pi)<0.01,f)
@@ -103,13 +103,13 @@ async def dof(br,site,fx):
 async def layout(br,site,fx):
     t=await open_page(br,site,"v40layout",w=1280,h=800); ok=t.ok; pg=t.pg
     await t.new_project(); await t.add_ply(fx["tilt"]); await t.ev("closeTool()"); await t.wait(300)
-    ok("five groups on the rail",await t.ev("rail.children.length")==5)
+    ok("four pages on the rail",await t.ev("rail.children.length")==4)
     ok("the rail fits on screen",await t.ev("(function(){var r=rail.getBoundingClientRect();return r.bottom<=innerHeight})()"))
     w0=await t.ev("cv.clientWidth")
-    await pg.click("[data-tool=image]"); await t.wait(300)
-    ok("a group opens its panel",await pg.is_visible("#pop") and await t.ev("curGroup")=="image")
+    await pg.click("[data-tool=look]"); await t.wait(300)
+    ok("a group opens its panel",await pg.is_visible("#pop") and await t.ev("curGroup")=="look")
     ok("the viewport makes room instead of sitting under the panel",await t.ev("cv.clientWidth")<=w0 and await t.ev("(function(){var a=cv.getBoundingClientRect(),b=$('pop').getBoundingClientRect();return a.right<=b.left+1})()"))
-    ok("the first section is open",await t.ev("curTool")=="colour" and await pg.is_visible("#c-exp"))
+    ok("the first section is open",await t.ev("curTool")=="colour" and await pg.is_visible("#c-exp"),[await t.ev("curTool"),await t.ev("curGroup")])
     await pg.click("[data-sec=lens]"); await t.wait(200)
     ok("opening another section folds the first",await t.ev("curTool")=="lens" and not await pg.is_visible("#c-exp") and await pg.is_visible("#c-grain"))
     await t.ev("setK('grain',0.6);openTool('lens',true)"); await t.wait(100)
@@ -119,14 +119,16 @@ async def layout(br,site,fx):
     # search
     await pg.fill("#psearch","vignette"); await t.wait(150)
     ok("search finds a setting in any group",await t.ev("document.querySelectorAll('#sres button').length")>=1)
-    await pg.fill("#psearch","tilt"); await t.wait(150)
+    await pg.fill("#psearch","grain size"); await t.wait(150)
     await pg.click("#sres button >> nth=0"); await t.wait(300)
-    ok("clicking a result jumps to it",await t.ev("curGroup")=="camera" and await t.ev("curTool")=="dof")
-    await pg.click("[data-tool=camera]"); await t.wait(150)
-    ok("the group button closes the menu and the dock falls back to Scene (always split)",await t.ev("curGroup")=="scene" and await pg.is_visible("#pop") and await pg.is_visible("#outl"))
+    ok("clicking a result jumps to it",await t.ev("curGroup")=="look" and await t.ev("curTool")=="lens")
+    await pg.click("[data-tool=look]"); await t.wait(150)
+    ok("the page button closes its own page and the Objects window takes the whole dock",(await t.ev("curGroup"))is None and not await pg.is_visible("#pop") and await pg.is_visible("#outl"))
     # keys
     await pg.keyboard.press("Digit2"); await t.wait(150)
-    ok("number keys open groups",await t.ev("curGroup")=="scene")
+    ok("number keys open pages",await t.ev("curGroup")=="look")
+    await pg.keyboard.press("Digit2"); await t.wait(150)
+    ok("pressing the same number again closes it",(await t.ev("curGroup"))is None)
     await pg.keyboard.press("Escape"); await t.wait(100)
     # outliner
     await t.ev("addCamera();leaveThru()"); await t.wait(800)

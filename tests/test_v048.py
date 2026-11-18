@@ -95,20 +95,20 @@ async def undodel(br,site,fx):
 async def uistate(br,site,fx):
     t=await open_page(br,site,"v048ui",w=1300,h=800); ok=t.ok; pg=t.pg
     await t.new_project(); await t.add_ply(fx["tilt"]); await t.wait(500)
-    await t.ev("openTool('dof');0"); await t.wait(200)
+    await t.ev("openTool('capture');0"); await t.wait(200)
     await t.ev("tlDockOpen(true);0"); await t.wait(400)
     u=json.loads(await t.ev("localStorage.getItem('sb.ui')||'{}'"))
-    ok("the open menu, section and timeline are written down",u.get("g")=="camera" and u.get("ls",{}).get("camera")=="dof" and u.get("tl")==1,u)
+    ok("the open menu, section and timeline are written down",u.get("g")=="file" and u.get("ls",{}).get("file")=="capture" and u.get("tl")==1,u)
     await t.ev("saveNow()"); await t.wait(800)
     await pg.reload(); await t.wait(1800)
     await pg.click("#grid .card:not(.new) >> nth=0"); await t.wait(2800)
-    ok("next visit the same menu opens",(await t.ev("curGroup"))=="camera",await t.ev("curGroup"))
-    ok("with the same section open",(await t.ev("curTool"))=="dof",await t.ev("curTool"))
+    ok("next visit the same menu opens",(await t.ev("curGroup"))=="file",await t.ev("curGroup"))
+    ok("with the same section open",(await t.ev("curTool"))=="capture",await t.ev("curTool"))
     ok("and the timeline is open again",(await t.ev("TLU.open"))==True)
     # closing it remembers that too
-    await t.ev("tlDockOpen(false);openTool('object');0"); await t.wait(300)
+    await t.ev("tlDockOpen(false);openTool('look');0"); await t.wait(300)
     u=json.loads(await t.ev("localStorage.getItem('sb.ui')||'{}'"))
-    ok("changes are remembered again",u.get("g")=="object" and u.get("tl")==0,u)
+    ok("changes are remembered again",u.get("g")=="look" and u.get("tl")==0,u)
     # junk in storage does not break the app
     await t.ev("localStorage.setItem('sb.ui','{\"g\":5,\"ls\":{\"camera\":\"nope\"},\"tl\":\"x\"}');0")
     await pg.reload(); await t.wait(1800)
@@ -124,7 +124,7 @@ async def numkeys(br,site,fx):
     ok("/ opens the panel and focuses the search",(await t.ev("document.activeElement&&document.activeElement.id"))=="psearch",await t.ev("document.activeElement&&document.activeElement.id"))
     await pg.keyboard.type("/"); await t.wait(100)
     ok("typing / inside the search just types it",(await t.ev("$('psearch').value"))=="/")
-    await t.ev("$('psearch').blur();openTool('dof');0"); await t.wait(150)
+    await t.ev("$('psearch').blur();openTool('look');0"); await t.wait(150)
     await pg.keyboard.press("/"); await t.wait(150)
     ok("/ with a panel already open also focuses it",(await t.ev("document.activeElement&&document.activeElement.id"))=="psearch")
     # maths in a number box
@@ -135,7 +135,7 @@ async def numkeys(br,site,fx):
     ok("a plain number still parses",(await t.ev("nbParse('fov','42',false)"))==42)
     # double-click an object slider to reset it (camera lens)
     await t.ev("addCamera?addCamera():0;0"); await t.wait(300)
-    await t.ev("openTool('camera');0"); await t.wait(250)
+    await t.ev("openTool('camobj');0"); await t.wait(250)
     if await t.ev("!!document.querySelector('#popB input[data-o=\"cfov\"]')"):
         await t.ev("var o=SEL;o.fov=90;refreshObjs();0"); await t.wait(250)
         await pg.dblclick('#popB input[data-o="cfov"]'); await t.wait(250)

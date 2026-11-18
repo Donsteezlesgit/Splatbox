@@ -52,7 +52,7 @@ async def desktop(br, site, fx):
     await no_overflow(t, "home")
     await t.new_project(); await t.add_ply(fx["tilt"])
     await t.ev("addCamera();leaveThru();addLight('sun');addLight('spot')"); await t.wait(500)
-    await t.ev("openTool('light')"); await t.wait(800)
+    await t.ev("openTool('lightobj')"); await t.wait(800)
     await t.ev("setStatus('')"); compare(t, "editor_light", await t.pg.screenshot())
     await no_overflow(t, "editor")
     await inside(t, "#tlBtn", "timeline button")
@@ -69,7 +69,7 @@ async def desktop(br, site, fx):
 async def phone(br, site, fx):
     t = await open_page(br, site, "visual-phone", w=390, h=844)
     await t.new_project(); await t.add_ply(fx["tilt"])
-    await t.ev("addLight('point')"); await t.ev("openTool('light')"); await t.wait(900)
+    await t.ev("addLight('point')"); await t.ev("openTool('lightobj')"); await t.wait(900)
     await t.ev("setStatus('')"); compare(t, "phone_light", await t.pg.screenshot())
     await no_overflow(t, "phone light sheet")
     return t.finish()

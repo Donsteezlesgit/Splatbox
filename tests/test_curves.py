@@ -33,7 +33,7 @@ async def run(br,site,fx):
     await t.pg.mouse.dblclick(bb["x"]+60,bb["y"]+26+24*ri["s:exp"]+12); await t.wait(500)
     ok("double-clicking a setting's row opens its menu",(await t.ev("curTool"))=="colour",await t.ev("curTool"))
     await t.pg.mouse.dblclick(bb["x"]+60,bb["y"]+26+24*ri[P]+12); await t.wait(500)
-    ok("double-clicking an object's row selects it and opens its menu",(await t.ev("curTool"))=="camera" and (await t.ev("SEL&&SEL.id"))==cid,[await t.ev("curTool")])
+    ok("double-clicking an object's row selects it and opens its menu",(await t.ev("curTool"))=="camobj" and (await t.ev("SEL&&SEL.id"))==cid,[await t.ev("curTool")])
     # ---- curves tab
     await t.pg.click("[data-tla=mode][data-m=curve]"); await t.wait(200); await t.ev("TLU.row='s:exp'")
     ok("Curves tab switches the dock",(await t.ev("TLU.mode"))=="curve")
