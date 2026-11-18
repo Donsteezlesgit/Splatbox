@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 051
+- The mouse wheel changes focus distance in much smaller steps. New "Wheel focus speed" slider in the camera's Depth of field section (Shift faster, Ctrl finer still).
+
 ## Version 050
 - Menus rebuilt. The left rail has four buttons: Add, Look, Scene, File. Each opens one page at the top right. Look is the scene's picture (colour, look, lens, depth and effects). Scene is lighting, display, free view and grids.
 - Click anything in the Objects list or in the view and its own page opens: splat, model, light or camera, with only that object's settings. A splat page has Transform, Object look, Crop, Select and Orient.

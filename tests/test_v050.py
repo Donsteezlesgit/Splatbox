@@ -213,6 +213,9 @@ async def dofcam(br,site,fx):
     f2=await t.ev("ACAM.fdist"); await pg.keyboard.down("Shift"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Shift"); await t.wait(200); fs=await t.ev("ACAM.fdist")
     await t.ev(f"ACAM.fdist={f2};viewFromCam(ACAM);0"); await pg.keyboard.down("Control"); await pg.mouse.wheel(0,100); await pg.keyboard.up("Control"); await t.wait(200); fc=await t.ev("ACAM.fdist")
     ok("Shift is faster and Ctrl is finer",fs/f2>f1/f0>fc/f2>1,[fs/f2,f1/f0,fc/f2])
+    await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);S.fdSens=1;0"); await pg.mouse.wheel(0,100); await t.wait(200); n1=await t.ev("ACAM.fdist")/1.95
+    await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);S.fdSens=0.2;0"); await pg.mouse.wheel(0,100); await t.wait(200); n2=await t.ev("ACAM.fdist")/1.95; await t.ev("S.fdSens=1;0")
+    ok("one wheel notch is a gentle step, and the sensitivity setting scales it",1.03<n1<1.12 and 1.0<n2<n1 and abs((n1-1)/(n2-1)-5)<1.2,[n1,n2])
     await t.ev("ACAM.fdist=0.06;viewFromCam(ACAM);0"); await pg.mouse.wheel(0,-3000); await t.wait(200)
     ok("it stops at the near limit",await t.ev("ACAM.fdist")>=0.0499,[await t.ev("ACAM.fdist"),await t.ev("THRU")])
     await t.ev("ACAM.fdist=1.95;viewFromCam(ACAM);0"); await t.wait(100)
