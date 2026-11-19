@@ -563,9 +563,9 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 055";
+var VERSION="Version 056";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
-var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=6;
+var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=7;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
 var RO=null,TRANSP=false,FORCESORT=false; /* V029: fixed render size, transparent target, always re-sort */
 
@@ -1252,12 +1252,12 @@ function meshObjs(){return OBJS.filter(function(o){return o.kind==="mesh"&&o.vis
 /* what you see is the render: every effect is on in the workspace too. Fast preview drops the heavy ones in the viewer only (never in exports) */
 function fastOn(){return !!S.fast&&!RO&&!RJ&&!(anim&&anim.rec)}
 /* depth of field belongs to a camera: it shows only while looking through one (and in anything made with one). The free view has none. */
-var DOFK=["defocus","focus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"];
+var DOFK=["defocus","focusRange","dofSoft","dofNear","dofFar","dofTilt","dofTiltA","dofTiltP","dofTiltB"];
 var DOFD={defocus:0,focus:0.5,focusRange:0,dofSoft:0,dofNear:1,dofFar:1,dofTilt:0,dofTiltA:0,dofTiltP:0,dofTiltB:0.25};
-var DOFLAB={defocus:"blur amount",focus:"focus point",focusRange:"sharp zone",dofSoft:"falloff",dofNear:"near blur",dofFar:"far blur",dofTilt:"tilt-shift blur",dofTiltA:"band angle",dofTiltP:"band position",dofTiltB:"sharp band"};
+var DOFLAB={defocus:"blur amount",focusRange:"sharp zone",dofSoft:"falloff",dofNear:"near blur",dofFar:"far blur",dofTilt:"tilt-shift blur",dofTiltA:"band angle",dofTiltP:"band position",dofTiltB:"sharp band"};
 function camDof(o,k){return o&&o.dof&&o.dof[k]!==undefined?o.dof[k]:DOFD[k]}
 function RV(){
-  var z;if(THRU&&ACAM&&ACAM.kind==="camera"){z=Object.assign({},S);DOFK.forEach(function(k){z[k]=camDof(ACAM,k)})}
+  var z;if(THRU&&ACAM&&ACAM.kind==="camera"){z=Object.assign({},S);DOFK.forEach(function(k){z[k]=camDof(ACAM,k)});z.focus=0.5}
   else z=Object.assign({},S,DOFD);
   if(fastOn())Object.assign(z,{defocus:0,dofTilt:0,lit:0,fxDis:0,fxScat:0,fxPulse:0});
   return z;
@@ -1788,8 +1788,8 @@ function setFocusPick(on){FOCUSPICK=!!on;cv.style.cursor=on?"crosshair":"";if(cu
 function focusFromDepth(d,dist){return clamp((d-(dist-1.1))/2.2,0,1)}
 function pickFocusAt(cx,cy){
   var pt=pickAt(cx,cy),L=LASTM;if(!pt||!L){setStatus("Nothing there to focus on. Click on the splat.","warn");return false}
-  var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=focusFromDepth(d,L.dRef||L.dist);
-  if(!(THRU&&ACAM))return false;ACAM.dof=ACAM.dof||{};ACAM.dof.focus=+f.toFixed(3);dirty=true;persistObjs();if(SEL===ACAM)try{syncObjFields()}catch(_){}return true;
+  var V=L.V,d=-(V[2]*pt[0]+V[6]*pt[1]+V[10]*pt[2]+V[14]),f=d;
+  if(!(THRU&&ACAM)||!(d>0.05))return false;ACAM.fdist=clamp(d,0.05,500);viewFromCam(ACAM);dirty=true;persistObjs();if(SEL===ACAM)try{syncObjFields()}catch(_){}return true;
 }
 cv.addEventListener("pointerdown",function(e){
   if(!FOCUSPICK)return;e.stopImmediatePropagation();e.preventDefault();
@@ -2375,7 +2375,7 @@ var PANES={
     sl("grain","Film grain",0,2,0.02)+sl("grainSize","Grain size",0.5,6,0.25)+sl("grainSoft","Grain softness",0,1,0.02)+sl("grainCol","Grain colour",0,1,0.02)+sl("grainRate","Grain rate (frames per change)",1,8,1)+
     '<button class="btn small" type="button" data-act="resetLens">Reset lens</button>'+
     '<p class="note">Lens effects show in the viewer, PNG and video. They are never saved into the .ply.</p>'},
-  dof:function(){var d=function(n,l,a,b,st){return osl("dof_"+n,l,a,b,st)};return d("defocus","Blur amount",0,2,0.05)+'<button class="btn small'+(FOCUSPICK?' on':'')+'" type="button" data-act="pickFocus">'+(FOCUSPICK?'Click the viewport\u2026':'Pick focus point')+'</button>'+d("focus","Focus point",-2,2,0.01)+d("focusRange","Sharp zone size",0,1,0.02)+d("dofSoft","Falloff softness",0,0.5,0.01)+d("dofNear","Near blur (in front of focus)",0,2,0.05)+d("dofFar","Far blur (behind focus)",0,2,0.05)+chk("dofVis","Show the focus zone in green")+
+  dof:function(){var d=function(n,l,a,b,st){return osl("dof_"+n,l,a,b,st)};return d("defocus","Blur amount",0,2,0.05)+'<button class="btn small'+(FOCUSPICK?' on':'')+'" type="button" data-act="pickFocus">'+(FOCUSPICK?'Click the viewport\u2026':'Pick focus point')+'</button>'+d("focusRange","Sharp zone size",0,1,0.02)+d("dofSoft","Falloff softness",0,0.5,0.01)+d("dofNear","Near blur (in front of focus)",0,2,0.05)+d("dofFar","Far blur (behind focus)",0,2,0.05)+chk("dofVis","Show the focus zone in green")+
     '<p class="lbl">Tilt-shift</p>'+d("dofTilt","Tilt-shift blur",0,2,0.05)+d("dofTiltA","Band angle",-90,90,1)+d("dofTiltP","Band position",-1,1,0.02)+d("dofTiltB","Sharp band size",0,1,0.02)+
     '<p class="lbl">Mouse wheel</p>'+sl("fdSens","Wheel focus speed",0.1,3,0.05)+
     '<button class="btn small" type="button" data-act="resetDof">Reset depth of field</button><p class="note">Blur belongs to this camera. It shows when you look through it, and in video and images made with it. The free view has none. Scroll while looking through the camera to change its focus distance.</p>'},
@@ -3403,7 +3403,7 @@ function tlProp(id){
   if(f==="vis")return {id:id,obj:o,label:nm+" visible",group:nm,dim:1,step:true,get:function(){return [o.vis?1:0]},set:function(v){o.vis=v[0]>=0.5}};
   if(f==="fov"&&o.kind==="camera")return {id:id,obj:o,label:nm+" lens",group:nm,dim:1,get:function(){return [o.fov||50]},set:function(v){o.fov=clamp(v[0],4,170)}};
   if(f==="fdist"&&o.kind==="camera")return {id:id,obj:o,label:nm+" focus distance",group:nm,dim:1,get:function(){return [o.fdist||1.95]},set:function(v){o.fdist=Math.max(0.05,v[0])}};
-  if(f==="dof"&&o.kind==="camera"&&DOFD[a[3]]!==undefined){var dk=a[3];return {id:id,obj:o,label:nm+" "+DOFLAB[dk],group:nm,dim:1,get:function(){return [camDof(o,dk)]},set:function(v){o.dof=o.dof||{};o.dof[dk]=v[0]}}}
+  if(f==="dof"&&o.kind==="camera"&&DOFK.indexOf(a[3])>=0){var dk=a[3];return {id:id,obj:o,label:nm+" "+DOFLAB[dk],group:nm,dim:1,get:function(){return [camDof(o,dk)]},set:function(v){o.dof=o.dof||{};o.dof[dk]=v[0]}}}
   if(f==="inten"&&isLight(o))return {id:id,obj:o,label:nm+" intensity",group:nm,dim:1,get:function(){return [o.inten==null?1:o.inten]},set:function(v){o.inten=Math.max(0,v[0])}};
   if(f==="st"&&o.kind==="splat"&&OLAB[a[3]]){var sk=a[3];return {id:id,obj:o,label:nm+" "+OLAB[sk],group:nm,dim:1,get:function(){return [+ovGet(o,sk)]},set:function(v){ovSet(o,sk,v[0]);if(OGRD[sk])regradeSoon()}}}
   if(f==="crop"&&o.crop)return {id:id,obj:o,label:nm+" crop box",group:nm,dim:6,get:function(){return TL_CROP.map(function(k){return o.crop[k]})},set:function(v){TL_CROP.forEach(function(k,i){o.crop[k]=clamp(v[i],0,1)})}};
@@ -4790,6 +4790,11 @@ function upgradeRec(p){
     cm.forEach(function(r){if(Object.keys(d6).length)r.dof=Object.assign({},d6,r.dof||{})});
     if(tr)Object.keys(tr).forEach(function(id){var m=/^s:(defocus|focus|focusRange|dofSoft|dofNear|dofFar|dofTilt|dofTiltA|dofTiltP|dofTiltB)$/.exec(id);if(!m)return;
       cm.forEach(function(r){tr["o:"+r.id+":dof:"+m[1]]=JSON.parse(JSON.stringify(tr[id]))});delete tr[id]});
+  }
+  if(v<7){/* V056: one focus control. The sharp plane is the camera's focus distance; the old 0-1 "focus point" moved it inside a window of +-1.1, so fold it in */
+    (p.objs||[]).forEach(function(r){if(r.kind!=="camera"||!r.dof)return;
+      if(r.dof.focus!==undefined){r.fdist=Math.max(0.05,(r.fdist||1.95)+(r.dof.focus-0.5)*2.2);delete r.dof.focus}});
+    var tr7=p.timeline&&p.timeline.tracks;if(tr7)Object.keys(tr7).forEach(function(id){if(/^o:.+:dof:focus$/.test(id))delete tr7[id]});
   }
   p.v=FORMAT;return p;
 }
