@@ -145,7 +145,7 @@ app.on("before-quit", () => { try { inbox.stop(); } catch (e) {} });
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 1500, height: 920, minWidth: 900, minHeight: 600, backgroundColor: "#000000", autoHideMenuBar: true, show: false,
+    width: 1500, height: 920, minWidth: 900, minHeight: 600, backgroundColor: "#000000", autoHideMenuBar: false, show: false,
     icon: path.join(__dirname, "icon.png"),
     webPreferences: { preload: path.join(__dirname, "preload.js"), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false }
   });
@@ -157,6 +157,8 @@ function createWindow() {
     const r = dialog.showMessageBoxSync(win, { type: "warning", buttons: ["Keep working", "Quit anyway"], defaultId: 0, cancelId: 0, message: "A photo scan from your inbox is still training", detail: "\u201c" + st.running + "\u201d is in progress. If you quit now it starts again from the beginning next time Splatbox opens." });
     if (r === 0) e.preventDefault();
   });
+  /* the menu bar (File, View, Help) stays on screen; a bare Alt tap must not grab it, so Alt + wheel works in the app */
+  win.webContents.on("before-input-event", (e, input) => { if (input.key === "Alt" && input.type === "keyUp") e.preventDefault(); });
   win.loadURL("app://splatbox/index.html");
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) shell.openExternal(url);
