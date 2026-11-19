@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 054
+- Depth of field "Focus point" slider now goes from -200% to +200%, so the sharp plane can sit well in front of or behind the subject.
+
 ## Version 053
 - Windows app: the File / View / Help bar is always showing. Tapping Alt no longer pops it open or grabs the keyboard, so Alt + wheel works.
 
