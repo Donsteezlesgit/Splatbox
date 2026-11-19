@@ -21,4 +21,14 @@ contextBridge.exposeInMainWorld("splatboxDesktop", {
     onAbort: (cb) => { ipcRenderer.on("inbox:abort", (ev, n) => cb(n)); },
     onState: (cb) => { ipcRenderer.on("inbox:state", (ev, s) => cb(s)); }
   },
+  // Image to splat (V057): one photo -> a splat on this PC's NVIDIA card. The log is image-to-splat.log in the app's data folder.
+  i2s: {
+    status: () => ipcRenderer.invoke("i2s:status"),
+    setup: () => ipcRenderer.invoke("i2s:setup"),
+    generate: (o) => ipcRenderer.invoke("i2s:generate", o),
+    cancel: () => ipcRenderer.invoke("i2s:cancel"),
+    tail: () => ipcRenderer.invoke("i2s:tail"),
+    openLog: () => ipcRenderer.invoke("i2s:openLog"),
+    onProgress: (cb) => { ipcRenderer.on("i2s:progress", (ev, p) => cb(p)); }
+  },
 });

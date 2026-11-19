@@ -444,6 +444,8 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 /* V050: focus distance readout while the wheel changes it */
 #fdRead{position:absolute;left:12px;bottom:12px;padding:5px 9px;border-radius:6px;background:rgba(20,22,24,.82);color:#e8e4dc;font:600 12px/1.2 system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .15s;z-index:6}
 #fdRead.on{opacity:1}
+/* V057: image to splat shows an error in the pane in the error colour */
+.note.bad{color:var(--bad)}
 </style>
 </head>
 <body>
@@ -551,6 +553,7 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
   <div class="trow"><button class="btn" id="tPause" type="button" disabled>Pause</button><button class="btn primary" id="tFinish" type="button" disabled>Finish and open</button></div>
 </div>
 <input id="newIn" type="file" accept="image/*" hidden>
+<input id="i2sIn" type="file" accept="image/*" hidden>
 <input id="multiIn" type="file" accept="image/*" multiple hidden>
 <input id="cubeIn" type="file" accept=".cube,text/plain" hidden>
 <input id="objPly" type="file" accept=".ply,.spz" hidden>
@@ -563,7 +566,7 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 056";
+var VERSION="Version 057";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=7;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -2283,6 +2286,7 @@ var PANES={
     '<p class="lbl">Make a splat</p>'+
     '<button class="btn" type="button" data-act="addPhotos">Photos to splat (scan)</button>'+
     '<p class="note">Pick 20 or more photos of the same place or object from slightly different spots. Training runs on your graphics card (needs WebGPU) and nothing leaves this PC. The result lands here as an object.</p>'+
+    i2sPane()+
     '<button class="btn" type="button" data-act="addPhoto">Photo to 3D (AI depth)</button>'+
     sl("range","Depth range",0.1,4,0.05)+sl("cut","Cut far background",0,0.6,0.02)+sl("fill","Fill gaps behind edges",0,1,0.05)+sl("detail","Detail (long side)",192,768,64)+
     '<p class="note">Photo to 3D runs Depth Anything V2 Small on your device. The first run downloads about 40 MB, once. The sliders above apply to the next photo you make.</p>'},
@@ -2899,6 +2903,7 @@ function openTool(id,keep){
   $("popB").innerHTML=h+'</div>';$("pop").hidden=false;
   if(q){$("psearch").value=q}
   syncControls();if(sec&&OBJTOOL[sec])syncObjFields();if(sec==="select")syncSel();
+  if(I2S&&$("i2sNote"))i2sRefresh();
   if(keepScroll)$("popB").scrollTop=keepScroll;
   dirty=true;uiSave();return true;
 }
@@ -3039,6 +3044,10 @@ $("popB").addEventListener("click",function(e){
   else if(a==="ply")exportScenePLY();
   else if(a==="spz")exportSceneSPZ();
   else if(a==="addPhotos")$("multiIn").click();
+  else if(a==="i2sGo")i2sPick();
+  else if(a==="i2sSetup")i2sSetup();
+  else if(a==="i2sCancel")i2sCancel();
+  else if(a==="i2sLog")i2sLog();
   else if(a==="addPhoto")$("newIn").click();
   else if(a==="fSave")saveProject();
   else if(a==="pSave")savePreset();
@@ -5262,6 +5271,79 @@ window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();ins
 window.addEventListener("appinstalled",function(){instEv=null;$("inst").hidden=true});
 $("inst").addEventListener("click",function(){if(!instEv)return;instEv.prompt();instEv.userChoice.then(function(){instEv=null;$("inst").hidden=true})});
 
+/* ---------- V057: image to splat (desktop app). One photo -> a 3D Gaussian splat, made by TripoSplat (MIT licence) on this PC's NVIDIA card.
+   The desktop shell (desktop/i2s.js) sets up a private Python environment and runs the model; every step and every error goes to image-to-splat.log. ---------- */
+var I2S=(window.splatboxDesktop&&window.splatboxDesktop.i2s)||null,I2ST={st:null,busy:"",txt:"",bad:false};
+function i2sPane(){
+  if(!I2S)return "";
+  return '<p class="lbl">AI: one photo to splat (beta, this PC only)</p>'+
+    '<button class="btn" type="button" id="i2sGo" data-act="i2sGo" hidden>Photo to splat (AI)</button>'+
+    '<button class="btn" type="button" id="i2sSetup" data-act="i2sSetup">Set up image to splat (one time, about 8 GB)</button>'+
+    '<button class="btn" type="button" id="i2sCancel" data-act="i2sCancel" hidden>Cancel</button>'+
+    '<p class="lbl">Detail</p><select class="txt" id="i2sCount" aria-label="Number of splats"><option value="32768">Light (32,768 splats)</option><option value="65536">Medium (65,536)</option><option value="131072" selected>High (131,072)</option><option value="262144">Maximum (262,144)</option></select>'+
+    '<p class="note" id="i2sNote"></p>'+
+    '<button class="btn small" type="button" id="i2sLogB" data-act="i2sLog">Open error log</button>';
+}
+function i2sMark(){
+  var n=$("i2sNote");if(!n)return;
+  var st=I2ST.st,set=!!(st&&st.installed),b=I2ST.busy;
+  $("i2sGo").hidden=!set;$("i2sGo").disabled=!!b;
+  $("i2sSetup").hidden=set;$("i2sSetup").disabled=!!b;
+  $("i2sCancel").hidden=b!=="generate";
+  $("i2sCount").disabled=!!b;
+  n.classList.toggle("bad",!!I2ST.bad);
+  if(b||I2ST.txt)n.textContent=I2ST.txt;
+  else n.textContent=set?"Pick one photo of one object. It runs on your NVIDIA graphics card and nothing leaves this PC. The back and hidden sides are invented by the AI, so this is a guess, not a scan.":"One-time set up: a private Python environment, PyTorch and the model files, about 8 GB and 10 to 30 minutes. It needs Python 3.10 or newer from python.org and an NVIDIA graphics card. Nothing is installed anywhere else.";
+}
+function i2sRefresh(){
+  if(!I2S)return;
+  I2S.status().then(function(st){I2ST.st=st;if(st.busy&&!I2ST.busy){I2ST.busy=st.busy}i2sMark()},function(){i2sMark()});
+}
+function i2sFail(e){
+  I2ST.busy="";I2ST.bad=e.code!=="cancelled";
+  if(e.code==="cancelled"){I2ST.txt="Cancelled.";i2sMark();setStatus("Cancelled.");return}
+  I2ST.txt=e.message+" Everything it did is in the error log.";i2sMark();
+  setStatus(e.message,"bad",{label:"Open error log",fn:i2sLog});
+}
+function i2sPick(){if(!I2S||I2ST.busy)return;$("i2sIn").value="";$("i2sIn").click()}
+function i2sSetup(){
+  if(!I2S||I2ST.busy)return;
+  I2ST.busy="setup";I2ST.bad=false;I2ST.txt="Starting set up…";i2sMark();
+  I2S.setup().then(function(r){
+    I2ST.busy="";
+    if(r&&r.error)return i2sFail(r.error);
+    I2ST.st=r.status;I2ST.txt="";I2ST.bad=false;i2sMark();setStatus("Image to splat is ready. Press Photo to splat (AI).");
+  },function(err){i2sFail({code:"app",message:"Set up stopped: "+err.message})});
+}
+function i2sRun(f){
+  if(!f||!I2S||I2ST.busy)return;
+  if(!cur||!GL2){setStatus("Open or start a project first.");return}
+  var cnt=+($("i2sCount")?$("i2sCount").value:131072)||131072;
+  I2ST.busy="generate";I2ST.bad=false;I2ST.txt="Starting…";i2sMark();
+  return f.arrayBuffer().then(function(ab){
+    return I2S.generate({name:f.name,bytes:new Uint8Array(ab),count:cnt,steps:20,seed:42});
+  }).then(function(r){
+    I2ST.busy="";
+    if(r&&r.error)return i2sFail(r.error);
+    var base=f.name.replace(/\.[^.]+$/,"").slice(0,30)||"Photo";
+    I2ST.txt="Finished in "+r.seconds+" s.";i2sMark();
+    var p=addPlyFile(new File([r.ply],"AI "+base+".ply",{type:"application/octet-stream"}));
+    return Promise.resolve(p).then(function(){setStatus("Added the AI splat. The back and hidden sides are invented, so check it from every side. If it lies the wrong way, use Orient.")});
+  }).catch(function(err){i2sFail({code:"app",message:"Something went wrong in Splatbox: "+err.message})});
+}
+function i2sCancel(){if(I2S)I2S.cancel()}
+function i2sLog(){
+  if(!I2S)return;
+  I2S.openLog().then(function(r){if(r&&r.error)setStatus("Couldn't open the error log: "+r.error,"bad")});
+}
+if(I2S){
+  $("i2sIn").addEventListener("change",function(e){var f=e.target.files&&e.target.files[0];e.target.value="";if(f)i2sRun(f)});
+  I2S.onProgress(function(p){
+    if(!p)return;
+    I2ST.txt=(p.stage==="python"||p.stage==="venv"||p.stage==="torch"||p.stage==="source"||p.stage==="weights"?"Set up, step "+p.i+" of "+p.n+": ":"")+p.text+(p.n&&p.stage==="running"?" ("+p.i+" of "+p.n+")":"…");
+    i2sMark();
+  });
+}
 /* ---------- app: version + update ---------- */
 $("ver").textContent="Splatbox "+(isDesk()?"Desktop":"Web")+" · "+VERSION+(BETA?" BETA":"");try{document.title="Splatbox "+(isDesk()?"Desktop":"Web")}catch(_){}
 if(BETA){document.title="BETA "+document.title;document.documentElement.classList.add("beta")}
@@ -5686,6 +5768,12 @@ function mergeObjects(list){
 var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the selected object so its up is up",aResetRot:"Put the object's rotation back to none",addPhoto:"Turn one photo into a 3D scene with AI depth",addPhotos:"Train a splat from a set of photos. Runs on your graphics card",camAdd:"Add a camera at the free view",camPlace:"Move this camera to where the free view is now",camThru:"Look through this camera, or leave it",cube:"Import a .cube colour LUT file",fCopy:"Make a copy of this project",fExport:"Save the whole project as a backup file",fHome:"Back to the project list",fNew:"Start a new empty project",fSave:"Save the project now",frame:"Fit everything in the view",hRedo:"Redo the step you undid",hUndo:"Undo the last change",level:"Level the horizon of the free view",lxSide:"Choose how this light shades the object",oAddMesh:"Bring in a 3D model (.glb or .obj)",oAddPoint:"Add a light that shines in every direction",oAddSplat:"Bring in a splat file (.ply or .spz)",oAddSpot:"Add a light that shines in a cone",oAddSun:"Add a sun: parallel light from one direction",oCropReset:"Remove the crop box",oDel:"Delete the selected object",oFocus:"Move the free view to look at this object",oLookReset:"Make this splat follow the scene look again",oPhoto:"Turn one photo into 3D",oReset:"Put position, rotation and scale back to the start",pApply:"Apply the picked preset to this project",pDel:"Delete the picked preset",pExport:"Save your presets to a file",pImport:"Load presets from a file",pSave:"Save the current settings as a preset",pickFocus:"Click in the view to set the focus distance",play:"Play the animation",ply:"Export the scene as a .ply file",png:"Save the current view as a PNG image",rFrames:"Render every frame to a PNG sequence",record:"Record a video of the viewer",resetColour:"Put the colour grade back to default",resetDof:"Put depth of field back to default",resetFx:"Put depth and effects back to default",resetLens:"Put the lens effects back to default",spz:"Export a much smaller .spz file",tdExport:"Export camera path, depth and point cloud for TouchDesigner",tlBake:"Turn the camera move into keyframes",tlClear:"Remove all keyframes",tlKey:"Keyframe the camera at the playhead",
   t_play:"Play or pause (Space)",t_close:"Close the timeline",t_copy:"Copy the selected keys",t_paste:"Paste keys at the playhead",t_del:"Delete the selected keys",t_dup:"Duplicate the selected keys",t_first:"Jump to the start",t_last:"Jump to the end",t_prevkey:"Previous key",t_nextkey:"Next key",t_fit:"Fit the whole length",t_add:"Key the chosen row at the playhead",t_rclear:"Clear the preview range",t_mode:"Switch between dope sheet and curves",t_ease:"Set how motion eases out of the selected keys",
   g_object:"Add and edit objects, crop, select and orient",g_scene:"Lights, effects and display",g_camera:"Cameras and depth of field",g_image:"Colour, looks and lens",g_output:"Capture, export and history"};
+if(window.splatboxDesktop&&window.splatboxDesktop.i2s){
+  TIPS.i2sGo="Turn one photo into a 3D splat with AI on your NVIDIA graphics card. The hidden sides are invented";
+  TIPS.i2sSetup="Install what image to splat needs, once: about 8 GB. Needs Python 3.10 or newer";
+  TIPS.i2sCancel="Stop making the splat";
+  TIPS.i2sLog="Open the error log: every step and every error from image to splat";
+}
 (function(){
   var tip=document.createElement("div");tip.id="tip";tip.setAttribute("role","tooltip");document.body.appendChild(tip);
   var T=0,on=null;

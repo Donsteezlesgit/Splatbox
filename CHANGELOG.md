@@ -1,6 +1,13 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 057
+- New (Windows app only, beta): **Photo to splat (AI)** in the Add page. Pick one photo and an AI model (TripoSplat, MIT licence) makes a 3D splat from it on your NVIDIA graphics card. Nothing leaves your PC. The back and hidden sides are invented by the AI, so it is a guess, not a scan.
+- First use needs a one-time **Set up** (about 8 GB, 10 to 30 minutes): a private Python environment, PyTorch and the model files. You need Python 3.10 or newer from python.org and an NVIDIA graphics card. Detail choice: 32k to 262k splats. Cancel stops it.
+- **Error log:** every step and every error (with the full Python traceback) is written to `image-to-splat.log` in the app's data folder. The "Open error log" button in the Add page and on the error message opens it. If something goes wrong, send that file.
+- Not checked on a real graphics card yet: the tests use a stand-in model. Whether the model runs in 8 GB, how long it takes, which way up the result lands, and how good it looks are unknown until it is tried.
+- The web and phone versions are unchanged: this needs the Windows app (the desktop wrapper changed, so it comes as a new app version).
+
 ## Version 056
 - One focus control. The separate Focus point slider is gone: the sharp plane is the camera's focus distance (wheel, slider and Pick focus point all set it, and it is keyframed). Old projects fold their focus point into each camera's focus distance.
 

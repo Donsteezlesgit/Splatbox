@@ -6,7 +6,7 @@ lighting-gizmos   v046 objfx camera visual
 timeline          timeline tl2 dock curves autokey visual
 save-folder-inbox savestate undodel uistate roundtrip folder backup inbox presets remember50 dofmig50
 render-export     render td spz fx
-scan-photo        photo scan sortworker overlap
+scan-photo        photo scan sortworker overlap i2s
 undo-selection    undo select
 beta-copy         beta
 core              core roundtrip

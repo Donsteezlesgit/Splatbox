@@ -143,6 +143,27 @@ ipcMain.handle("inbox:read", (ev, name, file) => { const b = inbox.readPhoto(Str
 ipcMain.handle("inbox:report", (ev, m) => inbox.report(m));
 app.on("before-quit", () => { try { inbox.stop(); } catch (e) {} });
 
+/* ---------- image to splat (V057): one photo -> a splat, made by TripoSplat on this PC's NVIDIA card ---------- */
+const i2s = require("./i2s").create({ dataDir: app.getPath("userData"), log: (m) => { try { console.log("[i2s] " + String(m).split("\n")[0]); } catch (e) {} } });
+const i2sSend = (p) => { if (win && !win.isDestroyed()) win.webContents.send("i2s:progress", p); };
+const i2sErr = (e) => ({ error: { code: e && e.code || "failed", message: e && e.message || String(e) } });
+ipcMain.handle("i2s:status", () => i2s.status());
+ipcMain.handle("i2s:setup", async () => { try { return { status: await i2s.setup(i2sSend) }; } catch (e) { return i2sErr(e); } });
+ipcMain.handle("i2s:generate", async (ev, o) => {
+  try {
+    const r = await i2s.generate({ name: String(o.name || "photo"), bytes: Buffer.from(o.bytes), count: o.count, steps: o.steps, seed: o.seed }, i2sSend);
+    const b = fs.readFileSync(r.plyPath);
+    return { ply: new Uint8Array(b.buffer, b.byteOffset, b.byteLength), count: r.count, seconds: r.seconds, gpu: r.gpu };
+  } catch (e) { return i2sErr(e); }
+});
+ipcMain.handle("i2s:cancel", () => i2s.cancel());
+ipcMain.handle("i2s:tail", () => i2s.tail(80));
+ipcMain.handle("i2s:openLog", async () => {
+  try { if (!fs.existsSync(i2s.logPath())) i2s.log("(log opened before anything ran)"); } catch (e) {}
+  const r = await shell.openPath(i2s.logPath());
+  return r ? { error: r } : { ok: true, path: i2s.logPath() };
+});
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1500, height: 920, minWidth: 900, minHeight: 600, backgroundColor: "#000000", autoHideMenuBar: false, show: false,

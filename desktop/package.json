@@ -29,6 +29,8 @@
       "main.js",
       "preload.js",
       "inbox.js",
+      "i2s.js",
+      "i2s_py/**",
       "www/**"
     ],
     "artifactName": "Splatbox-Setup-${version}.exe",
