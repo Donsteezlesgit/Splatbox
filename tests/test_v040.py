@@ -68,7 +68,7 @@ async def dof(br,site,fx):
     await sd(t,"S.focus=0.5;S.dofNear=0;S.dofFar=1"); nb=await f()
     await sd(t,"S.dofNear=1;S.dofFar=0"); fb=await f()
     ok("near-only and far-only blur differ",nb!=fb,[nb,fb])
-    await sd(t,"S.focus=0.2;S.dofNear=1;S.dofFar=1;S.dofSoft=0.3"); sf=await f()
+    await sd(t,"S.dofNear=1;S.dofFar=1;S.dofSoft=0.3"); sf=await f()
     ok("falloff softness changes the blur",sf!=a)
     await sd(t,"S.dofSoft=0;S.defocus=0;S.dofTilt=1;S.dofTiltB=0.1"); tl=await f()
     ok("tilt-shift blurs with the depth blur off",tl!=base)
@@ -92,11 +92,11 @@ async def dof(br,site,fx):
     await t.ev("S.fast=false")
     await t.ev("setMode('render')"); await t.wait(200)
     # picker
-    await sd(t,"S.focus=0.93");await t.ev("setFocusPick(true)")
+    await t.ev("setFocusPick(true)")
     ok("pick mode turns on",await t.ev("FOCUSPICK"))
     box=await t.ev("(function(){var r=cv.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]})()")
     await t.pg.mouse.click(box[0],box[1]); await t.wait(200)
-    ok("clicking the splat sets the focus and ends pick mode",not await t.ev("FOCUSPICK") and 0<=await t.ev("curCam().dof.focus")<=1 and await t.ev("curCam().dof.focus")!=0.93,await t.ev("curCam().dof.focus"))
+    ok("clicking the splat sets the focus and ends pick mode",not await t.ev("FOCUSPICK") and await t.ev("curCam().fdist")!=1.95,await t.ev("curCam().fdist"))
     # keys
     ok("all the DOF settings can be keyframed on the camera",await t.ev("DOFK.every(function(k){return !!tlProp('o:'+curCam().id+':dof:'+k)})"))
     await t.ev("S.dur=2;var P='o:'+curCam().id+':dof:dofTilt';tlKey(P,0,[0]);tlKey(P,2,[1]);tlSetTime(1)"); v=await t.ev("camDof(curCam(),'dofTilt')")

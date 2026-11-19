@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 056
+- One focus control. The separate Focus point slider is gone: the sharp plane is the camera's focus distance (wheel, slider and Pick focus point all set it, and it is keyframed). Old projects fold their focus point into each camera's focus distance.
+
 ## Version 055
 - Fixed: in a project saved to a folder, undoing the delete of a splat (or a merge) could not bring it back, because its file had already been removed from the folder. The bytes are now kept in memory first, and saving waits for that.
 

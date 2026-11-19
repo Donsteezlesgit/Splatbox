@@ -4,7 +4,7 @@ from harness import *
 async def run(br,site,fx):
     t=await open_page(br,site,"timeline",w=1000,h=640); ok=t.ok
     await t.new_project(); await t.add_ply(fx["tilt"]); await t.ev("closeTool()")
-    ok("project is format 6 with an empty timeline",(await t.ev("cur.v"))==6 and (await t.ev("Object.keys(cur.timeline.tracks).length"))==0)
+    ok("project is format 6 with an empty timeline",(await t.ev("cur.v"))==7 and (await t.ev("Object.keys(cur.timeline.tracks).length"))==0)
     await t.ev("addCamera()"); await t.ev("leaveThru()")
     cid=await t.ev("SEL.id"); P=f"o:{cid}:pos"; R=f"o:{cid}:rot"
     ok("property registry finds camera position and a setting",(await t.ev(f"!!tlProp('{P}')"))and(await t.ev("!!tlProp('s:exp')"))and not(await t.ev("!!tlProp('s:nope')")))
@@ -54,8 +54,8 @@ async def run(br,site,fx):
     ok("keys survive save and reload",json.loads(before)["tracks"].keys()==json.loads(after)["tracks"].keys() and len(before)==len(after),[len(before),len(after)])
     # old format upgrade
     r=json.loads(await t.ev("JSON.stringify(upgradeRec({v:4,settings:{},objs:[]}))"))
-    ok("a format 4 project upgrades with an empty timeline",r["v"]==6 and r["timeline"]=={"fps":30,"tracks":{}},r)
-    ok("a project from a newer app is refused",await t.ev("tooNew({v:7})"))
+    ok("a format 4 project upgrades with an empty timeline",r["v"]==7 and r["timeline"]=={"fps":30,"tracks":{}},r)
+    ok("a project from a newer app is refused",await t.ev("tooNew({v:8})"))
     # playback follows keys
     await t.ev("S.dur=4;SEL=cams()[0];startAnim(false)"); await t.wait(300)
     ok("Play uses the timeline when there are keys",(await t.ev("!!anim&&anim.tl"))==True)
