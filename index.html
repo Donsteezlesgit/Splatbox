@@ -563,7 +563,7 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 054";
+var VERSION="Version 055";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=6;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -2455,6 +2455,7 @@ function objRec(o){
 }
 function persistObjs(){
   if(!cur)return;
+  if(PHOLD){PHOLD.then(persistObjs);return}
   refreshSpace();
   cur.objs=OBJS.map(objRec);
   saveSoon();
@@ -2462,8 +2463,16 @@ function persistObjs(){
 function refreshObjs(){if(isObjPage()){if(objGroupFor(SEL)===curGroup)openTool(curTool||curGroup,true);else showObjPage()}dirty=true}
 function findObj(id){for(var i=0;i<OBJS.length;i++)if(OBJS[i].id===id)return OBJS[i];return null}
 /* removing an object can be undone: it is rebuilt from the same saved record */
+/* A project saved to a folder keeps each splat as a file there, and a removed object's file is deleted on the next save. Undo then finds nothing to read.
+   So the bytes of any file-backed blob are copied into memory first, and saving waits until that is done. */
+var PHOLD=null;
+function holdBlobs(recs){
+  var ps=recs.filter(function(r){return r&&r.blob instanceof File}).map(function(r){var f=r.blob;return f.arrayBuffer().then(function(ab){r.blob=new Blob([ab],{type:f.type})})});
+  if(!ps.length)return;
+  var h=Promise.all(ps).catch(function(){}).then(function(){if(PHOLD===h)PHOLD=null});PHOLD=h;
+}
 function objUndoCmd(o){
-  var rec=objRec(o),id=o.id;
+  var rec=objRec(o),id=o.id;holdBlobs([rec]);
   return {label:"remove "+(o.name||"object"),bytes:o.blob?o.blob.size:0,
     undo:function(){busy(true,"Restoring…");loadObjs([rec]).then(function(){busy(false);var n=findObj(id);if(n)SEL=n;persistObjs();refreshObjs();regrade();dirty=true})},
     redo:function(){var x=findObj(id);if(x)removeObj(x,true)}};
@@ -5608,6 +5617,7 @@ function mergeObjects(list){
         var v=has[0].st[k],same=has.length===list.length&&has.every(function(o){return o.st[k]===v});if(same)st[k]=v;else dropped++});
       var nm=("Merged "+list.map(function(o){return o.name}).join(" + ")).slice(0,40);
       var m=addSplatObj(raw,nm,blob,{name:nm,st:Object.keys(st).length?st:undefined});
+      holdBlobs(recs);
       list.forEach(function(o){removeObj(o,true)});
       var ids=ids0.filter(function(i){return idsL.indexOf(i)<0});ids.splice(Math.min(first,ids.length),0,m.id);orderBy(ids);
       MSEL=[];SEL=m;var mid=m.id,mrec=objRec(m);regrade();refreshObjs();dirty=true;
