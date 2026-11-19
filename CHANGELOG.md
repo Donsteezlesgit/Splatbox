@@ -1,6 +1,9 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 055
+- Fixed: in a project saved to a folder, undoing the delete of a splat (or a merge) could not bring it back, because its file had already been removed from the folder. The bytes are now kept in memory first, and saving waits for that.
+
 ## Version 054
 - Depth of field "Focus point" slider now goes from -200% to +200%, so the sharp plane can sit well in front of or behind the subject.
 

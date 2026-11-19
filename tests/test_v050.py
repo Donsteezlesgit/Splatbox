@@ -274,3 +274,26 @@ async def dofmigrate(br,site,fx):
     ok("a current project is left alone",r3["objs"][0]["dof"]=={"defocus":2})
     ok("no console or page errors",len(t.errs)==0,t.errs[:3])
     return t.finish()
+
+LSF="""(async function(){var out={};async function walk(d,p){for await(var [n,h] of d.entries()){if(h.kind==='directory')await walk(h,p+n+'/');else out[p+n]=1}}await walk(FOLD.h,'');return JSON.stringify(Object.keys(out))})()"""
+async def folderundo(br,site,fx):
+    """A project saved to a folder: deleting a splat removes its file from the folder, and undo must still bring it back."""
+    t=await open_page(br,site,"v050fold",w=1440,h=900); ok=t.ok; pg=t.pg
+    await t.ev("navigator.storage.getDirectory().then(function(r){return r.getDirectoryHandle('proj'+Date.now(),{create:true})}).then(function(h){return fsUse(h,false)}).then(function(){return 1})")
+    await t.new_project(); await t.add_ply(fx["tilt"]); await t.add_ply(fx["blob"]); await t.ev("closeTool()")
+    await pg.click("#saveBtn"); await t.wait(2000)
+    await t.ev("goHome()"); await t.wait(1500); await t.ev("renderHome()"); await t.wait(1000)
+    await pg.locator("#grid .card:not(.new)").first.click(); await t.wait(4000)
+    ok("both splats are back from the folder (their data now lives in files)",await t.ev("OBJS.filter(function(o){return o.gs&&o.gs.n}).length")==2)
+    n0=len(json.loads(await t.ev(LSF)))
+    await pg.click('#outlB .orw >> nth=0 >> [data-oa=del]'); await t.wait(2500)
+    n1=len(json.loads(await t.ev(LSF)))
+    ok("deleting the splat removed its file from the folder",n1<n0,[n0,n1])
+    await pg.keyboard.press("Control+z"); await t.wait(3500)
+    ok("undo brings the splat back, with its data",await t.ev("OBJS.filter(function(o){return o.gs&&o.gs.n>0}).length")==2,await t.ev("OBJS.map(function(o){return o.name+':'+(o.gs&&o.gs.n)}).join()"))
+    await t.wait(2500); n2=len(json.loads(await t.ev(LSF)))
+    ok("and its file is saved to the folder again",n2==n0,[n0,n1,n2])
+    await pg.keyboard.press("Control+Shift+z"); await t.wait(1500); await pg.keyboard.press("Control+z"); await t.wait(3500)
+    ok("delete, undo, redo, undo still works",await t.ev("OBJS.filter(function(o){return o.gs&&o.gs.n>0}).length")==2)
+    ok("no page errors",len(t.errs)==0,t.errs[:3])
+    return t.finish()
