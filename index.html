@@ -566,7 +566,7 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 057";
+var VERSION="Version 058";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=7;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -5293,7 +5293,7 @@ function i2sMark(){
   $("i2sCount").disabled=!!b;
   n.classList.toggle("bad",!!I2ST.bad);
   if(b||I2ST.txt)n.textContent=I2ST.txt;
-  else n.textContent=set?"Pick one photo of one object. It runs on your NVIDIA graphics card and nothing leaves this PC. The back and hidden sides are invented by the AI, so this is a guess, not a scan.":"One-time set up: a private Python environment, PyTorch and the model files, about 8 GB and 10 to 30 minutes. It needs Python 3.10 or newer from python.org and an NVIDIA graphics card. Nothing is installed anywhere else.";
+  else n.textContent=set?"Pick one photo of one object. It runs on your NVIDIA graphics card and nothing leaves this PC. The back and hidden sides are invented by the AI, so this is a guess, not a scan.":"One-time set up: a private Python environment, PyTorch and the model files, about 8 GB and 10 to 30 minutes. It needs Python 3.12 (3.10 to 3.13 also work, not newer) from python.org and an NVIDIA graphics card. Nothing is installed anywhere else.";
 }
 function i2sRefresh(){
   if(!I2S)return;
@@ -5770,7 +5770,7 @@ var TIPS={aFlip:"Turn the selected object upside down",aLevel:"Straighten the se
   g_object:"Add and edit objects, crop, select and orient",g_scene:"Lights, effects and display",g_camera:"Cameras and depth of field",g_image:"Colour, looks and lens",g_output:"Capture, export and history"};
 if(window.splatboxDesktop&&window.splatboxDesktop.i2s){
   TIPS.i2sGo="Turn one photo into a 3D splat with AI on your NVIDIA graphics card. The hidden sides are invented";
-  TIPS.i2sSetup="Install what image to splat needs, once: about 8 GB. Needs Python 3.10 or newer";
+  TIPS.i2sSetup="Install what image to splat needs, once: about 8 GB. Needs Python 3.12 (3.10 to 3.13 work)";
   TIPS.i2sCancel="Stop making the splat";
   TIPS.i2sLog="Open the error log: every step and every error from image to splat";
 }

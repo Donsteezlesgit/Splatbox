@@ -57,7 +57,33 @@ function fakeInstall(d) {
   d = tmp();
   m = create({ dataDir: d, platform: "linux", exec: (c, a, o, log) => Promise.resolve({ code: 0, out: "Python 3.8.10\n" }) });
   e = await m.setup().catch((x) => x);
-  ok(e && e.code === "nopython" && /too old/.test(logOf(d)), "Python 3.8 is refused and logged as too old");
+  ok(e && e.code === "pyversion" && /3\.8\.10/.test(e.message) && /PyTorch needs 3\.10 to 3\.13/.test(logOf(d)), "Python 3.8 is refused and logged");
+
+  // 3c. a Python that is too NEW (3.15) is not used; the message says what to install
+  d = tmp();
+  m = create({ dataDir: d, platform: "linux", exec: (c, a, o, log) => Promise.resolve(a.join(" ") === "-3 --version" ? { code: 0, out: "Python 3.15.2\n" } : { code: 1, out: "" }), pythonCandidates: [["py", "-3.12"], ["py", "-3"]] });
+  e = await m.setup().catch((x) => x);
+  ok(e && e.code === "pyversion" && /3\.15\.2/.test(e.message) && /Python 3\.12/.test(e.message), "Python 3.15 is refused with a message naming 3.12");
+  ok(/PyTorch needs 3\.10 to 3\.13/.test(logOf(d)), "the refusal is in the log");
+
+  // 3d. with 3.15 and 3.12 both installed, 3.12 is chosen and used for the environment
+  d = tmp(); const used = [];
+  m = create({ dataDir: d, platform: "linux", pythonCandidates: [["py", "-3.12"], ["py", "-3"]], exec: (c, a, o, log) => {
+    used.push(c + " " + a.join(" "));
+    if (a.indexOf("--version") >= 0) return Promise.resolve({ code: 0, out: c + a[0] === "py-3.12" ? "Python 3.12.7\n" : "Python 3.15.2\n" });
+    if (a.indexOf("venv") >= 0) { fs.mkdirSync(path.dirname(venvPy(d)), { recursive: true }); fs.writeFileSync(venvPy(d), "x"); }
+    if (/fetch_repo/.test(a.join(" "))) { fs.mkdirSync(path.join(d, "image-to-splat", "triposplat"), { recursive: true }); fs.writeFileSync(path.join(d, "image-to-splat", "triposplat", "triposplat.py"), "#"); }
+    return Promise.resolve({ code: 0, out: "" });
+  } });
+  await m.setup();
+  ok(used.some((u) => /^py -3\.12 -m venv/.test(u)) && !used.some((u) => /^py -3 /.test(u)), "the environment is made with 3.12, and the newer Python is never tried: " + used.slice(0, 3));
+
+  // 3e. command output is logged a whole line at a time (no words split across log lines)
+  d = tmp();
+  m = create({ dataDir: d, platform: "linux", pythonCandidates: [["python3"]] });
+  await m.setup().catch(() => {});
+  const lg = logOf(d);
+  ok(/Python 3\.\d+\.\d+/.test(lg) || /could not start/.test(lg), "a real command's output reaches the log");
 
   // 4. a step fails (torch): setup error, log says so, not marked installed, can retry (busy cleared)
   d = tmp();

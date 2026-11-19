@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 058
+- Fixed: image to splat set up failed on a PC with Python 3.15, because PyTorch has no downloads for it yet (the error log showed "No matching distribution found for torch"). Set up now looks for Python 3.12 first, then 3.11, 3.13, 3.10, and never uses a newer one. If only a newer Python is installed it says so and tells you to install Python 3.12 from python.org (it can sit next to the newer one).
+- Error log lines are no longer split in the middle of a word.
+
 ## Version 057
 - New (Windows app only, beta): **Photo to splat (AI)** in the Add page. Pick one photo and an AI model (TripoSplat, MIT licence) makes a 3D splat from it on your NVIDIA graphics card. Nothing leaves your PC. The back and hidden sides are invented by the AI, so it is a guess, not a scan.
 - First use needs a one-time **Set up** (about 8 GB, 10 to 30 minutes): a private Python environment, PyTorch and the model files. You need Python 3.10 or newer from python.org and an NVIDIA graphics card. Detail choice: 32k to 262k splats. Cancel stops it.

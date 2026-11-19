@@ -60,7 +60,7 @@ async def run(br,site,fx):
     await t.new_project(); await t.ev("openTool('add')"); await t.wait(300)
     ok("desktop: the Set up button shows, Photo to splat is hidden",(await t.ev("!$('i2sSetup').hidden&&$('i2sGo').hidden")))
     note=await t.ev("$('i2sNote').textContent")
-    ok("the note says what set up needs (Python, NVIDIA, about 8 GB)",all(w in note for w in ("Python","NVIDIA","8 GB")),note)
+    ok("the note says what set up needs (Python, NVIDIA, about 8 GB)",all(w in note for w in ("Python 3.12","NVIDIA","8 GB")),note)
     ok("a log button is always there",(await t.ev("!$('i2sLogB').hidden")))
     await t.pg.click("#i2sLogB"); await t.wait(100)
     ok("Open error log asks the desktop shell to open the log",(await t.ev("window.__i2.logOpened"))==1)

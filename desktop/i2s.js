@@ -29,7 +29,10 @@ function create(opt) {
   const helperDir = opt.helperDir || path.join(__dirname, "i2s_py");
   const isWin = (opt.platform || process.platform) === "win32";
   const venvPy = isWin ? path.join(venv, "Scripts", "python.exe") : path.join(venv, "bin", "python");
-  const candidates = opt.pythonCandidates || (isWin ? [["py", "-3"], ["python"], ["python3"]] : [["python3"], ["python"]]);
+  const candidates = opt.pythonCandidates || (isWin
+    ? [["py", "-3.12"], ["py", "-3.11"], ["py", "-3.13"], ["py", "-3.10"], ["py", "-3"], ["python"], ["python3"]]
+    : [["python3.12"], ["python3.11"], ["python3.13"], ["python3.10"], ["python3"], ["python"]]);
+  let seenOutside = ""; // a Python that was found but PyTorch can't use (too old or too new)
   let busy = "";
   let child = null;
   let cancelled = false;
@@ -64,18 +67,20 @@ function create(opt) {
         return;
       }
       if (o.track) child = p;
-      let out = "";
+      let out = "", partial = "";
       const feed = (buf) => {
         const t = buf.toString();
         out += t;
         if (out.length > 200000) out = out.slice(-100000);
-        if (o.onData) o.onData(t);
-        else log(t.replace(/\n$/, ""));
+        if (o.onData) { o.onData(t); return; }
+        partial += t;
+        const k = partial.lastIndexOf("\n");
+        if (k >= 0) { log(partial.slice(0, k)); partial = partial.slice(k + 1); }
       };
       p.stdout.on("data", feed);
       p.stderr.on("data", feed);
       p.on("error", (e) => { log("could not start: " + e.message); resolve({ code: -1, out }); });
-      p.on("close", (code) => { if (o.track) child = null; log("exit code " + code); resolve({ code, out }); });
+      p.on("close", (code) => { if (o.track) child = null; if (partial.trim()) log(partial); log("exit code " + code); resolve({ code, out }); });
     });
   }
 
@@ -89,13 +94,15 @@ function create(opt) {
   }
 
   async function findPython() {
+    seenOutside = "";
     for (const c of candidates) {
       const r = await exec(c[0], c.slice(1).concat(["--version"]), {});
       const m = /Python (\d+)\.(\d+)\.(\d+)/.exec(r.out || "");
       if (r.code === 0 && m) {
         const maj = +m[1], min = +m[2];
-        if (maj === 3 && min >= 10) return { cmd: c[0], args: c.slice(1), version: m[1] + "." + m[2] + "." + m[3] };
-        log("found Python " + m[0] + " but it is too old (need 3.10 or newer)");
+        if (maj === 3 && min >= 10 && min <= 13) return { cmd: c[0], args: c.slice(1), version: m[1] + "." + m[2] + "." + m[3] };
+        log("found Python " + m[1] + "." + m[2] + "." + m[3] + " but PyTorch needs 3.10 to 3.13 (3.12 is best)");
+        if (!seenOutside) seenOutside = m[1] + "." + m[2] + "." + m[3];
       }
     }
     return null;
@@ -141,10 +148,11 @@ function create(opt) {
       log("---------- SET UP image to splat ----------");
       log("Splatbox desktop, platform " + process.platform + " " + process.arch);
       const total = 5;
-      step(on, "python", "Looking for Python 3.10 or newer", 1, total);
+      step(on, "python", "Looking for Python 3.12 (3.10 to 3.13 also work)", 1, total);
       const py = await findPython();
       if (!py) {
-        throw fail("nopython", "Python 3.10 or newer wasn't found. Install it from python.org (tick \"Add python.exe to PATH\"), then press Set up again.");
+        if (seenOutside) throw fail("pyversion", "Found Python " + seenOutside + ", but PyTorch doesn't work with it yet. Install Python 3.12 from python.org (it can sit next to your newer one; tick \"Add python.exe to PATH\"), then press Set up again.");
+        throw fail("nopython", "Python 3.10 to 3.13 wasn't found. Install Python 3.12 from python.org (tick \"Add python.exe to PATH\"), then press Set up again.");
       }
       log("Using Python " + py.version);
       const gpu = await gpuInfo();
