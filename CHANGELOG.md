@@ -1,6 +1,10 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 060
+- New: **Alt + drag duplicates**. In the viewport, hold Alt and drag a Move, Rotate or Scale handle: a copy is left where the object was and you carry on dragging the new one. In the Objects list, hold Alt and drag a row: the copy lands where you drop it. Undo removes the copy.
+- Duplicate (right-click in the list) now works on lights, cameras and 3D models too, not only splats. Animation keys are not copied.
+
 ## Version 059
 - Changed: while looking through a camera, **Alt + mouse wheel** changes its focus distance, and the plain wheel moves the view again.
 - Fixed: the focus distance slider and box now follow the wheel on the Depth of field page (before, only the Camera page updated).

@@ -566,7 +566,7 @@ html.ax-dys body{letter-spacing:.03em;word-spacing:.1em;line-height:1.6}
 var $=function(id){return document.getElementById(id)};
 var clamp=function(v,a,b){return Math.max(a,Math.min(b,v))};
 var FOV=50*Math.PI/180, TY=Math.tan(FOV/2);
-var VERSION="Version 059";
+var VERSION="Version 060";
 /* BETA = the copy served from /beta/. It has its own project storage so testing can never touch real projects. FORMAT = project file format number. */
 var BETA=/\/beta\//.test(location.pathname),ROOT=BETA?"../":"",FORMAT=7;
 var DEPTHP=null,DF={fbo:null,tex:null,rb:null,w:0,h:0,f32:false};
@@ -1939,10 +1939,12 @@ cv.addEventListener("pointerdown",function(e){
   var g=gzGeo(),r=cv.getBoundingClientRect();
   GD={h:h,id:e.pointerId,sx:e.clientX,sy:e.clientY,pos0:SEL.pos.slice(),R0:SEL.R.slice(),s0:SEL.scl,g:g,rx:r.left,ry:r.top};
   anim=null;dirty=true;
+  /* Alt + drag: leave a copy where it was and drag the new one. The copy is made first, then the drag carries on with it. */
+  if(e.altKey&&!SEL.locked){var gd=GD;gd.wait=true;dupObj(SEL,{here:true,quiet:true,done:function(n){gd.wait=false;if(GD===gd){gd.pos0=n.pos.slice();gd.R0=n.R.slice();gd.s0=n.scl}dirty=true}})}
 },true);
 cv.addEventListener("pointermove",function(e){
   if(GD){
-    if(e.pointerId!==GD.id)return;e.stopImmediatePropagation();
+    if(e.pointerId!==GD.id)return;e.stopImmediatePropagation();if(GD.wait)return;
     var h=GD.h,g=GD.g,o=SEL,dx=e.clientX-GD.sx,dy=e.clientY-GD.sy,x=e.clientX-GD.rx,y=e.clientY-GD.ry;
     if(h.t==="axis"){
       var en=g.ends[h.i];if(en){var vx=en[0]-g.c[0],vy=en[1]-g.c[1],l2=vx*vx+vy*vy||1,t=(dx*vx+dy*vy)/l2*g.arm;o.pos[h.i]=GD.pos0[h.i]+t}
@@ -5602,7 +5604,7 @@ function ibAction(a){
 
 
 /* ---------- V040: the Objects window (outliner) and drag-to-resize panels ---------- */
-var OUTL_SIG="",OUTL_T=0,OUTL_DRAG=null,MSEL=[];
+var OUTL_SIG="",OUTL_T=0,OUTL_DRAG=null,OUTL_DUP=false,MSEL=[];
 var OKIND={splat:"Splat",mesh:"Model",camera:"Camera",sun:"Sun",point:"Light",spot:"Spot"};
 var EYE_I='<svg class="i" viewBox="0 0 24 24" width="18" height="18"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEX_I='<svg class="i" viewBox="0 0 24 24" width="18" height="18"><path d="M3 3l18 18M10.6 6.2A9.5 9.5 0 0112 6c6.4 0 10 6 10 6a17 17 0 01-3.3 3.9M6.6 7.6C3.9 9.3 2 12 2 12s3.6 7 10 7a9.8 9.8 0 004.2-.9"/></svg>',LOCK_I='<svg class="i" viewBox="0 0 24 24" width="17" height="17"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>',CAM_I='<svg class="i" viewBox="0 0 24 24" width="17" height="17"><rect x="3" y="7" width="12" height="10" rx="2"/><path d="M15 11l6-3v8l-6-3z"/></svg>';
 function outlSig(){return OBJS.map(function(o){return o.id+"|"+o.name+"|"+(o.vis?1:0)+(o.locked?"L":"")+"|"+o.kind}).join(",")+"#"+(SEL?SEL.id:"")+(THRU&&ACAM?"T"+ACAM.id:"")+"M"+(MSEL||[]).map(function(o){return o.id}).join(".")}
@@ -5646,15 +5648,16 @@ $("outlB").addEventListener("dblclick",function(e){
   inp.addEventListener("blur",onb);inp.addEventListener("keydown",function(ev){if(ev.key==="Enter"){ev.preventDefault();done(true)}else if(ev.key==="Escape"){done(false)}});
 });
 /* drag a row to reorder */
-$("outlB").addEventListener("dragstart",function(e){var row=e.target.closest(".orw");if(!row)return;OUTL_DRAG=row.dataset.oid;try{e.dataTransfer.setData("text/plain",OUTL_DRAG);e.dataTransfer.effectAllowed="move"}catch(_){}});
-$("outlB").addEventListener("dragover",function(e){if(!OUTL_DRAG)return;e.preventDefault();var row=e.target.closest(".orw");Array.prototype.forEach.call($("outlB").querySelectorAll(".dragover"),function(x){x.classList.remove("dragover")});if(row)row.classList.add("dragover")});
+$("outlB").addEventListener("dragstart",function(e){var row=e.target.closest(".orw");if(!row)return;OUTL_DRAG=row.dataset.oid;OUTL_DUP=!!e.altKey;try{e.dataTransfer.setData("text/plain",OUTL_DRAG);e.dataTransfer.effectAllowed=OUTL_DUP?"copy":"move"}catch(_){}});
+$("outlB").addEventListener("dragover",function(e){if(!OUTL_DRAG)return;e.preventDefault();try{e.dataTransfer.dropEffect=OUTL_DUP?"copy":"move"}catch(_){}var row=e.target.closest(".orw");Array.prototype.forEach.call($("outlB").querySelectorAll(".dragover"),function(x){x.classList.remove("dragover")});if(row)row.classList.add("dragover")});
 $("outlB").addEventListener("drop",function(e){
-  if(!OUTL_DRAG)return;e.preventDefault();var row=e.target.closest(".orw"),a=findObj(OUTL_DRAG);OUTL_DRAG=null;if(!a)return;
+  if(!OUTL_DRAG)return;e.preventDefault();var row=e.target.closest(".orw"),a=findObj(OUTL_DRAG),dup=OUTL_DUP;OUTL_DRAG=null;OUTL_DUP=false;if(!a)return;
+  if(dup){var tg=row&&findObj(row.dataset.oid);dupObj(a,tg?{beforeId:tg.id}:{end:true});OUTL_SIG="";renderOutl(true);return}
   var arr=OBJS.filter(function(x){return x!==a}),i=row?arr.indexOf(findObj(row.dataset.oid)):arr.length;if(i<0)i=arr.length;arr.splice(i,0,a);
   if(arr.some(function(x,k){return x!==OBJS[k]})){undoPush(orderCmd(OBJS.slice(),arr.slice()));OBJS=arr;persistObjs();dirty=true}
   OUTL_SIG="";renderOutl(true);
 });
-$("outlB").addEventListener("dragend",function(){OUTL_DRAG=null;OUTL_SIG="";renderOutl(true)});
+$("outlB").addEventListener("dragend",function(){OUTL_DRAG=null;OUTL_DUP=false;OUTL_SIG="";renderOutl(true)});
 function orderCmd(before,after){var ids0=before.map(function(o){return o.id}),ids1=after.map(function(o){return o.id});
   function set(ids){OBJS=ids.map(findObj).filter(Boolean);persistObjs();dirty=true;OUTL_SIG="";renderOutl(true)}
   return {label:"Reorder objects",bytes:1,undo:function(){set(ids0)},redo:function(){set(ids1)}}}
@@ -5662,7 +5665,7 @@ function orderCmd(before,after){var ids0=before.map(function(o){return o.id}),id
 $("outlB").addEventListener("contextmenu",function(e){
   var row=e.target.closest(".orw");if(!row)return;e.preventDefault();var o=findObj(row.dataset.oid);if(!o)return;outlSelect(o);
   var m=$("octx");if(m)m.remove();m=document.createElement("div");m.id="octx";
-  m.innerHTML=(MSEL.length>=2&&MSEL.indexOf(o)>=0?'<button type="button" data-oc="mrg">Merge '+MSEL.length+' splats</button>':'')+(o.kind==="splat"?'<button type="button" data-oc="dup">Duplicate</button>':'')+'<button type="button" data-oc="ren">Rename</button><button type="button" data-oc="del">Delete</button>';
+  m.innerHTML=(MSEL.length>=2&&MSEL.indexOf(o)>=0?'<button type="button" data-oc="mrg">Merge '+MSEL.length+' splats</button>':'')+'<button type="button" data-oc="dup">Duplicate</button>'+'<button type="button" data-oc="ren">Rename</button><button type="button" data-oc="del">Delete</button>';
   m.style.left=Math.min(e.clientX,innerWidth-170)+"px";m.style.top=Math.min(e.clientY,innerHeight-130)+"px";document.body.appendChild(m);
   m.addEventListener("click",function(ev){var b=ev.target.closest("button");if(!b)return;m.remove();
     if(b.dataset.oc==="del")removeObj(o);else if(b.dataset.oc==="ren"){var nm=row.querySelector(".on");if(nm)nm.dispatchEvent(new MouseEvent("dblclick",{bubbles:true}))}else if(b.dataset.oc==="dup")dupObj(o);else if(b.dataset.oc==="mrg")mergeObjects(MSEL.slice())});
@@ -5670,18 +5673,22 @@ $("outlB").addEventListener("contextmenu",function(e){
 document.addEventListener("pointerdown",function(e){var m=$("octx");if(m&&!m.contains(e.target))m.remove()});
 function orderBy(ids){OBJS=ids.map(findObj).filter(Boolean).concat(OBJS.filter(function(x){return ids.indexOf(x.id)<0}));persistObjs();dirty=true;OUTL_SIG="";renderOutl(true)}
 /* duplicate a splat: same file, same look, nudged to the side, placed just above the original */
-function dupObj(o){
-  if(!o||o.kind!=="splat"||!o.blob)return;
-  var ids0=OBJS.map(function(x){return x.id}),rec=objRec(o);delete rec.id;rec.name=(o.name||"Splat").slice(0,34)+" copy";rec.pos=[o.pos[0]+0.4*o.scl,o.pos[1],o.pos[2]];
-  var before=OBJS.length;busy(true,"Duplicating…");
+function dupObj(o,opt){
+  opt=opt||{};
+  if(!o||((o.kind==="splat"||o.kind==="mesh")&&!o.blob))return;
+  var ids0=OBJS.map(function(x){return x.id}),rec=objRec(o);delete rec.id;rec.name=(o.name||"Object").slice(0,34)+" copy";if(!opt.here)rec.pos=[o.pos[0]+0.4*(o.scl||1),o.pos[1],o.pos[2]];
+  var before=OBJS.length;if(!opt.quiet)busy(true,"Duplicating…");
   loadObjs([rec]).then(function(){
-    busy(false);var n=OBJS.length>before?OBJS[OBJS.length-1]:null;if(!n)return;
-    var i=ids0.indexOf(o.id);var ids=ids0.slice();ids.splice(i+1,0,n.id);orderBy(ids);
+    if(!opt.quiet)busy(false);var n=OBJS.length>before?OBJS[OBJS.length-1]:null;if(!n)return;
+    var ids=ids0.slice(),at=ids0.indexOf(o.id)+1;
+    if(opt.end)at=ids.length;else if(opt.beforeId&&ids.indexOf(opt.beforeId)>=0)at=ids.indexOf(opt.beforeId);
+    ids.splice(at,0,n.id);orderBy(ids);
     var nid=n.id,nrec=objRec(n);SEL=n;refreshObjs();regrade();
-    undoPush({label:"duplicate "+(o.name||"splat"),bytes:n.blob?n.blob.size:0,
+    undoPush({label:"duplicate "+(o.name||"object"),bytes:n.blob?n.blob.size:0,
       undo:function(){var x=findObj(nid);if(x)removeObj(x,true)},
       redo:function(){loadObjs([nrec]).then(function(){orderBy(ids);var y=findObj(nid);if(y)SEL=y;refreshObjs()})}});
-    setStatus("Duplicated "+o.name+".","ok");
+    if(!opt.quiet)setStatus("Duplicated "+o.name+".","ok");
+    if(opt.done)opt.done(n);
   });
 }
 /* merge several splats into one object. Moves, rotation, scale, crop, mask and each splat's own colour changes are baked in; the scene look then applies to the merged splat as it did to the parts. */
