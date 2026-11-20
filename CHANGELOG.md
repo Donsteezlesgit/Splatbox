@@ -1,6 +1,11 @@
 # Splatbox changelog
 Newest first. Stable = the main link. Each version is also a git tag (v018 etc.) you can roll back to.
 
+## Version 059
+- Changed: while looking through a camera, **Alt + mouse wheel** changes its focus distance, and the plain wheel moves the view again.
+- Fixed: the focus distance slider and box now follow the wheel on the Depth of field page (before, only the Camera page updated).
+- Moved: the **Focus distance** slider is now at the top of the camera's Depth of field page. Its range goes up to 50.
+
 ## Version 058
 - Fixed: image to splat set up failed on a PC with Python 3.15, because PyTorch has no downloads for it yet (the error log showed "No matching distribution found for torch"). Set up now looks for Python 3.12 first, then 3.11, 3.13, 3.10, and never uses a newer one. If only a newer Python is installed it says so and tells you to install Python 3.12 from python.org (it can sit next to the newer one).
 - Error log lines are no longer split in the middle of a word.

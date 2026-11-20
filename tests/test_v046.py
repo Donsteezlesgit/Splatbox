@@ -53,7 +53,7 @@ async def run(br,site,fx):
     await t.ev("SEL=findObj('"+sid+"');openTool('lightobj')"); await t.wait(200)
     ok("the light menu shows the spot's own controls",await t.ev("!!document.getElementById('oo-lx_cone')&&!!document.getElementById('oo-lx_range')"))
     # ---- typed value on the camera focus distance slider
-    await t.ev("SEL=findObj('"+cid+"');openTool('camobj')"); await t.wait(200)
+    await t.ev("SEL=findObj('"+cid+"');openTool('dof')"); await t.wait(200)
     ok("camera focus distance is a slider with a typed box",await t.ev("!!document.getElementById('oo-cfd')&&document.getElementById('oov-cfd').tagName==='INPUT'"))
     await t.pg.fill("#oov-cfd","3.5"); await t.pg.press("#oov-cfd","Enter"); await t.wait(200)
     ok("typing sets it",abs(await t.ev("findObj('"+cid+"').fdist")-3.5)<0.01)
